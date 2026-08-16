@@ -150,10 +150,15 @@ export default function QuoteRequestForm() {
         <label><input type="radio" name="preferredContact" value="email" /> E-mail</label>
       </fieldset>
 
-      <div className="privacy-box" id="privacidade">
+      <div className="privacy-box">
+        <details className="privacy-details" id="politica-de-privacidade">
+          <summary>Política de Privacidade — resumo do formulário</summary>
+          <p>Os dados informados serão usados para receber, analisar e responder sua solicitação, manter o histórico comercial necessário ao atendimento e registrar o consentimento apresentado no envio.</p>
+          <p>O consentimento para novidades é opcional e separado da solicitação de proposta. Antes da publicação definitiva, a HRX disponibilizará o canal formal para solicitações relacionadas aos dados pessoais e a versão completa desta política.</p>
+        </details>
         <label className="privacy-check">
           <input type="checkbox" checked={privacyConsent} onChange={(event) => setPrivacyConsent(event.target.checked)} required />
-          <span>Li e concordo com a Política de Privacidade e autorizo o uso dos dados enviados para análise desta solicitação e retorno de contato.</span>
+          <span>Li a Política de Privacidade acima e autorizo o uso dos dados enviados para análise desta solicitação e retorno de contato.</span>
         </label>
         <label className="privacy-check privacy-optional">
           <input type="checkbox" name="marketingConsent" />
