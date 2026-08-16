@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import './fidelity.css'
 import './refinement.css'
+import QuoteRequestForm from './quotes/QuoteRequestForm'
+import BudgetAdminPreview from './quotes/BudgetAdminPreview'
 
 type Solution = { icon: string; title: string; description: string }
 type Project = {
@@ -156,6 +158,12 @@ function ProjectVisual({ id }: { id: Project['id'] }) {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeMenu = () => setMenuOpen(false)
+  const adminPreviewEnabled = import.meta.env.VITE_HRX_ADMIN_UI === 'true'
+  const adminRoute = window.location.pathname.includes('/admin/orcamentos') || window.location.hash === '#admin/orcamentos'
+
+  if (adminPreviewEnabled && adminRoute) {
+    return <BudgetAdminPreview />
+  }
 
   return (
     <div className="site-shell">
@@ -183,7 +191,7 @@ export default function App() {
               <p className="hero-text">Combinamos organização, tecnologia e estratégia para transformar operações e impulsionar resultados concretos.</p>
               <div className="hero-actions">
                 <a className="button button-primary" href="#solucoes">Conheça nossas soluções <span>→</span></a>
-                <a className="button button-secondary" href="#projetos">Conheça nossos projetos <span>→</span></a>
+                <a className="button button-secondary" href="#contato">Solicite uma proposta <span>→</span></a>
               </div>
               <div className="hero-pill-row" aria-label="Territórios de atuação">
                 <span>Gestão</span><span>Tecnologia</span><span>Documentação</span><span>Operações</span>
@@ -206,7 +214,7 @@ export default function App() {
                   <span className="solution-icon" aria-hidden="true">{solution.icon}</span>
                   <h3>{solution.title}</h3>
                   <p>{solution.description}</p>
-                  <a href="#contato">Saiba mais <span>→</span></a>
+                  <a href="#contato">Solicitar análise <span>→</span></a>
                 </article>
               ))}
             </div>
@@ -254,18 +262,12 @@ export default function App() {
         <section id="contato" className="section contact-section">
           <div className="container contact-grid">
             <div className="contact-copy">
-              <p className="eyebrow">CONTATO</p>
-              <h2>Vamos conversar sobre o que a sua empresa precisa?</h2>
-              <p>Conte o contexto, o problema e o que precisa funcionar melhor. A HRX estrutura o caminho entre necessidade, execução e resultado.</p>
+              <p className="eyebrow">SOLICITE UMA PROPOSTA</p>
+              <h2>Conte o que você precisa. A análise vem antes do preço.</h2>
+              <p>Você descreve o contexto e a necessidade. A HRX interpreta o pedido, estrutura um escopo e valida internamente antes de retornar qualquer orçamento.</p>
               <div className="location-pill">Manaus, Amazonas · Brasil</div>
             </div>
-            <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
-              <div className="form-row"><label>Nome completo<input type="text" name="name" autoComplete="name" /></label><label>E-mail<input type="email" name="email" autoComplete="email" /></label></div>
-              <div className="form-row"><label>Empresa<input type="text" name="company" autoComplete="organization" /></label><label>Telefone<input type="tel" name="phone" autoComplete="tel" /></label></div>
-              <label>Como podemos ajudar?<textarea name="message" rows={5} /></label>
-              <button type="submit" className="button button-primary form-button" disabled>Enviar mensagem <span>→</span></button>
-              <small>O envio será ativado quando o canal comercial definitivo for conectado.</small>
-            </form>
+            <QuoteRequestForm />
           </div>
         </section>
       </main>
