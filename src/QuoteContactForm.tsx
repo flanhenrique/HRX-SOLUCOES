@@ -12,6 +12,18 @@ type QuoteResponse = {
   error?: string
 }
 
+const SERVICE_OPTIONS = [
+  { value: 'sistema web aplicacao interna', label: 'Sistema web / aplicação interna' },
+  { value: 'automacao automatizar processos', label: 'Automação de processos' },
+  { value: 'site institucional landing page', label: 'Site institucional / landing page' },
+  { value: 'crm funil comercial pipeline comercial', label: 'CRM e operação comercial' },
+  { value: 'mapear processos organizacao administrativa', label: 'Processos e organização administrativa' },
+  { value: 'gestao documental procedimento operacional', label: 'Documentação e procedimentos' },
+  { value: 'planilha excel controle em planilha', label: 'Planilhas e controles' },
+  { value: 'organizacao financeira fluxo de caixa', label: 'Organização financeira' },
+  { value: 'diagnostico entender a operacao', label: 'Diagnóstico / ainda preciso definir' },
+]
+
 export default function QuoteContactForm() {
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
   const [protocol, setProtocol] = useState('')
@@ -34,15 +46,17 @@ export default function QuoteContactForm() {
     setSubmitState('sending')
     setErrorMessage('')
 
+    const service = String(data.get('service') ?? '').trim()
     const payload = {
       name: String(data.get('name') ?? '').trim(),
       email: String(data.get('email') ?? '').trim(),
       company: String(data.get('company') ?? '').trim(),
       phone: String(data.get('phone') ?? '').trim(),
       request: String(data.get('message') ?? '').trim(),
+      desiredDeadline: String(data.get('desiredDeadline') ?? '').trim(),
       reason: 'orcamento',
-      interests: ['nao_sei'],
-      preferredContact: 'whatsapp',
+      interests: service ? [service] : [],
+      preferredContact: String(data.get('preferredContact') ?? 'whatsapp') as 'whatsapp' | 'email',
       privacyConsent: true,
       marketingConsent: false,
       source: 'website',
@@ -85,10 +99,10 @@ export default function QuoteContactForm() {
 
   return (
     <>
-      <form className="contact-form executive-form" onSubmit={submit} noValidate={false}>
+      <form className="contact-form executive-form quote-capture-form" onSubmit={submit} noValidate={false}>
         <div className="form-intro-row">
           <div>
-            <span className="form-step">01 · CONTEXTO</span>
+            <span className="form-step">01 · CONTATO</span>
             <strong>Solicitação de proposta</strong>
           </div>
           <span className="form-security">Análise humana antes do preço</span>
@@ -102,7 +116,48 @@ export default function QuoteContactForm() {
           <label>Empresa <small>opcional</small><input type="text" name="company" autoComplete="organization" /></label>
           <label>Telefone / WhatsApp<input required type="tel" name="phone" autoComplete="tel" /></label>
         </div>
-        <label>Como podemos ajudar?<textarea required minLength={20} name="message" rows={5} placeholder="Explique o cenário atual, o que precisa melhorar e, se souber, o prazo desejado." /></label>
+
+        <div className="form-section-label">
+          <span>02 · NECESSIDADE</span>
+          <small>Essas informações ajudam a HRX a preparar um escopo mais preciso.</small>
+        </div>
+
+        <div className="form-row quote-qualifier-grid">
+          <label>
+            Principal necessidade
+            <select required name="service" defaultValue="">
+              <option value="" disabled>Selecione uma opção</option>
+              {SERVICE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
+            Prazo desejado
+            <select required name="desiredDeadline" defaultValue="">
+              <option value="" disabled>Selecione o prazo</option>
+              <option value="urgente ate 7 dias">Urgente · até 7 dias</option>
+              <option value="entre 2 e 4 semanas">Entre 2 e 4 semanas</option>
+              <option value="entre 1 e 3 meses">Entre 1 e 3 meses</option>
+              <option value="sem prazo definido">Ainda sem prazo definido</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Conte o cenário e o resultado que você precisa<textarea required minLength={20} name="message" rows={5} placeholder="Ex.: hoje controlamos o processo em planilhas e precisamos centralizar as informações, reduzir retrabalho e acompanhar indicadores." /></label>
+
+        <div className="form-row quote-qualifier-grid">
+          <label>
+            Preferência de contato
+            <select name="preferredContact" defaultValue="whatsapp">
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">E-mail</option>
+            </select>
+          </label>
+          <div className="quote-next-step" aria-label="Próxima etapa">
+            <span>03 · PRÓXIMA ETAPA</span>
+            <strong>A HRX revisa a demanda antes de precificar.</strong>
+            <small>O formulário não gera preço automático nem compromisso comercial.</small>
+          </div>
+        </div>
 
         <label className="privacy-check">
           <input required type="checkbox" name="privacyConsent" />
@@ -115,7 +170,7 @@ export default function QuoteContactForm() {
           <button type="submit" className="button button-primary form-button" disabled={submitState === 'sending'}>
             {submitState === 'sending' ? 'Enviando solicitação…' : 'Enviar para análise'} <span>{submitState === 'sending' ? '···' : '→'}</span>
           </button>
-          <small>Você não recebe preço automático. A proposta só é enviada depois da validação da HRX.</small>
+          <small>Depois da análise, a HRX define escopo, prazo e proposta com base na necessidade informada.</small>
         </div>
       </form>
 
@@ -125,7 +180,7 @@ export default function QuoteContactForm() {
             <div className="success-mark" aria-hidden="true">✓</div>
             <p className="eyebrow">SOLICITAÇÃO RECEBIDA</p>
             <h3 id="success-title">Sua demanda entrou para análise.</h3>
-            <p>A HRX vai revisar as informações antes de definir escopo, prazo e proposta. O retorno será feito pelos canais informados.</p>
+            <p>A HRX vai revisar as informações antes de definir escopo, prazo e proposta. O retorno será feito pelo canal informado.</p>
             {protocol && <div className="protocol-box"><span>Protocolo</span><strong>{protocol}</strong></div>}
             <button className="button button-primary" type="button" onClick={closeSuccess}>Concluir <span>→</span></button>
           </section>
