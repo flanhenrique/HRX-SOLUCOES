@@ -1,0 +1,44 @@
+.contact-channels{
+  display:grid;
+  gap:10px;
+  margin:24px 0 18px;
+}
+
+.contact-channels a{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:13px 15px;
+  border:1px solid rgba(179,216,237,.14);
+  border-radius:14px;
+  background:rgba(255,255,255,.035);
+  color:inherit;
+  text-decoration:none;
+  transition:border-color .2s ease,background .2s ease,transform .2s ease;
+}
+
+.contact-channels a:hover{
+  border-color:rgba(105,216,58,.45);
+  background:rgba(105,216,58,.055);
+  transform:translateY(-1px);
+}
+
+.contact-channels span{
+  color:#8da5b8;
+  font-size:.7rem;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.contact-channels strong{
+  color:#e9f3f8;
+  font-size:.92rem;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:520px){
+  .contact-channels{margin-top:20px}
+  .contact-channels a{padding:12px 13px}
+  .contact-channels strong{font-size:.84rem}
+}

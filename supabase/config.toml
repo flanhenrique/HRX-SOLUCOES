@@ -1,0 +1,7 @@
+project_id = "tgcdkofplegmjvvkheyd"
+
+[functions.quote-intake]
+verify_jwt = false
+
+[functions.quote-admin]
+verify_jwt = true
