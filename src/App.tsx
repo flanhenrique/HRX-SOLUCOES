@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import './fidelity.css'
 import './refinement.css'
+import './contact.css'
 import QuoteRequestForm from './quotes/QuoteRequestForm'
-import BudgetAdminPreview from './quotes/BudgetAdminPreview'
+import AdminQuotes from './quotes/AdminQuotes'
 
 type Solution = { icon: string; title: string; description: string }
 type Project = {
@@ -17,6 +18,8 @@ type Project = {
 const VOLT_ICON = 'https://raw.githubusercontent.com/flanhenrique/Volt-consumo/main/icon.svg'
 const SOMMA_LOGO = 'https://raw.githubusercontent.com/flanhenrique/somma/main/assets/logo-somma-hq.webp'
 const SOMMA_HERO = 'https://raw.githubusercontent.com/flanhenrique/somma/main/assets/hotel-hero-reference.jpg'
+const CONTACT_EMAIL = 'contato@hrxsolutions.com.br'
+const COMMERCIAL_EMAIL = 'comercial@hrxsolutions.com.br'
 
 const solutions: Solution[] = [
   { icon: '◎', title: 'Gestão', description: 'Organizamos operações, estruturas e rotinas para gerar mais eficiência, controle e clareza.' },
@@ -158,11 +161,10 @@ function ProjectVisual({ id }: { id: Project['id'] }) {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeMenu = () => setMenuOpen(false)
-  const adminPreviewEnabled = import.meta.env.VITE_HRX_ADMIN_UI === 'true'
   const adminRoute = window.location.pathname.includes('/admin/orcamentos') || window.location.hash === '#admin/orcamentos'
 
-  if (adminPreviewEnabled && adminRoute) {
-    return <BudgetAdminPreview />
+  if (adminRoute) {
+    return <AdminQuotes />
   }
 
   return (
@@ -265,6 +267,10 @@ export default function App() {
               <p className="eyebrow">SOLICITE UMA PROPOSTA</p>
               <h2>Conte o que você precisa. A análise vem antes do preço.</h2>
               <p>Você descreve o contexto e a necessidade. A HRX interpreta o pedido, estrutura um escopo e valida internamente antes de retornar qualquer orçamento.</p>
+              <div className="contact-channels" aria-label="Canais de e-mail da HRX">
+                <a href={`mailto:${CONTACT_EMAIL}`}><span>Contato geral</span><strong>{CONTACT_EMAIL}</strong></a>
+                <a href={`mailto:${COMMERCIAL_EMAIL}`}><span>Comercial e propostas</span><strong>{COMMERCIAL_EMAIL}</strong></a>
+              </div>
               <div className="location-pill">Manaus, Amazonas · Brasil</div>
             </div>
             <QuoteRequestForm />
