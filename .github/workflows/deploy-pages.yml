@@ -35,10 +35,18 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Prepare direct admin route
+      - name: Prepare direct admin PWA route
         run: |
           mkdir -p dist/admin/orcamentos
           cp dist/index.html dist/admin/orcamentos/index.html
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('dist/admin/orcamentos/index.html')
+          html = path.read_text()
+          tags = '''\n    <link rel="manifest" href="/admin/manifest.webmanifest" />\n    <meta name="theme-color" content="#061a31" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-title" content="HRX Admin" />\n    <link rel="apple-touch-icon" href="/admin/hrx-admin-icon.svg" />'''
+          html = html.replace('</head>', f'{tags}\n  </head>')
+          path.write_text(html)
+          PY
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

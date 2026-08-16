@@ -1,0 +1,28 @@
+{
+  "id": "/admin/orcamentos",
+  "name": "HRX Admin",
+  "short_name": "HRX Admin",
+  "description": "Ambiente administrativo da HRX Solutions para solicitações, orçamentos e operações internas.",
+  "start_url": "/admin/orcamentos",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#061a31",
+  "theme_color": "#061a31",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/admin/hrx-admin-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Orçamentos",
+      "short_name": "Orçamentos",
+      "url": "/admin/orcamentos"
+    }
+  ]
+}
