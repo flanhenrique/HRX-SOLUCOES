@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
+  <title id="title">SOMMA Consultoria Hoteleira &amp; Condomínios</title>
+  <desc id="desc">Logo vetorial da SOMMA com símbolo dourado, traços arquitetônicos brancos e tipografia clara.</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f1bd26"/>
+      <stop offset="0.55" stop-color="#dca500"/>
+      <stop offset="1" stop-color="#b97800"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(18 18)">
+    <circle cx="310" cy="300" r="185" fill="url(#gold)"/>
+    <g fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 228 L122 135 L176 171"/>
+      <path d="M18 228 H62 V344 H246 V126 H344 V344 H432 V0 H548 V344 H690 V184 H616"/>
+      <path d="M146 390 Q310 315 474 390"/>
+      <path d="M158 432 Q310 365 462 432"/>
+      <path d="M188 470 Q310 421 432 470"/>
+    </g>
+    <g transform="translate(720 164)">
+      <text x="0" y="110" fill="#ffffff" font-family="Jost, Arial, sans-serif" font-size="124" font-weight="300" letter-spacing="15">SOMMA</text>
+      <text x="0" y="202" fill="#cdb08f" font-family="Jost, Arial, sans-serif" font-size="48" font-weight="300" letter-spacing="14">CONSULTORIA</text>
+      <text x="0" y="274" fill="#cdb08f" font-family="Jost, Arial, sans-serif" font-size="48" font-weight="300" letter-spacing="14">HOTELEIRA &amp;</text>
+      <text x="0" y="346" fill="#cdb08f" font-family="Jost, Arial, sans-serif" font-size="48" font-weight="300" letter-spacing="14">CONDOMÍNIOS</text>
+    </g>
+  </g>
+</svg>
