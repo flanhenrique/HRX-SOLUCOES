@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './fidelity.css'
 import './refinement.css'
 import './premium-polish.css'
+import './paged-navigation.css'
 import QuoteContactForm from './QuoteContactForm'
 
 type Solution = { icon: string; title: string; description: string }
@@ -12,6 +13,17 @@ type Project = {
   tag: string
   href?: string
   linkLabel?: string
+}
+
+type PageId = 'inicio' | 'solucoes' | 'projetos' | 'sobre' | 'contato'
+
+const PAGE_IDS: PageId[] = ['inicio', 'solucoes', 'projetos', 'sobre', 'contato']
+const PAGE_TITLES: Record<PageId, string> = {
+  inicio: 'Início',
+  solucoes: 'Soluções',
+  projetos: 'Projetos',
+  sobre: 'Sobre',
+  contato: 'Contato',
 }
 
 const VOLT_ICON = 'https://raw.githubusercontent.com/flanhenrique/Volt-consumo/main/icon.svg'
@@ -51,6 +63,11 @@ const projects: Project[] = [
   },
 ]
 
+function hashPage(): PageId {
+  const candidate = window.location.hash.replace('#', '') as PageId
+  return PAGE_IDS.includes(candidate) ? candidate : 'inicio'
+}
+
 function Brand() {
   return (
     <a className="brand brand-authentic" href="#inicio" aria-label="HRX Solutions - início">
@@ -76,12 +93,12 @@ function HeroShowcase() {
         <span className="showcase-action">Abrir projeto ↗</span>
       </a>
 
-      <div className="showcase-card showcase-nexus authentic-nexus">
+      <a className="showcase-card showcase-nexus authentic-nexus" href="#projetos">
         <span className="nexus-wordmark">NEXUS</span>
         <strong>Gestão comercial e operacional.</strong>
         <p>Informação centralizada para apoiar execução e decisão.</p>
         <div className="nexus-grid" aria-hidden="true"><i /><i /><i /><i /></div>
-      </div>
+      </a>
 
       <a
         className="showcase-card showcase-somma authentic-somma"
@@ -100,22 +117,49 @@ function HeroShowcase() {
 
 function VoltPreview() {
   return (
-    <div className="project-visual real-preview volt-real-preview" aria-label="Prévia visual do VOLT">
-      <div className="volt-browser">
-        <div className="volt-browser-top"><i /><i /><i /><span>voltconsumo.com.br</span></div>
-        <div className="volt-auth">
-          <div className="volt-auth-branding">
-            <div className="volt-lockup"><img src={VOLT_ICON} alt="" /><b>VOLT<small>CONSUMO</small></b></div>
-            <span>CONTROLE COM CLAREZA</span>
-            <strong>Seu consumo mais claro.</strong>
-            <p>Registre o medidor, acompanhe energia e água e antecipe seus gastos em um só lugar.</p>
-          </div>
-          <div className="volt-auth-form">
-            <span>ACESSE SUA CONTA</span>
-            <b>Entrar no Volt</b>
-            <i className="volt-input" />
-            <i className="volt-input" />
-            <i className="volt-button">Entrar</i>
+    <div className="project-visual real-preview volt-real-preview" aria-label="Tela inicial do VOLT">
+      <div className="project-browser volt-browser volt-dashboard-browser">
+        <div className="project-browser-top"><i /><i /><i /><span>voltconsumo.com.br</span></div>
+        <div className="volt-dashboard-shot">
+          <aside className="volt-mini-sidebar">
+            <div className="volt-lockup volt-dashboard-lockup"><img src={VOLT_ICON} alt="" /><b>VOLT<small>CONSUMO</small></b></div>
+            <span className="volt-mini-nav active">⌂ <b>Início</b></span>
+            <span className="volt-mini-nav">▥ <b>Consumo</b></span>
+            <span className="volt-mini-nav">▤ <b>Leituras</b></span>
+            <span className="volt-mini-nav">◌ <b>Alertas</b></span>
+          </aside>
+          <div className="volt-mini-main">
+            <div className="volt-mini-heading">
+              <div><span>VISÃO GERAL</span><strong>Olá, Henrique!</strong></div>
+              <span className="volt-cycle-pill">Ciclo atual</span>
+            </div>
+            <div className="volt-utility-grid">
+              <article className="volt-utility-card energy">
+                <span>ENERGIA</span>
+                <strong>50 kWh</strong>
+                <small>Última leitura: 28.402 kWh</small>
+                <i><b style={{ width: '42%' }} /></i>
+                <em>Dentro da meta</em>
+              </article>
+              <article className="volt-utility-card water">
+                <span>ÁGUA</span>
+                <strong>—</strong>
+                <small>Aguardando nova leitura</small>
+                <i><b style={{ width: '8%' }} /></i>
+                <em>Sem leitura no período</em>
+              </article>
+            </div>
+            <div className="volt-mini-lower">
+              <article className="volt-mini-chart">
+                <span>EVOLUÇÃO DO CONSUMO</span>
+                <div aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+              </article>
+              <article className="volt-mini-insight">
+                <span>INSIGHT</span>
+                <strong>Consumo dentro do planejado</strong>
+                <p>Acompanhe suas próximas leituras para manter a projeção atualizada.</p>
+              </article>
+            </div>
           </div>
         </div>
       </div>
@@ -125,12 +169,26 @@ function VoltPreview() {
 
 function NexusPreview() {
   return (
-    <div className="project-visual real-preview nexus-hold-preview" aria-label="NEXUS - plataforma interna">
-      <div className="nexus-hold-card">
-        <span className="nexus-wordmark">NEXUS</span>
-        <strong>Operação conectada</strong>
-        <p>Uma visão central para organizar informações comerciais, contratos, atividades e acompanhamento operacional.</p>
-        <div className="nexus-hold-lines" aria-hidden="true"><i /><i /><i /></div>
+    <div className="project-visual real-preview nexus-login-preview" aria-label="Tela de login do MAP.i Nexus">
+      <div className="project-browser nexus-browser">
+        <div className="project-browser-top nexus-browser-top"><i /><i /><i /><span>MAP.i Nexus · acesso interno</span></div>
+        <div className="nexus-login-shot">
+          <section className="nexus-login-branding">
+            <span className="nexus-map-mark">MAP.i</span>
+            <strong>NEXUS</strong>
+            <p>Inteligência para gestão comercial e operacional.</p>
+            <div className="nexus-login-grid" aria-hidden="true"><i /><i /><i /><i /></div>
+          </section>
+          <section className="nexus-login-form">
+            <span>ACESSO À PLATAFORMA</span>
+            <strong>Bem-vindo ao Nexus</strong>
+            <p>Entre com suas credenciais para continuar.</p>
+            <label><small>E-mail</small><i>nome@empresa.com.br</i></label>
+            <label><small>Senha</small><i>••••••••••</i></label>
+            <button type="button">Entrar</button>
+            <em>Ambiente interno · MAP Inteligência</em>
+          </section>
+        </div>
       </div>
     </div>
   )
@@ -138,12 +196,21 @@ function NexusPreview() {
 
 function SommaPreview() {
   return (
-    <div className="project-visual real-preview somma-real-preview" aria-label="Prévia visual da SOMMA">
-      <div className="somma-site-shot" style={{ backgroundImage: `linear-gradient(90deg, rgba(17,17,20,.9), rgba(17,17,20,.34)), url(${SOMMA_HERO})` }}>
-        <img src={SOMMA_LOGO} alt="SOMMA Consultoria Hoteleira & Condomínios" />
-        <span>APRESENTAÇÃO INSTITUCIONAL</span>
-        <strong>Gestão financeira, controladoria e processos <em>com resultado comprovado.</em></strong>
-        <p>Diagnóstico, implantação e acompanhamento contínuo.</p>
+    <div className="project-visual real-preview somma-real-preview" aria-label="Visualização do site da SOMMA">
+      <div className="project-browser somma-browser">
+        <div className="project-browser-top somma-browser-top"><i /><i /><i /><span>sommaconsulthtl.com.br</span></div>
+        <div className="somma-site-shot" style={{ backgroundImage: `linear-gradient(90deg, rgba(17,17,20,.92), rgba(17,17,20,.30)), url(${SOMMA_HERO})` }}>
+          <div className="somma-mini-nav">
+            <img src={SOMMA_LOGO} alt="SOMMA Consultoria Hoteleira & Condomínios" />
+            <span>Início</span><span>Soluções</span><span>Sobre</span><span>Cases</span><span>Contato</span>
+          </div>
+          <div className="somma-mini-copy">
+            <span>CONSULTORIA HOTELEIRA & CONDOMÍNIOS</span>
+            <strong>Gestão financeira, controladoria e processos <em>com resultado comprovado.</em></strong>
+            <p>Diagnóstico, implantação e acompanhamento contínuo.</p>
+            <i>Conheça nossas soluções →</i>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -157,29 +224,31 @@ function ProjectVisual({ id }: { id: Project['id'] }) {
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState('inicio')
+  const [activeSection, setActiveSection] = useState<PageId>(() => hashPage())
   const closeMenu = () => setMenuOpen(false)
 
   useEffect(() => {
-    const sectionIds = ['inicio', 'solucoes', 'projetos', 'sobre', 'contato']
-    const sections = sectionIds.map((id) => document.getElementById(id)).filter((section): section is HTMLElement => Boolean(section))
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-        if (visible?.target.id) setActiveSection(visible.target.id)
-      },
-      { rootMargin: '-18% 0px -58% 0px', threshold: [0, .2, .45, .7] },
-    )
-    sections.forEach((section) => observer.observe(section))
-    return () => observer.disconnect()
+    const syncPage = () => {
+      const nextPage = hashPage()
+      setActiveSection(nextPage)
+      setMenuOpen(false)
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+
+    syncPage()
+    window.addEventListener('hashchange', syncPage)
+    return () => window.removeEventListener('hashchange', syncPage)
   }, [])
 
-  const navClass = (section: string, extra = '') => `${activeSection === section ? 'is-active ' : ''}${extra}`.trim()
+  useEffect(() => {
+    document.title = `${PAGE_TITLES[activeSection]} | HRX Solutions`
+  }, [activeSection])
+
+  const navClass = (section: PageId, extra = '') => `${activeSection === section ? 'is-active ' : ''}${extra}`.trim()
+  const pageClass = (section: PageId, extra = '') => `page-view ${activeSection === section ? 'is-active ' : ''}${extra}`.trim()
 
   return (
-    <div className="site-shell">
+    <div className="site-shell paged-site-shell">
       <header className="site-header">
         <div className="container header-inner">
           <Brand />
@@ -195,8 +264,8 @@ export default function App() {
         </div>
       </header>
 
-      <main>
-        <section id="inicio" className="hero section-grid">
+      <main className="paged-main">
+        <section id="inicio" className={pageClass('inicio', 'hero section-grid')} aria-hidden={activeSection !== 'inicio'}>
           <div className="hero-glow hero-glow-one" /><div className="hero-glow hero-glow-two" /><div className="x-lines" aria-hidden="true"><i /><i /><i /></div>
           <div className="container hero-grid">
             <div className="hero-copy">
@@ -215,7 +284,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="solucoes" className="section solutions-section">
+        <section id="solucoes" className={pageClass('solucoes', 'section solutions-section')} aria-hidden={activeSection !== 'solucoes'}>
           <div className="container section-layout">
             <div className="section-intro">
               <p className="eyebrow">NOSSAS SOLUÇÕES</p>
@@ -235,7 +304,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="projetos" className="section projects-section">
+        <section id="projetos" className={pageClass('projetos', 'section projects-section')} aria-hidden={activeSection !== 'projetos'}>
           <div className="container">
             <div className="section-heading-row">
               <div><p className="eyebrow">NOSSOS PROJETOS</p><h2>Produtos e projetos que nascem de problemas reais.</h2></div>
@@ -261,7 +330,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="sobre" className="section about-section">
+        <section id="sobre" className={pageClass('sobre', 'section about-section')} aria-hidden={activeSection !== 'sobre'}>
           <div className="container about-grid">
             <div className="manaus-panel" aria-hidden="true"><div className="map-outline"><span className="map-pin">●</span></div><strong>Manaus / AM</strong></div>
             <div className="about-copy">
@@ -273,7 +342,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="contato" className="section contact-section">
+        <section id="contato" className={pageClass('contato', 'section contact-section')} aria-hidden={activeSection !== 'contato'}>
           <div className="container contact-grid">
             <div className="contact-copy">
               <p className="eyebrow">SOLICITE UMA PROPOSTA</p>
@@ -315,7 +384,7 @@ export default function App() {
           <div className="footer-meta">
             <span>© 2026 HRX Solutions. Todos os direitos reservados.</span>
             <span className="footer-accounting">Responsabilidade contábil: Raisa da Silva Pereira · SOMMA</span>
-            <a href="#inicio">Voltar ao topo ↑</a>
+            <a href="#inicio">Voltar ao início ↑</a>
           </div>
         </div>
       </footer>
