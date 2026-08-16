@@ -1,0 +1,689 @@
+/* Page-based navigation and faithful project previews. */
+
+html {
+  scroll-behavior: auto;
+}
+
+.paged-main {
+  min-height: calc(100svh - 78px);
+}
+
+.page-view {
+  display: none !important;
+}
+
+.page-view.is-active {
+  display: block !important;
+  animation: hrx-page-enter .28s ease both;
+}
+
+@keyframes hrx-page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-view.section,
+.page-view.hero {
+  min-height: calc(100svh - 78px);
+}
+
+.page-view.section {
+  padding-top: clamp(72px, 8vw, 116px);
+  padding-bottom: clamp(72px, 8vw, 116px);
+}
+
+.nav-links a.is-active:not(.nav-cta) {
+  color: #ffffff;
+}
+
+.nav-links a.is-active:not(.nav-cta)::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+/* Shared browser shell */
+.project-browser {
+  width: 96%;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 22px 50px rgba(0,0,0,.28);
+  transform: translateY(25px);
+}
+
+.project-browser-top {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.08);
+  backdrop-filter: blur(16px);
+}
+
+.project-browser-top > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.32);
+}
+
+.project-browser-top > span {
+  margin-left: 8px;
+  overflow: hidden;
+  color: rgba(255,255,255,.58);
+  font-size: .47rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* VOLT dashboard */
+.volt-real-preview {
+  display: grid;
+  place-items: end center;
+  padding: 0 14px;
+}
+
+.volt-dashboard-browser {
+  height: 300px;
+  border-color: rgba(16,37,31,.13);
+  background: #edf6f2;
+  color: #10251f;
+}
+
+.volt-dashboard-browser .project-browser-top {
+  border-bottom-color: rgba(16,37,31,.07);
+  background: rgba(255,255,255,.72);
+}
+
+.volt-dashboard-browser .project-browser-top > i {
+  background: rgba(16,37,31,.22);
+}
+
+.volt-dashboard-browser .project-browser-top > span {
+  color: #70837e;
+}
+
+.volt-dashboard-shot {
+  height: calc(100% - 28px);
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(0,168,120,.12), transparent 9rem),
+    linear-gradient(145deg, #f4faf7, #e5f0ec);
+}
+
+.volt-mini-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 10px;
+  border-right: 1px solid rgba(16,37,31,.07);
+  background: rgba(255,255,255,.54);
+}
+
+.volt-dashboard-lockup {
+  margin: 0 0 13px;
+  gap: 5px;
+}
+
+.volt-dashboard-lockup img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.volt-dashboard-lockup b {
+  font-size: .52rem;
+}
+
+.volt-dashboard-lockup small {
+  margin-top: 2px;
+  font-size: .22rem;
+}
+
+.volt-mini-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 7px;
+  border-radius: 7px;
+  color: #71827d;
+  font-size: .4rem;
+  font-style: normal;
+}
+
+.volt-mini-nav b {
+  font-weight: 700;
+}
+
+.volt-mini-nav.active {
+  color: #006f54;
+  background: rgba(0,168,120,.11);
+}
+
+.volt-mini-main {
+  min-width: 0;
+  padding: 15px 14px 12px;
+}
+
+.volt-mini-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.volt-mini-heading > div > span,
+.volt-utility-card > span,
+.volt-mini-chart > span,
+.volt-mini-insight > span {
+  display: block;
+  color: #008567;
+  font-size: .29rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.volt-mini-heading strong {
+  display: block;
+  margin-top: 2px;
+  color: #10251f;
+  font-size: .82rem;
+}
+
+.volt-cycle-pill {
+  padding: 4px 8px;
+  border: 1px solid rgba(0,168,120,.13);
+  border-radius: 999px;
+  background: rgba(255,255,255,.65);
+  color: #52736a;
+  font-size: .31rem;
+  font-weight: 700;
+}
+
+.volt-utility-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.volt-utility-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(16,37,31,.07);
+  border-radius: 11px;
+  background: rgba(255,255,255,.68);
+  box-shadow: 0 8px 18px rgba(33,80,65,.06);
+}
+
+.volt-utility-card.water > span {
+  color: #3c82af;
+}
+
+.volt-utility-card strong {
+  display: block;
+  margin-top: 5px;
+  color: #10251f;
+  font-size: .75rem;
+}
+
+.volt-utility-card small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #6e817b;
+  font-size: .27rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.volt-utility-card > i {
+  display: block;
+  height: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(16,37,31,.08);
+}
+
+.volt-utility-card > i b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #00a878;
+}
+
+.volt-utility-card.water > i b {
+  background: #4f9ec9;
+}
+
+.volt-utility-card em {
+  display: block;
+  margin-top: 5px;
+  color: #53806f;
+  font-size: .25rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.volt-mini-lower {
+  display: grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.volt-mini-chart,
+.volt-mini-insight {
+  min-width: 0;
+  height: 76px;
+  padding: 9px;
+  border: 1px solid rgba(16,37,31,.07);
+  border-radius: 10px;
+  background: rgba(255,255,255,.62);
+}
+
+.volt-mini-chart > div {
+  height: 46px;
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  padding-top: 9px;
+}
+
+.volt-mini-chart > div i {
+  flex: 1;
+  min-width: 3px;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #18bc8a, #78d7bc);
+}
+
+.volt-mini-chart > div i:nth-child(1) { height: 33%; }
+.volt-mini-chart > div i:nth-child(2) { height: 54%; }
+.volt-mini-chart > div i:nth-child(3) { height: 42%; }
+.volt-mini-chart > div i:nth-child(4) { height: 76%; }
+.volt-mini-chart > div i:nth-child(5) { height: 58%; }
+.volt-mini-chart > div i:nth-child(6) { height: 84%; }
+.volt-mini-chart > div i:nth-child(7) { height: 67%; }
+.volt-mini-chart > div i:nth-child(8) { height: 45%; }
+
+.volt-mini-insight strong {
+  display: block;
+  margin-top: 6px;
+  color: #193f34;
+  font-size: .42rem;
+  line-height: 1.1;
+}
+
+.volt-mini-insight p {
+  margin: 4px 0 0;
+  color: #71827d;
+  font-size: .27rem;
+  line-height: 1.35;
+}
+
+/* NEXUS login */
+.nexus-login-preview {
+  display: grid;
+  place-items: end center;
+  padding: 0 14px;
+}
+
+.nexus-browser {
+  height: 300px;
+  background: #091d31;
+}
+
+.nexus-browser-top {
+  background: rgba(4,20,34,.92);
+}
+
+.nexus-login-shot {
+  height: calc(100% - 28px);
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(89,214,61,.15), transparent 11rem),
+    radial-gradient(circle at 76% 12%, rgba(46,154,220,.12), transparent 12rem),
+    #0b2b49;
+}
+
+.nexus-login-branding {
+  position: relative;
+  overflow: hidden;
+  padding: 27px 24px;
+  border-right: 1px solid rgba(255,255,255,.07);
+}
+
+.nexus-map-mark {
+  display: block;
+  color: #7de14b;
+  font-size: .58rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.nexus-login-branding > strong {
+  display: block;
+  margin-top: 9px;
+  color: #f2f7fb;
+  font-size: 1.25rem;
+  letter-spacing: .19em;
+}
+
+.nexus-login-branding > p {
+  max-width: 145px;
+  margin: 17px 0 0;
+  color: #a7bac8;
+  font-size: .45rem;
+  line-height: 1.5;
+}
+
+.nexus-login-grid {
+  position: absolute;
+  right: -18px;
+  bottom: -14px;
+  display: grid;
+  grid-template-columns: repeat(2, 54px);
+  gap: 7px;
+  transform: rotate(-7deg);
+}
+
+.nexus-login-grid i {
+  height: 54px;
+  border: 1px solid rgba(125,225,75,.15);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+}
+
+.nexus-login-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px 22px;
+  background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+}
+
+.nexus-login-form > span {
+  color: #79db48;
+  font-size: .3rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.nexus-login-form > strong {
+  margin-top: 5px;
+  color: #f4f8fb;
+  font-size: .75rem;
+}
+
+.nexus-login-form > p {
+  margin: 4px 0 9px;
+  color: #91a8b8;
+  font-size: .31rem;
+}
+
+.nexus-login-form label {
+  display: block;
+  margin-top: 6px;
+}
+
+.nexus-login-form label small {
+  display: block;
+  margin-bottom: 3px;
+  color: #b6c6d2;
+  font-size: .26rem;
+}
+
+.nexus-login-form label i {
+  display: flex;
+  align-items: center;
+  height: 25px;
+  padding: 0 8px;
+  border: 1px solid rgba(173,205,226,.13);
+  border-radius: 7px;
+  background: rgba(5,24,41,.42);
+  color: #728b9d;
+  font-size: .28rem;
+  font-style: normal;
+}
+
+.nexus-login-form button {
+  height: 25px;
+  margin-top: 9px;
+  border: 0;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #6bd63c, #55c84a);
+  color: #0c2a24;
+  font-size: .29rem;
+  font-weight: 900;
+}
+
+.nexus-login-form em {
+  margin-top: 7px;
+  color: #6f8798;
+  font-size: .24rem;
+  font-style: normal;
+  text-align: center;
+}
+
+/* SOMMA website */
+.somma-real-preview {
+  display: grid;
+  place-items: end center;
+  padding: 0 14px;
+}
+
+.somma-browser {
+  height: 300px;
+  background: #111216;
+}
+
+.somma-browser-top {
+  background: #15161a;
+}
+
+.somma-site-shot {
+  width: 100%;
+  height: calc(100% - 28px);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.somma-mini-nav {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 17px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(14,14,17,.44);
+  backdrop-filter: blur(10px);
+}
+
+.somma-mini-nav img {
+  width: 92px;
+  max-height: 32px;
+  margin-right: auto;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.somma-mini-nav span {
+  color: rgba(255,255,255,.72);
+  font-size: .25rem;
+}
+
+.somma-mini-copy {
+  max-width: 245px;
+  padding: 34px 20px 18px;
+}
+
+.somma-mini-copy > span {
+  display: block;
+  color: #c8a66f;
+  font-size: .3rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.somma-mini-copy strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: .92rem;
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.somma-mini-copy strong em {
+  color: #d5b57f;
+  font-style: italic;
+}
+
+.somma-mini-copy p {
+  margin: 7px 0 0;
+  color: rgba(255,255,255,.72);
+  font-size: .35rem;
+  line-height: 1.45;
+}
+
+.somma-mini-copy i {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 6px 9px;
+  border: 1px solid rgba(210,177,119,.38);
+  border-radius: 999px;
+  color: #e1c28c;
+  font-size: .28rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Projects page gets enough room without restoring one-page scrolling. */
+.page-view.projects-section .projects-grid {
+  margin-top: 34px;
+}
+
+.page-view.projects-section .project-card {
+  min-height: 540px;
+}
+
+.page-view.projects-section .project-copy p {
+  min-height: 94px;
+}
+
+@media (max-width: 1050px) {
+  .page-view.section,
+  .page-view.hero {
+    min-height: auto;
+  }
+
+  .page-view.projects-section .project-card {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 760px) {
+  .paged-main {
+    min-height: calc(100svh - 68px);
+  }
+
+  .page-view.section {
+    padding-top: 54px;
+    padding-bottom: 66px;
+  }
+
+  .page-view.hero {
+    min-height: calc(100svh - 68px);
+  }
+
+  .project-browser,
+  .volt-dashboard-browser,
+  .nexus-browser,
+  .somma-browser {
+    width: 100%;
+    height: 272px;
+  }
+
+  .volt-dashboard-shot {
+    grid-template-columns: 58px 1fr;
+  }
+
+  .volt-mini-sidebar {
+    padding: 12px 6px;
+  }
+
+  .volt-dashboard-lockup b,
+  .volt-mini-nav b {
+    display: none;
+  }
+
+  .volt-mini-nav {
+    justify-content: center;
+    font-size: .52rem;
+  }
+
+  .volt-mini-main {
+    padding: 12px 9px 10px;
+  }
+
+  .volt-mini-lower {
+    grid-template-columns: 1fr;
+  }
+
+  .volt-mini-insight {
+    display: none;
+  }
+
+  .nexus-login-shot {
+    grid-template-columns: .9fr 1.1fr;
+  }
+
+  .nexus-login-branding {
+    padding: 22px 14px;
+  }
+
+  .nexus-login-branding > strong {
+    font-size: .95rem;
+  }
+
+  .nexus-login-branding > p {
+    font-size: .36rem;
+  }
+
+  .nexus-login-form {
+    padding: 18px 12px;
+  }
+
+  .somma-mini-nav span {
+    display: none;
+  }
+
+  .somma-mini-copy {
+    max-width: 215px;
+    padding: 31px 16px 16px;
+  }
+
+  .somma-mini-copy strong {
+    font-size: .82rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-view.is-active {
+    animation: none;
+  }
+}
