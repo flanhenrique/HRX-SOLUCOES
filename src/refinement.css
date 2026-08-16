@@ -1,0 +1,490 @@
+/* Final layout pass: hierarchy, mobile composition and more balanced project cards. */
+
+.hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 120px;
+  opacity: .18;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,
+      transparent 0 3%, rgba(198,221,236,.3) 3% 5%, transparent 5% 8%,
+      rgba(198,221,236,.24) 8% 10%, transparent 10% 13%, rgba(198,221,236,.27) 13% 17%,
+      transparent 17% 21%, rgba(198,221,236,.22) 21% 24%, transparent 24% 29%,
+      rgba(198,221,236,.28) 29% 33%, transparent 33% 39%, rgba(198,221,236,.2) 39% 43%,
+      transparent 43% 49%, rgba(198,221,236,.26) 49% 52%, transparent 52% 58%,
+      rgba(198,221,236,.2) 58% 63%, transparent 63% 68%, rgba(198,221,236,.25) 68% 72%,
+      transparent 72% 78%, rgba(198,221,236,.22) 78% 83%, transparent 83% 88%,
+      rgba(198,221,236,.28) 88% 92%, transparent 92% 100%);
+  clip-path: polygon(0 70%,3% 70%,3% 36%,5% 36%,5% 64%,8% 64%,8% 45%,10% 45%,10% 74%,13% 74%,13% 28%,17% 28%,17% 68%,21% 68%,21% 48%,24% 48%,24% 76%,29% 76%,29% 34%,33% 34%,33% 70%,39% 70%,39% 52%,43% 52%,43% 72%,49% 72%,49% 40%,52% 40%,52% 70%,58% 70%,58% 47%,63% 47%,63% 75%,68% 75%,68% 31%,72% 31%,72% 68%,78% 68%,78% 44%,83% 44%,83% 73%,88% 73%,88% 26%,92% 26%,92% 66%,100% 66%,100% 100%,0 100%);
+}
+
+.hero-grid {
+  grid-template-columns: minmax(0, .95fr) minmax(520px, 1.05fr);
+  gap: 54px;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-copy .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-copy .eyebrow::before {
+  content: '';
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--green), transparent);
+}
+
+.hero h1 {
+  max-width: 700px;
+  text-wrap: balance;
+}
+
+.hero-text {
+  max-width: 560px;
+}
+
+.hero-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 26px;
+}
+
+.hero-pill-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 31px;
+  padding: 0 12px;
+  border: 1px solid rgba(179, 216, 237, .15);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .035);
+  color: #b9cbd8;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+
+.authentic-showcase {
+  width: min(100%, 610px);
+  margin-left: auto;
+}
+
+.authentic-showcase .showcase-card {
+  isolation: isolate;
+}
+
+.authentic-showcase .showcase-card::after {
+  z-index: -1;
+}
+
+.authentic-nexus {
+  left: 24%;
+}
+
+.authentic-somma {
+  right: 1%;
+}
+
+.section-intro,
+.section-heading-row > div,
+.about-copy,
+.contact-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.solution-card,
+.project-card,
+.manaus-panel,
+.contact-form {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 18px 45px rgba(0, 14, 31, .12);
+}
+
+.solution-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.solution-card p {
+  flex: 1;
+}
+
+.projects-grid {
+  align-items: stretch;
+}
+
+.project-card {
+  grid-template-rows: minmax(235px, auto) 1fr;
+}
+
+.project-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-copy p {
+  flex: 1;
+}
+
+.project-status {
+  margin-top: 4px;
+}
+
+.real-preview {
+  align-self: end;
+}
+
+.nexus-hold-card {
+  min-height: 230px;
+}
+
+.nexus-hold-card p {
+  max-width: 275px;
+}
+
+.contact-form input,
+.contact-form textarea {
+  min-height: 48px;
+}
+
+.contact-form textarea {
+  min-height: 132px;
+}
+
+@media (max-width: 1180px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .hero-copy {
+    max-width: 760px;
+  }
+
+  .authentic-showcase {
+    width: min(100%, 760px);
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 1050px) {
+  .project-card {
+    grid-template-columns: .82fr 1.18fr;
+    grid-template-rows: 1fr;
+    min-height: 360px;
+  }
+
+  .project-copy {
+    align-self: stretch;
+    justify-content: center;
+    padding: 30px;
+  }
+
+  .real-preview {
+    align-self: stretch;
+    min-height: 100%;
+  }
+
+  .volt-real-preview,
+  .somma-real-preview,
+  .nexus-hold-preview {
+    display: grid;
+    align-items: end;
+  }
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    backdrop-filter: blur(24px);
+  }
+
+  .hero-grid {
+    padding-top: 52px;
+    padding-bottom: 54px;
+  }
+
+  .hero-copy {
+    text-align: left;
+  }
+
+  .hero h1 {
+    max-width: 620px;
+    margin-bottom: 22px;
+    font-size: clamp(3rem, 13vw, 4.6rem);
+    line-height: .94;
+  }
+
+  .hero-text {
+    margin-bottom: 28px;
+  }
+
+  .hero-pill-row {
+    margin-top: 20px;
+  }
+
+  .hero-pill-row span {
+    min-height: 29px;
+    padding: 0 10px;
+    font-size: .67rem;
+  }
+
+  .authentic-showcase {
+    width: min(100%, 520px);
+    min-height: 430px;
+    margin-top: 2px;
+  }
+
+  .authentic-volt {
+    left: 0;
+    top: 62px;
+    width: 148px;
+    height: 270px;
+  }
+
+  .authentic-nexus {
+    left: 28%;
+    top: 8px;
+    width: 250px;
+    height: 200px;
+  }
+
+  .authentic-somma {
+    top: 192px;
+    right: 0;
+    width: 182px;
+    height: 225px;
+  }
+
+  .project-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    min-height: 0;
+  }
+
+  .project-copy {
+    padding: 25px 24px 16px;
+  }
+
+  .project-copy p {
+    min-height: 0;
+  }
+
+  .real-preview {
+    min-height: 250px;
+  }
+
+  .volt-browser {
+    height: 270px;
+  }
+
+  .somma-site-shot {
+    min-height: 245px;
+  }
+
+  .section-heading-row h2,
+  .section-intro h2,
+  .about-copy h2,
+  .contact-copy h2 {
+    text-wrap: balance;
+  }
+}
+
+@media (max-width: 520px) {
+  .container {
+    width: min(100% - 28px, 440px);
+  }
+
+  .hero-grid {
+    padding-top: 42px;
+  }
+
+  .hero-copy .eyebrow {
+    font-size: .68rem;
+    letter-spacing: .12em;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.85rem, 14vw, 3.75rem);
+  }
+
+  .hero-actions {
+    gap: 10px;
+  }
+
+  .button {
+    min-height: 52px;
+    border-radius: 12px;
+  }
+
+  .hero-pill-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hero-pill-row span {
+    justify-content: center;
+  }
+
+  .authentic-showcase {
+    min-height: 380px;
+  }
+
+  .authentic-volt {
+    left: 0;
+    top: 55px;
+    width: 136px;
+    height: 244px;
+    padding: 15px;
+  }
+
+  .showcase-brand-row {
+    gap: 8px;
+  }
+
+  .showcase-brand-row img {
+    width: 31px;
+    height: 31px;
+  }
+
+  .showcase-brand-row > span {
+    font-size: .88rem;
+  }
+
+  .authentic-volt strong {
+    margin-top: 20px;
+    font-size: 1.02rem;
+  }
+
+  .authentic-volt p {
+    font-size: .68rem;
+  }
+
+  .authentic-nexus {
+    left: 25%;
+    width: 225px;
+    height: 178px;
+    padding: 17px;
+  }
+
+  .nexus-wordmark {
+    font-size: 1rem;
+  }
+
+  .authentic-nexus strong {
+    max-width: 175px;
+    margin-top: 12px;
+    font-size: 1rem;
+  }
+
+  .authentic-nexus p {
+    max-width: 150px;
+    font-size: .66rem;
+  }
+
+  .nexus-grid {
+    opacity: .7;
+  }
+
+  .authentic-somma {
+    top: 170px;
+    right: 0;
+    width: 160px;
+    height: 198px;
+    padding: 16px;
+  }
+
+  .hero-somma-logo {
+    width: 108px;
+  }
+
+  .authentic-somma strong {
+    margin-top: 43px;
+    font-size: .86rem;
+  }
+
+  .showcase-action {
+    left: 16px;
+    bottom: 15px;
+    font-size: .58rem;
+  }
+
+  .section {
+    padding: 58px 0;
+  }
+
+  .solution-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .solution-card {
+    min-height: 0;
+    padding: 22px;
+  }
+
+  .solution-icon {
+    margin-bottom: 18px;
+  }
+
+  .project-card {
+    border-radius: 18px;
+  }
+
+  .project-copy h3 {
+    font-size: 1.8rem;
+  }
+
+  .volt-auth {
+    grid-template-columns: 1fr;
+  }
+
+  .volt-auth-form {
+    display: none;
+  }
+
+  .volt-auth-branding > p {
+    display: block;
+  }
+
+  .nexus-hold-card {
+    width: 100%;
+  }
+
+  .somma-site-shot {
+    padding: 22px;
+  }
+
+  .manaus-panel {
+    min-height: 245px;
+    border-radius: 20px;
+  }
+
+  .map-outline {
+    width: 205px;
+    height: 150px;
+  }
+
+  .contact-form {
+    padding: 20px;
+    border-radius: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authentic-showcase .showcase-card,
+  .solution-card,
+  .project-link,
+  .button {
+    transition: none !important;
+  }
+}
