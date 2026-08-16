@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './fidelity.css'
+import './refinement.css'
 
 type Solution = { icon: string; title: string; description: string }
 type Project = {
@@ -76,7 +77,7 @@ function HeroShowcase() {
       <div className="showcase-card showcase-nexus authentic-nexus">
         <span className="nexus-wordmark">NEXUS</span>
         <strong>Gestão comercial e operacional.</strong>
-        <p>Projeto interno da HRX.</p>
+        <p>Informação centralizada para apoiar execução e decisão.</p>
         <div className="nexus-grid" aria-hidden="true"><i /><i /><i /><i /></div>
       </div>
 
@@ -122,11 +123,11 @@ function VoltPreview() {
 
 function NexusPreview() {
   return (
-    <div className="project-visual real-preview nexus-hold-preview" aria-label="NEXUS - projeto interno">
+    <div className="project-visual real-preview nexus-hold-preview" aria-label="NEXUS - plataforma interna">
       <div className="nexus-hold-card">
         <span className="nexus-wordmark">NEXUS</span>
-        <strong>Projeto interno</strong>
-        <p>A visualização pública será conectada quando os assets oficiais do projeto estiverem disponíveis neste repositório.</p>
+        <strong>Operação conectada</strong>
+        <p>Uma visão central para organizar informações comerciais, contratos, atividades e acompanhamento operacional.</p>
         <div className="nexus-hold-lines" aria-hidden="true"><i /><i /><i /></div>
       </div>
     </div>
@@ -183,6 +184,9 @@ export default function App() {
               <div className="hero-actions">
                 <a className="button button-primary" href="#solucoes">Conheça nossas soluções <span>→</span></a>
                 <a className="button button-secondary" href="#projetos">Conheça nossos projetos <span>→</span></a>
+              </div>
+              <div className="hero-pill-row" aria-label="Territórios de atuação">
+                <span>Gestão</span><span>Tecnologia</span><span>Documentação</span><span>Operações</span>
               </div>
             </div>
             <HeroShowcase />
