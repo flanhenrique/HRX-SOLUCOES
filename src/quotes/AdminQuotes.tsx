@@ -15,6 +15,7 @@ type ProviderRule = {
 type AdminDraft = {
   id: string
   request_id: string
+  updated_at?: string
   base_amount: number
   complexity_multiplier: number
   urgency_multiplier: number
