@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './fidelity.css'
 import './refinement.css'
+import './premium-polish.css'
+import QuoteContactForm from './QuoteContactForm'
 
 type Solution = { icon: string; title: string; description: string }
 type Project = {
@@ -155,7 +157,26 @@ function ProjectVisual({ id }: { id: Project['id'] }) {
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState('inicio')
   const closeMenu = () => setMenuOpen(false)
+
+  useEffect(() => {
+    const sectionIds = ['inicio', 'solucoes', 'projetos', 'sobre', 'contato']
+    const sections = sectionIds.map((id) => document.getElementById(id)).filter((section): section is HTMLElement => Boolean(section))
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (visible?.target.id) setActiveSection(visible.target.id)
+      },
+      { rootMargin: '-18% 0px -58% 0px', threshold: [0, .2, .45, .7] },
+    )
+    sections.forEach((section) => observer.observe(section))
+    return () => observer.disconnect()
+  }, [])
+
+  const navClass = (section: string, extra = '') => `${activeSection === section ? 'is-active ' : ''}${extra}`.trim()
 
   return (
     <div className="site-shell">
@@ -163,12 +184,13 @@ export default function App() {
         <div className="container header-inner">
           <Brand />
           <button className="menu-button" type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}><span /><span /><span /></button>
-          <nav className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
-            <a href="#inicio" onClick={closeMenu}>Início</a>
-            <a href="#solucoes" onClick={closeMenu}>Soluções</a>
-            <a href="#projetos" onClick={closeMenu}>Projetos</a>
-            <a href="#sobre" onClick={closeMenu}>Sobre</a>
-            <a href="#contato" onClick={closeMenu}>Contato</a>
+          <nav className={menuOpen ? 'nav-links is-open' : 'nav-links'} aria-label="Navegação principal">
+            <a className={navClass('inicio')} aria-current={activeSection === 'inicio' ? 'page' : undefined} href="#inicio" onClick={closeMenu}>Início</a>
+            <a className={navClass('solucoes')} aria-current={activeSection === 'solucoes' ? 'page' : undefined} href="#solucoes" onClick={closeMenu}>Soluções</a>
+            <a className={navClass('projetos')} aria-current={activeSection === 'projetos' ? 'page' : undefined} href="#projetos" onClick={closeMenu}>Projetos</a>
+            <a className={navClass('sobre')} aria-current={activeSection === 'sobre' ? 'page' : undefined} href="#sobre" onClick={closeMenu}>Sobre</a>
+            <a className={navClass('contato')} aria-current={activeSection === 'contato' ? 'page' : undefined} href="#contato" onClick={closeMenu}>Contato</a>
+            <a className="nav-cta" href="#contato" onClick={closeMenu}>Solicitar proposta</a>
           </nav>
         </div>
       </header>
@@ -183,7 +205,7 @@ export default function App() {
               <p className="hero-text">Combinamos organização, tecnologia e estratégia para transformar operações e impulsionar resultados concretos.</p>
               <div className="hero-actions">
                 <a className="button button-primary" href="#solucoes">Conheça nossas soluções <span>→</span></a>
-                <a className="button button-secondary" href="#projetos">Conheça nossos projetos <span>→</span></a>
+                <a className="button button-secondary" href="#contato">Solicite uma proposta <span>→</span></a>
               </div>
               <div className="hero-pill-row" aria-label="Territórios de atuação">
                 <span>Gestão</span><span>Tecnologia</span><span>Documentação</span><span>Operações</span>
@@ -206,7 +228,7 @@ export default function App() {
                   <span className="solution-icon" aria-hidden="true">{solution.icon}</span>
                   <h3>{solution.title}</h3>
                   <p>{solution.description}</p>
-                  <a href="#contato">Saiba mais <span>→</span></a>
+                  <a href="#contato">Solicitar análise <span>→</span></a>
                 </article>
               ))}
             </div>
@@ -254,23 +276,49 @@ export default function App() {
         <section id="contato" className="section contact-section">
           <div className="container contact-grid">
             <div className="contact-copy">
-              <p className="eyebrow">CONTATO</p>
-              <h2>Vamos conversar sobre o que a sua empresa precisa?</h2>
-              <p>Conte o contexto, o problema e o que precisa funcionar melhor. A HRX estrutura o caminho entre necessidade, execução e resultado.</p>
+              <p className="eyebrow">SOLICITE UMA PROPOSTA</p>
+              <h2>Conte o que precisa funcionar melhor.</h2>
+              <p>Você descreve o contexto e a necessidade. A HRX analisa o pedido, estrutura o escopo e só depois valida internamente uma proposta.</p>
+              <div className="contact-channels">
+                <a href="mailto:contato@hrxsolutions.com.br">contato@hrxsolutions.com.br</a>
+                <a href="mailto:comercial@hrxsolutions.com.br">comercial@hrxsolutions.com.br</a>
+              </div>
               <div className="location-pill">Manaus, Amazonas · Brasil</div>
             </div>
-            <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
-              <div className="form-row"><label>Nome completo<input type="text" name="name" autoComplete="name" /></label><label>E-mail<input type="email" name="email" autoComplete="email" /></label></div>
-              <div className="form-row"><label>Empresa<input type="text" name="company" autoComplete="organization" /></label><label>Telefone<input type="tel" name="phone" autoComplete="tel" /></label></div>
-              <label>Como podemos ajudar?<textarea name="message" rows={5} /></label>
-              <button type="submit" className="button button-primary form-button" disabled>Enviar mensagem <span>→</span></button>
-              <small>O envio será ativado quando o canal comercial definitivo for conectado.</small>
-            </form>
+            <QuoteContactForm />
           </div>
         </section>
       </main>
 
-      <footer className="site-footer"><div className="container footer-inner"><Brand /><p>© 2026 HRX Solutions. Todos os direitos reservados.</p><a href="#inicio">Voltar ao topo ↑</a></div></footer>
+      <footer className="executive-footer">
+        <div className="container">
+          <div className="footer-executive-grid">
+            <div className="footer-brand-copy">
+              <Brand />
+              <p>Soluções em gestão, tecnologia, documentação e operações, estruturadas a partir de necessidades reais.</p>
+              <span className="footer-location">Manaus, Amazonas · Brasil</span>
+            </div>
+            <div className="footer-column">
+              <strong>NAVEGAÇÃO</strong>
+              <a href="#solucoes">Soluções</a>
+              <a href="#projetos">Projetos</a>
+              <a href="#sobre">Sobre</a>
+              <a href="#contato">Solicitar proposta</a>
+            </div>
+            <div className="footer-column">
+              <strong>CONTATO</strong>
+              <a href="mailto:contato@hrxsolutions.com.br">contato@hrxsolutions.com.br</a>
+              <a href="mailto:comercial@hrxsolutions.com.br">comercial@hrxsolutions.com.br</a>
+              <span>CNPJ 68.588.217/0001-06</span>
+            </div>
+          </div>
+          <div className="footer-meta">
+            <span>© 2026 HRX Solutions. Todos os direitos reservados.</span>
+            <span className="footer-accounting">Responsabilidade contábil: Raisa da Silva Pereira · SOMMA</span>
+            <a href="#inicio">Voltar ao topo ↑</a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
