@@ -35,6 +35,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prepare direct admin route
+        run: |
+          mkdir -p dist/admin/orcamentos
+          cp dist/index.html dist/admin/orcamentos/index.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
