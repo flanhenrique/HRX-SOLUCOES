@@ -49,9 +49,9 @@ const projects: Project[] = [
   {
     id: 'nexus',
     name: 'NEXUS',
-    tag: 'Gestão operacional',
-    description: 'Plataforma de gestão comercial e operacional construída para centralizar informações, contratos, atividades e decisões.',
-    linkLabel: 'Projeto interno',
+    tag: 'Aplicação interna · Intranet',
+    description: 'Plataforma corporativa de acesso restrito, desenvolvida para centralizar informações comerciais e operacionais em ambiente interno. Por sua natureza e pelo tratamento de dados empresariais, o NEXUS não possui acesso público na web.',
+    linkLabel: 'Aplicação interna · acesso restrito',
   },
   {
     id: 'somma',
@@ -96,7 +96,7 @@ function HeroShowcase() {
       <a className="showcase-card showcase-nexus authentic-nexus" href="#projetos">
         <span className="nexus-wordmark">NEXUS</span>
         <strong>Gestão comercial e operacional.</strong>
-        <p>Informação centralizada para apoiar execução e decisão.</p>
+        <p>Aplicação interna de intranet para operação corporativa.</p>
         <div className="nexus-grid" aria-hidden="true"><i /><i /><i /><i /></div>
       </a>
 
@@ -171,7 +171,7 @@ function NexusPreview() {
   return (
     <div className="project-visual real-preview nexus-login-preview" aria-label="Tela de login do MAP.i Nexus">
       <div className="project-browser nexus-browser">
-        <div className="project-browser-top nexus-browser-top"><i /><i /><i /><span>MAP.i Nexus · acesso interno</span></div>
+        <div className="project-browser-top nexus-browser-top"><i /><i /><i /><span>MAP.i Nexus · intranet · acesso restrito</span></div>
         <div className="nexus-login-shot">
           <section className="nexus-login-branding">
             <span className="nexus-map-mark">MAP.i</span>
@@ -180,13 +180,13 @@ function NexusPreview() {
             <div className="nexus-login-grid" aria-hidden="true"><i /><i /><i /><i /></div>
           </section>
           <section className="nexus-login-form">
-            <span>ACESSO À PLATAFORMA</span>
+            <span>ACESSO À INTRANET</span>
             <strong>Bem-vindo ao Nexus</strong>
             <p>Entre com suas credenciais para continuar.</p>
             <label><small>E-mail</small><i>nome@empresa.com.br</i></label>
             <label><small>Senha</small><i>••••••••••</i></label>
             <button type="button">Entrar</button>
-            <em>Ambiente interno · MAP Inteligência</em>
+            <em>Ambiente interno · acesso restrito</em>
           </section>
         </div>
       </div>
