@@ -27,7 +27,7 @@ const PAGE_TITLES: Record<PageId, string> = {
 }
 
 const VOLT_ICON = 'https://raw.githubusercontent.com/flanhenrique/Volt-consumo/main/icon.svg'
-const SOMMA_LOGO = 'https://raw.githubusercontent.com/flanhenrique/somma/main/assets/logo-somma-hq.webp'
+const SOMMA_LOGO = '/somma-logo.svg'
 const SOMMA_HERO = 'https://raw.githubusercontent.com/flanhenrique/somma/main/assets/hotel-hero-reference.jpg'
 
 const solutions: Solution[] = [
@@ -271,13 +271,13 @@ export default function App() {
             <div className="hero-copy">
               <p className="eyebrow">HRX SOLUTIONS · MANAUS / AM</p>
               <h1>Soluções <em>inteligentes.</em><br />Resultados <em>reais.</em></h1>
-              <p className="hero-text">Combinamos organização, tecnologia e estratégia para transformar operações e impulsionar resultados concretos.</p>
+              <p className="hero-text">Conte o que precisa funcionar melhor. A HRX organiza a necessidade, estrutura o escopo e transforma a demanda em uma solução e uma proposta claras.</p>
               <div className="hero-actions">
-                <a className="button button-primary" href="#solucoes">Conheça nossas soluções <span>→</span></a>
-                <a className="button button-secondary" href="#contato">Solicite uma proposta <span>→</span></a>
+                <a className="button button-primary" href="#contato">Solicitar análise do projeto <span>→</span></a>
+                <a className="button button-secondary" href="#projetos">Ver projetos <span>→</span></a>
               </div>
-              <div className="hero-pill-row" aria-label="Territórios de atuação">
-                <span>Gestão</span><span>Tecnologia</span><span>Documentação</span><span>Operações</span>
+              <div className="hero-pill-row" aria-label="Como funciona a solicitação">
+                <span>1 · Conte a necessidade</span><span>2 · Análise HRX</span><span>3 · Escopo e proposta</span>
               </div>
             </div>
             <HeroShowcase />
@@ -347,7 +347,7 @@ export default function App() {
             <div className="contact-copy">
               <p className="eyebrow">SOLICITE UMA PROPOSTA</p>
               <h2>Conte o que precisa funcionar melhor.</h2>
-              <p>Você descreve o contexto e a necessidade. A HRX analisa o pedido, estrutura o escopo e só depois valida internamente uma proposta.</p>
+              <p>Informe o tipo de necessidade, o cenário atual e o prazo. A solicitação é registrada e pré-classificada para apoiar a análise; a HRX valida o escopo antes de definir qualquer proposta comercial.</p>
               <div className="contact-channels">
                 <a href="mailto:contato@hrxsolutions.com.br">contato@hrxsolutions.com.br</a>
                 <a href="mailto:comercial@hrxsolutions.com.br">comercial@hrxsolutions.com.br</a>
