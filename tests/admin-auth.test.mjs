@@ -4,10 +4,11 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin route uses password auth router instead of magic-link login', async () => {
-  const [main, authRouter] = await Promise.all([
+test('admin route uses password auth router with hardened password flows', async () => {
+  const [main, authRouter, passwordSecurity] = await Promise.all([
     read('src/main.tsx'),
     read('src/quotes/AdminAuthRouter.tsx'),
+    read('src/quotes/passwordSecurity.ts'),
   ])
 
   assert.match(main, /AdminAuthRouter/)
@@ -15,9 +16,16 @@ test('admin route uses password auth router instead of magic-link login', async 
 
   assert.match(authRouter, /signInWithPassword/)
   assert.match(authRouter, /resetPasswordForEmail/)
-  assert.match(authRouter, /updateUser\(\{ password \}\)/)
+  assert.match(authRouter, /secureUpdateAdminPassword/)
+  assert.match(authRouter, /passwordMeetsPolicy/)
+  assert.match(authRouter, /minLength=\{12\}/)
   assert.match(authRouter, /Ativar primeiro acesso/)
   assert.match(authRouter, /Esqueci minha senha/)
   assert.match(authRouter, /autoComplete="current-password"/)
   assert.match(authRouter, /autoComplete="new-password"/)
+
+  assert.match(passwordSecurity, /functions\.invoke\('admin-password'/)
+  assert.match(passwordSecurity, /pwned_password/)
+  assert.match(passwordSecurity, /pwned_check_unavailable/)
+  assert.match(passwordSecurity, /password\.length >= 12/)
 })
