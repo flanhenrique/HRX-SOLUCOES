@@ -39,3 +39,15 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
 
   assert.doesNotMatch(publicIndex, /user-scalable=no/)
 })
+
+test('authenticated admin can change password inside the PWA', async () => {
+  const [control, main] = await Promise.all([
+    read('src/quotes/AdminPasswordControl.tsx'),
+    read('src/main.tsx'),
+  ])
+
+  assert.match(control, /auth\.updateUser\(\{ password \}\)/)
+  assert.match(control, /Alterar senha/)
+  assert.match(control, /minLength=\{8\}/)
+  assert.match(main, /<AdminPasswordControl \/>/)
+})
