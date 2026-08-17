@@ -4,6 +4,7 @@ import App from './App'
 import AdminQuotes from './quotes/AdminQuotes'
 import AdminPwaBridge from './AdminPwaBridge'
 import './styles.css'
+import './brand-fix.css'
 
 const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
 const isAdminRoute = pathname === '/admin/orcamentos' || window.location.hash === '#admin/orcamentos'
