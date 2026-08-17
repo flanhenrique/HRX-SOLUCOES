@@ -40,16 +40,18 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
   assert.doesNotMatch(publicIndex, /user-scalable=no/)
 })
 
-test('authenticated admin can change password inside the PWA', async () => {
-  const [control, main] = await Promise.all([
-    read('src/quotes/AdminPasswordControl.tsx'),
+test('authenticated admin can change password inside settings', async () => {
+  const [experience, main] = await Promise.all([
+    read('src/quotes/AdminExperienceLayer.tsx'),
     read('src/main.tsx'),
   ])
 
-  assert.match(control, /auth\.updateUser\(\{ password \}\)/)
-  assert.match(control, /Alterar senha/)
-  assert.match(control, /minLength=\{8\}/)
-  assert.match(main, /<AdminPasswordControl \/>/)
+  assert.match(experience, /auth\.updateUser\(\{ password \}\)/)
+  assert.match(experience, /Alterar senha/)
+  assert.match(experience, /minLength=\{8\}/)
+  assert.match(experience, /Configurações/)
+  assert.match(main, /<AdminExperienceLayer \/>/)
+  assert.doesNotMatch(main, /<AdminPasswordControl \/>/)
 })
 
 test('first access is integrated into the login screen without email delivery', async () => {
