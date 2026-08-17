@@ -6,7 +6,7 @@
   "start_url": "/admin/orcamentos",
   "scope": "/admin/",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "background_color": "#061a31",
   "theme_color": "#061a31",
   "categories": ["business", "productivity"],
