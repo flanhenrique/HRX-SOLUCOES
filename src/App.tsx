@@ -3,11 +3,12 @@ import './fidelity.css'
 import './refinement.css'
 import './premium-polish.css'
 import './paged-navigation.css'
+import './hortifruti-project.css'
 import QuoteContactForm from './QuoteContactForm'
 
 type Solution = { icon: string; title: string; description: string }
 type Project = {
-  id: 'volt' | 'nexus' | 'somma'
+  id: 'volt' | 'nexus' | 'somma' | 'hortifruti-site' | 'hortifruti-app'
   name: string
   description: string
   tag: string
@@ -29,6 +30,7 @@ const PAGE_TITLES: Record<PageId, string> = {
 const VOLT_ICON = 'https://raw.githubusercontent.com/flanhenrique/Volt-consumo/main/icon.svg'
 const SOMMA_LOGO = '/somma-logo.svg'
 const SOMMA_HERO = 'https://raw.githubusercontent.com/flanhenrique/somma/main/assets/hotel-hero-reference.jpg'
+const HORTIFRUTI_URL = 'https://hortifruti-revolucao.vercel.app'
 
 const solutions: Solution[] = [
   { icon: '◎', title: 'Gestão', description: 'Organizamos operações, estruturas e rotinas para gerar mais eficiência, controle e clareza.' },
@@ -60,6 +62,22 @@ const projects: Project[] = [
     description: 'Plataforma e presença institucional para gestão, controladoria e relacionamento da SOMMA com seus clientes.',
     href: 'https://sommaconsulthtl.com.br',
     linkLabel: 'Conhecer SOMMA',
+  },
+  {
+    id: 'hortifruti-site',
+    name: 'HORTIFRUTI REVOLUÇÃO',
+    tag: 'Site institucional · B2B',
+    description: 'Presença institucional premium para apresentar o abastecimento corporativo, serviços, linha de produtos, processo comercial e atendimento empresarial do Hortifruti Revolução.',
+    href: HORTIFRUTI_URL,
+    linkLabel: 'Conhecer site institucional',
+  },
+  {
+    id: 'hortifruti-app',
+    name: 'HORTIFRUTI REVOLUÇÃO',
+    tag: 'PWA · Portal do cliente',
+    description: 'Aplicativo web para clientes realizarem pedidos, consultarem catálogo e condições comerciais, acompanharem status e histórico, com experiência instalável e notificações.',
+    href: `${HORTIFRUTI_URL}/login`,
+    linkLabel: 'Acessar aplicativo',
   },
 ]
 
@@ -216,9 +234,79 @@ function SommaPreview() {
   )
 }
 
+function HortiBrandMini() {
+  return (
+    <div className="horti-brand-mini" aria-label="Hortifruti Revolução">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 40V17" />
+        <path d="M24 27C15 26 10 20 10 11c9 0 14 5 14 16Z" />
+        <path d="M24 22C30 22 36 17 38 9c-8-1-14 4-14 13Z" />
+        <path d="M24 34c-7 0-12-4-14-10 7-1 12 3 14 10Z" />
+        <path d="M24 31c6 0 11-3 14-9-7-1-12 2-14 9Z" />
+      </svg>
+      <span>REVOLUÇÃO<small>HORTIFRUTI</small></span>
+    </div>
+  )
+}
+
+function HortiSitePreview() {
+  return (
+    <div className="project-visual real-preview horti-preview" aria-label="Visualização do site institucional do Hortifruti Revolução">
+      <div className="horti-browser">
+        <div className="horti-browser-top"><i /><i /><i /><span>hortifruti-revolucao.vercel.app</span></div>
+        <div className="horti-site-shot">
+          <div className="horti-site-nav">
+            <HortiBrandMini />
+            <div><span>Serviços</span><span>Produtos</span><span>Como funciona</span><span>Sobre</span></div>
+          </div>
+          <div className="horti-site-copy">
+            <span>HORTIFRUTI PARA EMPRESAS</span>
+            <strong>Abastecimento profissional, do pedido à entrega.</strong>
+            <p>Fornecimento organizado para operações empresariais com padrão comercial e acompanhamento.</p>
+            <i className="horti-site-cta">Conhecer serviços</i>
+          </div>
+          <div className="horti-produce-grid" aria-hidden="true"><i>FR</i><i>LG</i><i>FL</i><i>TP</i></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HortiAppPreview() {
+  return (
+    <div className="project-visual real-preview horti-preview" aria-label="Visualização do aplicativo do Hortifruti Revolução">
+      <div className="horti-browser horti-app-browser">
+        <div className="horti-browser-top"><i /><i /><i /><span>hortifruti-revolucao.vercel.app/cliente</span></div>
+        <div className="horti-app-shot">
+          <aside className="horti-app-sidebar">
+            <HortiBrandMini />
+            <div className="horti-app-nav"><span>Início</span><span>Novo pedido</span><span>Pedidos</span><span>Catálogo</span></div>
+          </aside>
+          <div className="horti-app-main">
+            <div className="horti-app-heading">
+              <div><span>PORTAL DO CLIENTE</span><strong>Visão geral</strong></div>
+              <em>PWA instalado</em>
+            </div>
+            <div className="horti-app-cards">
+              <article><span>PEDIDOS ATIVOS</span><strong>03</strong></article>
+              <article><span>ITENS NO CATÁLOGO</span><strong>150+</strong></article>
+            </div>
+            <div className="horti-app-list">
+              <span>ÚLTIMO PEDIDO</span>
+              <div className="horti-app-row"><div><b>#HR-0028</b><br /><small>12 itens · entrega programada</small></div><i>Em separação</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProjectVisual({ id }: { id: Project['id'] }) {
   if (id === 'volt') return <VoltPreview />
   if (id === 'somma') return <SommaPreview />
+  if (id === 'hortifruti-site') return <HortiSitePreview />
+  if (id === 'hortifruti-app') return <HortiAppPreview />
   return <NexusPreview />
 }
 
@@ -308,7 +396,7 @@ export default function App() {
           <div className="container">
             <div className="section-heading-row">
               <div><p className="eyebrow">NOSSOS PROJETOS</p><h2>Produtos e projetos que nascem de problemas reais.</h2></div>
-              <p>VOLT, NEXUS e SOMMA mostram como a HRX combina operação, tecnologia e execução em contextos diferentes.</p>
+              <p>VOLT, NEXUS, SOMMA e HORTIFRUTI REVOLUÇÃO mostram como a HRX combina operação, tecnologia e execução — do posicionamento institucional a aplicações completas.</p>
             </div>
             <div className="projects-grid">
               {projects.map((project) => (
