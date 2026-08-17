@@ -19,27 +19,41 @@ const serviceRules: { key: string; terms: string[] }[] = [
   { key: 'site_institucional', terms: ['site institucional', 'site para empresa', 'site da empresa', 'website'] },
   { key: 'landing_page', terms: ['landing page', 'pagina de venda', 'página de venda', 'pagina unica', 'página única'] },
   { key: 'catalogo_digital', terms: ['catalogo digital', 'catálogo digital', 'catalogo online', 'catálogo online'] },
-  { key: 'automacao', terms: ['automacao', 'automação', 'automatizar', 'automatico', 'automático', 'n8n'] },
-  { key: 'integracao_api', terms: ['api', 'integracao', 'integração', 'conectar sistemas'] },
+  { key: 'automacao_avancada', terms: ['automacao avancada', 'automação avançada', 'automacao complexa', 'automação complexa', 'multiplas automacoes', 'múltiplas automações'] },
+  { key: 'automacao_intermediaria', terms: ['automacao intermediaria', 'automação intermediária', 'automacao com integracao', 'automação com integração', 'automacao integrada', 'automação integrada'] },
+  { key: 'automacao', terms: ['automacao simples', 'automação simples', 'automatizar tarefa', 'automatizar rotina', 'n8n', 'zapier', 'make.com'] },
+  { key: 'integracao_api', terms: ['integracao via api', 'integração via api', 'integracao api', 'integração api', 'conectar sistemas', 'webhook'] },
   { key: 'sistema_web', terms: ['sistema web', 'sistema interno', 'aplicacao interna', 'aplicação interna', 'portal interno'] },
-  { key: 'mvp', terms: ['mvp', 'produto digital', 'aplicativo novo', 'app novo'] },
-  { key: 'suporte_digital', terms: ['manutencao de site', 'manutenção de site', 'manutencao de sistema', 'manutenção de sistema', 'suporte tecnico', 'suporte técnico'] },
-  { key: 'diagnostico_operacional', terms: ['diagnostico', 'diagnóstico', 'gargalo', 'entender a operacao', 'entender a operação'] },
-  { key: 'mapeamento_processos', terms: ['mapear processo', 'mapear processos', 'fluxo de processo', 'fluxograma'] },
-  { key: 'implantacao_processo', terms: ['implantar processo', 'organizar processo', 'padronizar processo', 'rotina operacional'] },
-  { key: 'implantacao_crm', terms: ['crm', 'funil comercial', 'funil de vendas', 'pipeline comercial'] },
-  { key: 'organizacao_atendimento', terms: ['atendimento ao cliente', 'organizar atendimento', 'chamados', 'suporte ao cliente'] },
+  { key: 'mvp', terms: ['mvp', 'produto digital', 'aplicativo novo', 'app novo', 'prototipo funcional', 'protótipo funcional'] },
+  { key: 'suporte_digital', terms: ['manutencao de site', 'manutenção de site', 'manutencao de sistema', 'manutenção de sistema', 'suporte tecnico', 'suporte técnico', 'evolucao de sistema', 'evolução de sistema'] },
+
+  { key: 'diagnostico_operacional', terms: ['diagnostico operacional', 'diagnóstico operacional', 'gargalo', 'entender a operacao', 'entender a operação'] },
+  { key: 'mapeamento_processos', terms: ['mapear processo', 'mapear processos', 'mapeamento de processos', 'fluxo de processo', 'fluxograma'] },
+  { key: 'estrutura_rotina_processo', terms: ['estruturar rotina', 'estruturação de rotina', 'estruturacao de rotina', 'estruturar processo', 'estruturação de processo', 'estruturacao de processo'] },
+  { key: 'implantacao_processo', terms: ['implantar processo', 'implantação de processo', 'implantacao de processo', 'padronizar processo', 'rotina operacional'] },
+  { key: 'gestao_recorrente_crm', terms: ['gestao recorrente de crm', 'gestão recorrente de crm', 'operacao de crm', 'operação de crm', 'administrar crm', 'gestao mensal de crm', 'gestão mensal de crm'] },
+  { key: 'implantacao_crm', terms: ['implantacao de crm', 'implantação de crm', 'implantar crm', 'configurar crm', 'funil comercial', 'funil de vendas', 'pipeline comercial'] },
+  { key: 'organizacao_atendimento', terms: ['atendimento ao cliente', 'organizar atendimento', 'chamados', 'suporte ao cliente', 'relacionamento com clientes'] },
+
   { key: 'organizacao_administrativa', terms: ['organizacao administrativa', 'organização administrativa', 'rotina administrativa', 'backoffice'] },
   { key: 'gestao_documental', terms: ['gestao documental', 'gestão documental', 'organizar documentos', 'arquivo digital'] },
+  { key: 'kit_documentos_ate_5', terms: ['kit de documentos', 'kit documentos', 'padronizar documentos', 'ate 5 documentos', 'até 5 documentos'] },
+  { key: 'procedimentos_ate_5', terms: ['pacote de procedimentos', 'ate 5 procedimentos', 'até 5 procedimentos', 'cinco procedimentos'] },
   { key: 'pop', terms: ['pop', 'procedimento operacional', 'manual de processo', 'procedimento interno'] },
   { key: 'controle_contratos', terms: ['controle de contratos', 'vencimento de contrato', 'gestao de contratos', 'gestão de contratos'] },
-  { key: 'planilha', terms: ['planilha', 'excel', 'controle em planilha'] },
+  { key: 'planilha_avancada', terms: ['planilha avancada', 'planilha avançada', 'dashboard em excel', 'planilha automatizada', 'excel avancado', 'excel avançado'] },
+  { key: 'planilha', terms: ['planilha simples', 'controle em planilha', 'planilha de controle', 'excel simples'] },
+
   { key: 'organizacao_financeira', terms: ['organizacao financeira', 'organização financeira', 'contas a pagar', 'contas a receber', 'fluxo de caixa'] },
   { key: 'faturamento_cobranca', terms: ['cobranca', 'cobrança', 'faturamento', 'inadimplencia', 'inadimplência'] },
   { key: 'conciliacao', terms: ['conciliacao', 'conciliação', 'conferir extrato', 'conferencia financeira', 'conferência financeira'] },
   { key: 'relatorio_gerencial', terms: ['relatorio gerencial', 'relatório gerencial', 'indicadores financeiros', 'relatorio financeiro', 'relatório financeiro'] },
   { key: 'apoio_fiscal_documental', terms: ['documentos fiscais', 'organizar notas', 'apoio fiscal', 'enviar para contabilidade'] },
   { key: 'dossie_credito', terms: ['credito bancario', 'crédito bancário', 'financiamento', 'dossie de credito', 'dossiê de crédito'] },
+
+  { key: 'recorrente_essencial', terms: ['plano essencial', 'recorrente essencial', 'pacote essencial', '6h por mes', '6 horas por mes', '6 horas por mês'] },
+  { key: 'recorrente_gestao', terms: ['plano gestao', 'plano gestão', 'recorrente gestao', 'recorrente gestão', '14h por mes', '14 horas por mês'] },
+  { key: 'recorrente_operacao', terms: ['plano operacao', 'plano operação', 'recorrente operacao', 'recorrente operação', '24h por mes', '24 horas por mês'] },
 ]
 
 const defaultOrigins = [
@@ -67,10 +81,28 @@ function publishableKeys() {
   }
 }
 
-function interpretRequest(payload: Payload) {
-  const text = normalize(`${payload.reason ?? ''} ${(payload.interests ?? []).join(' ')} ${payload.request ?? ''}`)
+function resolveServiceKeys(text: string) {
   const matches = serviceRules.filter((rule) => rule.terms.some((term) => text.includes(term))).map((rule) => rule.key)
   const unique = [...new Set(matches)]
+
+  if (unique.includes('automacao_avancada') || unique.includes('automacao_intermediaria')) {
+    return unique.filter((key) => key !== 'automacao')
+  }
+  if (unique.includes('planilha_avancada')) {
+    return unique.filter((key) => key !== 'planilha')
+  }
+  if (unique.includes('procedimentos_ate_5')) {
+    return unique.filter((key) => key !== 'pop')
+  }
+  if (unique.includes('gestao_recorrente_crm')) {
+    return unique.filter((key) => key !== 'implantacao_crm')
+  }
+  return unique
+}
+
+function interpretRequest(payload: Payload) {
+  const text = normalize(`${payload.reason ?? ''} ${(payload.interests ?? []).join(' ')} ${payload.request ?? ''}`)
+  const unique = resolveServiceKeys(text)
 
   let confidence = 35
   if (unique.length === 1) confidence = 82
@@ -184,7 +216,7 @@ Deno.serve(async (req) => {
     suggested_service_keys: interpretation.serviceKeys,
     confidence: interpretation.confidence,
     missing_information: interpretation.missing,
-    interpretation_method: 'rules-v1',
+    interpretation_method: 'rules-v2',
     raw_result: { matched: interpretation.serviceKeys },
   })
 
