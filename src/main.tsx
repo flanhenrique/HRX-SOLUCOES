@@ -14,6 +14,7 @@ import './styles.css'
 import './brand-fix.css'
 import './quotes/rules.css'
 import './quotes/app-shell.css'
+import './quotes/admin-fiscal-manual-state.css'
 import './nexus-screen.css'
 
 const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
