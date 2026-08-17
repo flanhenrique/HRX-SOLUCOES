@@ -12,6 +12,7 @@ import './styles.css'
 import './brand-fix.css'
 import './quotes/rules.css'
 import './quotes/app-shell.css'
+import './nexus-screen.css'
 
 const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
 const isAdminRoute = pathname === '/admin/orcamentos' || window.location.hash === '#admin/orcamentos'
