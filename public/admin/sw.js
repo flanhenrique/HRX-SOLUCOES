@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hrx-admin-v3'
+const CACHE_NAME = 'hrx-admin-v4'
 const APP_SHELL = ['/admin/orcamentos', '/admin/manifest.webmanifest', '/admin/hrx-admin-icon.svg']
 
 self.addEventListener('install', (event) => {
