@@ -9,6 +9,28 @@ import './quotes.css'
 type ProviderRule = { provider: 'nubank' | 'mercadopago'; display_name: string; boleto_fee_per_paid: number; fee_note?: string | null }
 type PricingRule = { service_key: string; service_name: string; category: string; base_amount: number; minimum_amount: number; fiscal_code?: string | null; invoice_description?: string | null }
 type QuoteItem = { id?: string; draft_id?: string; service_key: string; service_name: string; quantity: number; unit_amount: number; total_amount: number; source: 'engine' | 'manual' }
+type ClientFiscalProfile = {
+  client_id: string
+  cnpj: string
+  legal_name?: string | null
+  trade_name?: string | null
+  registration_status?: string | null
+  main_cnae_code?: string | null
+  main_cnae_description?: string | null
+  simple_option?: boolean | null
+  mei_option?: boolean | null
+  tax_regime?: string | null
+  tax_regime_requires_confirmation?: boolean | null
+  state_registration?: string | null
+  state_registration_status?: string | null
+  icms_taxpayer?: boolean | null
+  federal_validation_status?: string | null
+  state_validation_status?: string | null
+  data_source?: string | null
+  source_note?: string | null
+  checked_at?: string | null
+  updated_at?: string | null
+}
 type AdminDraft = {
   id: string; request_id: string; base_amount: number; complexity_multiplier: number; urgency_multiplier: number;
   pre_discount_amount: number; discount_percent: DiscountLevel; discount_status: 'green' | 'yellow' | 'red' | 'purple';
@@ -30,12 +52,40 @@ type SaveQuotePayload = {
   retentionPricingMode: 'informational' | 'preserve_net'; fiscalReviewConfirmed: boolean; notes: string
 }
 type EditorTab = 'overview' | 'composition' | 'finance' | 'fiscal' | 'send'
+type FiscalProfileState = 'idle' | 'loading' | 'ready' | 'missing' | 'error'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const emptyRetentions: RetentionInput = { iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0 }
 const retentionLabels: Record<keyof RetentionInput, string> = { iss: 'ISS', irrf: 'IRRF', pis: 'PIS', cofins: 'COFINS', csll: 'CSLL', inss: 'INSS' }
 const statusLabels: Record<string, string> = { awaiting_review: 'Aguardando revisão', needs_scope: 'Escopo pendente', approved: 'Aprovado', rejected: 'Rejeitado', suspended: 'Suspenso', new: 'Novo', received: 'Recebido' }
 const statusLabel = (status: string) => statusLabels[status] ?? status.replaceAll('_', ' ')
+
+const fiscalLabel = (value?: string | null) => {
+  if (!value) return 'Não informado'
+  const labels: Record<string, string> = {
+    LUCRO_PRESUMIDO: 'Lucro Presumido',
+    LUCRO_REAL: 'Lucro Real',
+    SIMPLES_NACIONAL: 'Simples Nacional',
+    IMUNE_ISENTA: 'Imune / Isenta',
+    NAO_VERIFICADO: 'Não verificado',
+    PENDENTE_SEFAZ_AM: 'Pendente SEFAZ-AM',
+    NAO_HABILITADO: 'Não habilitado',
+    HABILITADO: 'Habilitado',
+  }
+  return labels[value] ?? value.replaceAll('_', ' ').toLocaleLowerCase('pt-BR').replace(/(^|\s)\S/g, (letter) => letter.toLocaleUpperCase('pt-BR'))
+}
+
+const yesNo = (value?: boolean | null) => value === true ? 'Sim' : value === false ? 'Não' : 'Não informado'
+
+const formatCnpj = (value?: string | null) => {
+  const digits = (value ?? '').replace(/\D/g, '')
+  if (digits.length !== 14) return value || 'Não informado'
+  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+}
+
+const formatFiscalDate = (value?: string | null) => value
+  ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+  : 'Não consultado'
 
 async function adminFetch<T>(session: Session, init?: RequestInit): Promise<T> {
   const response = await fetch(quoteAdminEndpoint, {
@@ -190,10 +240,36 @@ function QuoteEditor({ request, providers, pricingRules, onSave, onApprove, onBa
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [saving, setSaving] = useState(false)
   const [shareStatus, setShareStatus] = useState('')
+  const [fiscalProfile, setFiscalProfile] = useState<ClientFiscalProfile | null>(null)
+  const [fiscalProfileState, setFiscalProfileState] = useState<FiscalProfileState>('idle')
 
   useEffect(() => {
-    setActiveTab('overview'); setDiscount(draft?.discount_percent ?? 0); setComplexity(draft?.complexity_multiplier ?? 1); setUrgency(draft?.urgency_multiplier ?? 1); setProvider(draft?.payment_provider ?? 'none'); setInstallments(draft?.installments ?? 1); setRetentions(draft?.retentions ?? emptyRetentions); setRetentionMode(draft?.retention_pricing_mode ?? 'informational'); setFiscalConfirmed(draft?.fiscal_review_confirmed ?? false); setNotes(draft?.notes ?? ''); setQuantities(Object.fromEntries((draft?.items ?? []).map((item) => [item.service_key, Number(item.quantity) || 1]))); setShareStatus('')
+    setActiveTab('overview'); setDiscount(draft?.discount_percent ?? 0); setComplexity(draft?.complexity_multiplier ?? 1); setUrgency(draft?.urgency_multiplier ?? 1); setProvider(draft?.payment_provider ?? 'none'); setInstallments(draft?.installments ?? 1); setRetentions(draft?.retentions ?? emptyRetentions); setRetentionMode(draft?.retention_pricing_mode ?? 'informational'); setFiscalConfirmed(draft?.fiscal_review_confirmed ?? false); setNotes(draft?.notes ?? ''); setQuantities(Object.fromEntries((draft?.items ?? []).map((item) => [item.service_key, Number(item.quantity) || 1]))); setShareStatus(''); setFiscalProfile(null); setFiscalProfileState('idle')
   }, [request.id, draft?.updated_at])
+
+  useEffect(() => {
+    if (activeTab !== 'fiscal') return
+    let alive = true
+    const loadFiscalProfile = async () => {
+      setFiscalProfileState('loading')
+      const { data: link, error: linkError } = await hrxSupabase.from('quote_requests').select('client_id').eq('id', request.id).maybeSingle()
+      if (!alive) return
+      if (linkError) { setFiscalProfile(null); setFiscalProfileState('error'); return }
+      const clientId = link?.client_id as string | null | undefined
+      if (!clientId) { setFiscalProfile(null); setFiscalProfileState('missing'); return }
+      const { data: profile, error: profileError } = await hrxSupabase.from('client_fiscal_profiles')
+        .select('client_id,cnpj,legal_name,trade_name,registration_status,main_cnae_code,main_cnae_description,simple_option,mei_option,tax_regime,tax_regime_requires_confirmation,state_registration,state_registration_status,icms_taxpayer,federal_validation_status,state_validation_status,data_source,source_note,checked_at,updated_at')
+        .eq('client_id', clientId)
+        .maybeSingle()
+      if (!alive) return
+      if (profileError) { setFiscalProfile(null); setFiscalProfileState('error'); return }
+      if (!profile) { setFiscalProfile(null); setFiscalProfileState('missing'); return }
+      setFiscalProfile(profile as ClientFiscalProfile)
+      setFiscalProfileState('ready')
+    }
+    void loadFiscalProfile()
+    return () => { alive = false }
+  }, [activeTab, request.id])
 
   const groupedRules = useMemo(() => { const groups = new Map<string, PricingRule[]>(); for (const rule of pricingRules) groups.set(rule.category, [...(groups.get(rule.category) ?? []), rule]); return [...groups.entries()] }, [pricingRules])
   if (!draft) return <div className="admin-empty-state"><h2>Rascunho ainda não disponível</h2><p>Esta solicitação ainda não possui um orçamento preparado.</p></div>
@@ -212,6 +288,19 @@ function QuoteEditor({ request, providers, pricingRules, onSave, onApprove, onBa
   const canSend = draft.status === 'approved' && !hasUnsavedChanges
   const whatsapp = normalizeWhatsApp(request.phone)
   const whatsappText = encodeURIComponent(`Olá, ${request.name}! Aqui é da HRX Solutions. Recebemos sua solicitação ${request.protocol} e estou entrando em contato para validar alguns pontos antes da proposta.`)
+  const fiscalNeedsTaxRegime = fiscalProfile?.tax_regime_requires_confirmation === true
+  const fiscalNeedsStateValidation = fiscalProfileState === 'ready' && (!fiscalProfile?.state_registration || fiscalProfile.state_validation_status !== 'HABILITADO')
+  const approvalButtonLabel = draft.status === 'approved'
+    ? 'Aprovado'
+    : hasUnsavedChanges
+      ? 'Salve antes de aprovar'
+      : draft.discount_status === 'purple'
+        ? '20% bloqueado'
+        : draft.status === 'needs_scope'
+          ? 'Escopo pendente'
+          : draft.fiscal_review_required && !draft.fiscal_review_confirmed
+            ? 'Revisão fiscal pendente'
+            : 'Aprovar orçamento'
 
   const toggleRule = (key: string, checked: boolean) => setQuantities((current) => { const next = { ...current }; if (checked) next[key] = Math.max(1, Number(next[key] ?? 1)); else delete next[key]; return next })
   const save = async () => {
@@ -239,12 +328,45 @@ function QuoteEditor({ request, providers, pricingRules, onSave, onApprove, onBa
 
         {activeTab === 'finance' && <div className="admin-view-grid admin-finance-grid"><article className="admin-panel"><span className="admin-card-kicker">PREÇO</span><h3>Base e complexidade</h3><div className="price-summary"><div><span>Base do catálogo</span><strong>{currency.format(preview.baseAmount)}</strong></div><div><span>Pré-desconto</span><strong>{currency.format(preview.preDiscountAmount)}</strong></div></div><div className="admin-inline-fields"><label className="admin-field">Complexidade<select value={complexity} onChange={(e) => setComplexity(Number(e.target.value))}><option value={1}>Padrão · 1x</option><option value={1.25}>Intermediária · 1,25x</option><option value={1.5}>Alta · 1,5x</option><option value={2}>Especial · 2x</option></select></label><label className="admin-field">Urgência<select value={urgency} onChange={(e) => setUrgency(Number(e.target.value))}><option value={1}>Normal · 1x</option><option value={1.15}>Prioritária · 1,15x</option><option value={1.3}>Urgente · 1,3x</option></select></label></div></article><article className="admin-panel"><span className="admin-card-kicker">DESCONTO</span><h3>Faixa autorizada</h3><div className="discount-options">{DISCOUNT_LEVELS.map((level) => { const item = assessDiscount(level); return <button key={level} type="button" className={`discount-choice discount-${item.tone} ${discount === level ? 'is-active' : ''}`} onClick={() => setDiscount(level)}><strong>{level}%</strong><span>{item.label}</span></button> })}</div><div className={`discount-assessment discount-${assessment.tone}`}><strong>{assessment.label}</strong><p>{assessment.message}</p></div></article><article className="admin-panel"><span className="admin-card-kicker">PAGAMENTO</span><h3>Cobrança</h3><div className="admin-inline-fields"><label className="admin-field">Provedor<select value={provider} onChange={(e) => setProvider(e.target.value as typeof provider)}><option value="none">Sem boleto</option>{providers.map((item) => <option key={item.provider} value={item.provider}>{item.display_name}</option>)}</select></label><label className="admin-field">Parcelas<input type="number" min="1" max="24" value={installments} onChange={(e) => setInstallments(Math.min(24, Math.max(1, Math.round(Number(e.target.value) || 1))))} /></label></div><div className="price-summary"><div><span>Taxa total prevista</span><strong>{currency.format(preview.paymentFeeTotal)}</strong></div></div></article><article className="admin-panel admin-finance-summary"><div><span className="admin-card-kicker">RESUMO FINANCEIRO</span><h3>Valor para validação</h3>{hasUnsavedChanges && <p className="admin-note warning">A prévia contém alterações ainda não salvas.</p>}</div><div className="admin-total-values"><div><span>Subtotal catálogo</span><strong>{currency.format(preview.baseAmount)}</strong></div><div><span>Pré-desconto</span><strong>{currency.format(preview.preDiscountAmount)}</strong></div><div><span>Desconto</span><strong>- {currency.format(preview.discountAmount)}</strong></div><div><span>Taxas de cobrança</span><strong>+ {currency.format(preview.paymentFeeTotal)}</strong></div><div><span>Retenções</span><strong>{preview.retentionTotal.toLocaleString('pt-BR')}% · {currency.format(preview.retentionAmount)}</strong></div><div className="admin-grand-total"><span>Valor final</span><strong>{currency.format(preview.finalAmount)}</strong></div><div><span>Líquido estimado</span><strong>{currency.format(preview.estimatedNet)}</strong></div></div><label className="admin-field">Observações internas<textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} /></label></article></div>}
 
-        {activeTab === 'fiscal' && <article className="admin-panel admin-fiscal-panel"><div><span className="admin-card-kicker">RETENÇÕES</span><h3>Revisão fiscal</h3><p className="admin-note warning">Informe somente retenções confirmadas. Alterar qualquer alíquota invalida a confirmação fiscal anterior.</p></div><div className="retention-grid">{(Object.keys(retentions) as (keyof RetentionInput)[]).map((key) => <label className="admin-field" key={key}>{retentionLabels[key]} (%)<input type="number" min="0" max="100" step="0.01" value={retentions[key]} onChange={(e) => changeRetention(key, Number(e.target.value))} /></label>)}</div><div className={retentionInvalid ? 'retention-total-alert is-invalid' : 'retention-total-alert'}><span>Total das retenções</span><strong>{retentionInputTotal.toLocaleString('pt-BR')}%</strong><span>{currency.format(preview.retentionAmount)} estimados</span></div>{retentionInvalid && <p className="admin-note retention-error">A soma das retenções precisa ser menor que 100%.</p>}<label className="admin-field">Tratamento<select value={retentionMode} onChange={(e) => { setRetentionMode(e.target.value as typeof retentionMode); setFiscalConfirmed(false) }}><option value="informational">Somente informar impacto</option><option value="preserve_net">Preservar líquido por gross-up</option></select></label>{retentionInputTotal > 0 && <label className="privacy-check"><input type="checkbox" checked={fiscalConfirmed} onChange={(e) => setFiscalConfirmed(e.target.checked)} /><span>Confirmei a revisão fiscal das retenções deste orçamento.</span></label>}<div className="retention-breakdown">{(Object.entries(retentions) as [keyof RetentionInput, number][]).filter(([, value]) => Number(value) > 0).map(([key, value]) => <div key={key}><span>{retentionLabels[key]} · {Number(value).toLocaleString('pt-BR')}%</span><strong>- {currency.format(preview.retentionBreakdown[key])}</strong></div>)}</div><div className="admin-fiscal-summary"><span>Bruto sugerido para preservar líquido</span><strong>{currency.format(preview.retentionGrossUpSuggestion)}</strong></div></article>}
+        {activeTab === 'fiscal' && <article className="admin-panel admin-fiscal-panel">
+          <div><span className="admin-card-kicker">PERFIL FISCAL DO CLIENTE</span><h3>Dados cadastrais vinculados</h3></div>
+          {fiscalProfileState === 'loading' && <p className="admin-note">Carregando situação fiscal do cliente…</p>}
+          {fiscalProfileState === 'error' && <p className="admin-note warning">Não foi possível consultar o perfil fiscal agora. Os dados do orçamento permanecem preservados.</p>}
+          {fiscalProfileState === 'missing' && <p className="admin-note warning">Este orçamento ainda não possui um perfil fiscal consultado. Use o módulo Fiscal para consultar o CNPJ do cliente.</p>}
+          {fiscalProfileState === 'ready' && fiscalProfile && <>
+            <div className="admin-total-values">
+              <div><span>CNPJ</span><strong>{formatCnpj(fiscalProfile.cnpj)}</strong></div>
+              <div><span>Razão social</span><strong>{fiscalProfile.legal_name || request.name}</strong></div>
+              <div><span>Situação federal</span><strong>{fiscalLabel(fiscalProfile.registration_status || fiscalProfile.federal_validation_status)}</strong></div>
+              <div><span>Regime tributário</span><strong>{fiscalLabel(fiscalProfile.tax_regime)}</strong></div>
+              <div><span>Simples Nacional</span><strong>{yesNo(fiscalProfile.simple_option)}</strong></div>
+              <div><span>MEI</span><strong>{yesNo(fiscalProfile.mei_option)}</strong></div>
+              <div><span>CNAE principal</span><strong>{[fiscalProfile.main_cnae_code, fiscalProfile.main_cnae_description].filter(Boolean).join(' · ') || 'Não informado'}</strong></div>
+              <div><span>Inscrição Estadual</span><strong>{fiscalProfile.state_registration || 'Não informada'}</strong></div>
+              <div><span>Situação da IE</span><strong>{fiscalLabel(fiscalProfile.state_registration_status)}</strong></div>
+              <div><span>Contribuinte de ICMS</span><strong>{yesNo(fiscalProfile.icms_taxpayer)}</strong></div>
+              <div><span>Validação estadual</span><strong>{fiscalLabel(fiscalProfile.state_validation_status)}</strong></div>
+              <div><span>Última consulta cadastral</span><strong>{formatFiscalDate(fiscalProfile.checked_at || fiscalProfile.updated_at)}</strong></div>
+            </div>
+            {fiscalNeedsTaxRegime && <p className="admin-note warning">O regime tributário ainda requer confirmação manual no módulo Fiscal.</p>}
+            {fiscalNeedsStateValidation && <p className="admin-note warning">A validação estadual ainda está pendente ou a Inscrição Estadual não foi informada.</p>}
+            <p className="admin-note">Esses dados identificam a situação cadastral do cliente. As retenções abaixo continuam específicas deste serviço e não são preenchidas automaticamente apenas pelo CNPJ ou pela IE.</p>
+          </>}
+          <div><span className="admin-card-kicker">RETENÇÕES DO ORÇAMENTO</span><h3>Revisão fiscal</h3><p className="admin-note warning">Informe somente retenções confirmadas. Alterar qualquer alíquota invalida a confirmação fiscal anterior.</p></div>
+          <div className="retention-grid">{(Object.keys(retentions) as (keyof RetentionInput)[]).map((key) => <label className="admin-field" key={key}>{retentionLabels[key]} (%)<input type="number" min="0" max="100" step="0.01" value={retentions[key]} onChange={(e) => changeRetention(key, Number(e.target.value))} /></label>)}</div>
+          <div className={retentionInvalid ? 'retention-total-alert is-invalid' : 'retention-total-alert'}><span>Total das retenções</span><strong>{retentionInputTotal.toLocaleString('pt-BR')}%</strong><span>{currency.format(preview.retentionAmount)} estimados</span></div>
+          {retentionInvalid && <p className="admin-note retention-error">A soma das retenções precisa ser menor que 100%.</p>}
+          <label className="admin-field">Tratamento<select value={retentionMode} onChange={(e) => { setRetentionMode(e.target.value as typeof retentionMode); setFiscalConfirmed(false) }}><option value="informational">Somente informar impacto</option><option value="preserve_net">Preservar líquido por gross-up</option></select></label>
+          {retentionInputTotal > 0 && <label className="privacy-check"><input type="checkbox" checked={fiscalConfirmed} onChange={(e) => setFiscalConfirmed(e.target.checked)} /><span>Confirmei a revisão fiscal das retenções deste orçamento.</span></label>}
+          <div className="retention-breakdown">{(Object.entries(retentions) as [keyof RetentionInput, number][]).filter(([, value]) => Number(value) > 0).map(([key, value]) => <div key={key}><span>{retentionLabels[key]} · {Number(value).toLocaleString('pt-BR')}%</span><strong>- {currency.format(preview.retentionBreakdown[key])}</strong></div>)}</div>
+          <div className="admin-fiscal-summary"><span>Bruto sugerido para preservar líquido</span><strong>{currency.format(preview.retentionGrossUpSuggestion)}</strong></div>
+          {!hasUnsavedChanges && <p className="admin-note">O orçamento já está sincronizado. Altere uma retenção ou o tratamento fiscal para habilitar o salvamento.</p>}
+        </article>}
 
         {activeTab === 'send' && <article className="admin-panel admin-send-card"><div><span className="admin-card-kicker">ENVIO AO CLIENTE</span><h3>Orçamento aprovado</h3><p>{canSend ? 'O orçamento está aprovado e sincronizado. Escolha o canal de envio.' : hasUnsavedChanges ? 'Existem alterações não salvas. Salve e aprove novamente antes de enviar.' : 'Aprove o orçamento para liberar o envio ao cliente.'}</p></div><div className="admin-send-preview"><pre>{approvedMessage}</pre></div><div className="admin-send-actions"><button className="button button-primary" type="button" disabled={!canSend} onClick={() => void shareQuote()}>Enviar orçamento</button><button className="button button-secondary" type="button" disabled={!canSend || !whatsapp} onClick={sendWhatsApp}>WhatsApp</button><button className="button button-secondary" type="button" disabled={!canSend || !request.email} onClick={sendEmail}>E-mail</button><button className="button button-secondary" type="button" disabled={!canSend} onClick={() => void copyQuote()}>Copiar</button></div>{shareStatus && <div className="admin-send-status" role="status">{shareStatus}</div>}<small>O sistema prepara o orçamento; o envio final ainda exige sua confirmação no aplicativo escolhido.</small></article>}
       </div>
 
-      <footer className="admin-editor-actions"><div className={hasUnsavedChanges ? 'admin-save-state is-dirty' : 'admin-save-state'}><span />{hasUnsavedChanges ? 'Alterações não salvas' : 'Orçamento sincronizado'}</div><div><button className="button button-secondary" type="button" disabled={saving || retentionInvalid || !hasUnsavedChanges} onClick={() => void save()}>{saving ? 'Salvando…' : 'Salvar'}</button><button className="button button-primary" type="button" disabled={!canApprove} onClick={() => void onApprove()}>{draft.status === 'approved' ? 'Aprovado' : 'Aprovar orçamento'}</button></div></footer>
+      <footer className="admin-editor-actions"><div className={hasUnsavedChanges ? 'admin-save-state is-dirty' : 'admin-save-state'}><span />{hasUnsavedChanges ? 'Alterações não salvas' : 'Orçamento sincronizado'}</div><div><button className="button button-secondary" type="button" disabled={saving || retentionInvalid || !hasUnsavedChanges} onClick={() => void save()}>{saving ? 'Salvando…' : hasUnsavedChanges ? 'Salvar alterações' : 'Sem alterações'}</button><button className="button button-primary" type="button" disabled={!canApprove} onClick={() => void onApprove()}>{approvalButtonLabel}</button></div></footer>
     </div>
   )
 }
