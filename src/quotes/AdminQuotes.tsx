@@ -15,7 +15,7 @@ type AdminDraft = {
   discount_amount: number; final_amount: number; payment_provider: 'none' | 'nubank' | 'mercadopago'; installments: number;
   payment_fee_total: number; retentions: RetentionInput; retention_total: number; retention_pricing_mode: 'informational' | 'preserve_net';
   retention_gross_up_suggestion: number; estimated_net: number; fiscal_review_required: boolean; fiscal_review_confirmed: boolean;
-  notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected'; items?: QuoteItem[]; updated_at?: string
+  notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected' | 'suspended'; items?: QuoteItem[]; updated_at?: string
 }
 type AdminRequest = {
   id: string; protocol: string; created_at: string; name: string; email: string; phone: string; company?: string | null;
@@ -34,7 +34,7 @@ type EditorTab = 'overview' | 'composition' | 'finance' | 'fiscal' | 'send'
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const emptyRetentions: RetentionInput = { iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0 }
 const retentionLabels: Record<keyof RetentionInput, string> = { iss: 'ISS', irrf: 'IRRF', pis: 'PIS', cofins: 'COFINS', csll: 'CSLL', inss: 'INSS' }
-const statusLabels: Record<string, string> = { awaiting_review: 'Aguardando revisão', needs_scope: 'Escopo pendente', approved: 'Aprovado', rejected: 'Rejeitado', new: 'Novo', received: 'Recebido' }
+const statusLabels: Record<string, string> = { awaiting_review: 'Aguardando revisão', needs_scope: 'Escopo pendente', approved: 'Aprovado', rejected: 'Rejeitado', suspended: 'Suspenso', new: 'Novo', received: 'Recebido' }
 const statusLabel = (status: string) => statusLabels[status] ?? status.replaceAll('_', ' ')
 
 async function adminFetch<T>(session: Session, init?: RequestInit): Promise<T> {
@@ -120,7 +120,7 @@ export default function AdminQuotes() {
     return requests.filter((item) => [item.name, item.company, item.email, item.protocol].some((value) => value?.toLocaleLowerCase('pt-BR').includes(normalized)))
   }, [query, requests])
   const metrics = useMemo(() => ({
-    pipeline: requests.reduce((sum, item) => sum + (item.draft?.status === 'rejected' ? 0 : Number(item.draft?.final_amount ?? 0)), 0),
+    pipeline: requests.reduce((sum, item) => sum + (item.draft?.status === 'rejected' || item.draft?.status === 'suspended' ? 0 : Number(item.draft?.final_amount ?? 0)), 0),
     awaiting: requests.filter((item) => item.draft?.status === 'awaiting_review').length,
     pendingScope: requests.filter((item) => item.draft?.status === 'needs_scope').length,
     approved: requests.filter((item) => item.draft?.status === 'approved').length,
