@@ -383,7 +383,12 @@ export default function App() {
           </div>
           <div className="footer-meta">
             <span>© 2026 HRX Solutions. Todos os direitos reservados.</span>
-            <span className="footer-accounting">Responsabilidade contábil: Raisa da Silva Pereira · SOMMA</span>
+            <span className="footer-accounting">
+              Responsabilidade contábil: Raisa da Silva Pereira · SOMMA ·{' '}
+              <a href="https://wa.me/5592982137652" target="_blank" rel="noreferrer">WhatsApp</a>
+              {' · '}
+              <a href="mailto:raisa.pereira.92@hotmail.com">E-mail</a>
+            </span>
             <a href="#inicio">Voltar ao início ↑</a>
           </div>
         </div>
