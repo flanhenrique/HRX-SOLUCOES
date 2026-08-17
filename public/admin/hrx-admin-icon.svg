@@ -1,10 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HRX Admin">
-  <rect width="512" height="512" rx="112" fill="#061a31"/>
-  <rect x="40" y="40" width="432" height="432" rx="94" fill="#0a2847" stroke="#173d5f" stroke-width="6"/>
-  <text x="86" y="286" fill="#eef7ff" font-family="Arial, Helvetica, sans-serif" font-size="152" font-weight="800" letter-spacing="-10">HR</text>
-  <g stroke="#72e532" stroke-width="48" stroke-linecap="square">
-    <line x1="318" y1="176" x2="424" y2="336"/>
-    <line x1="424" y1="176" x2="318" y2="336"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HRX Solutions">
+  <defs>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.48" stop-color="#e3e7eb"/><stop offset="0.75" stop-color="#c7cdd4"/><stop offset="1" stop-color="#f7f9fb"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#58e48c"/><stop offset="0.55" stop-color="#20bf6f"/><stop offset="1" stop-color="#0b8f5a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#06172c"/>
+  <rect x="18" y="18" width="476" height="476" rx="104" fill="none" stroke="#183752" stroke-width="3"/>
+  <g transform="translate(47 154) scale(.47)">
+    <path fill="url(#silver)" d="M0 0h62v82h104V0h62v218h-62v-82H62v82H0z"/>
+    <path fill="url(#silver)" fill-rule="evenodd" d="M250 0h170c76 0 124 39 124 101 0 47-28 80-74 94l91 93h-82l-82-86h-85v86h-62V0zm62 55v94h103c43 0 65-16 65-47 0-31-22-47-65-47H312z"/>
+    <path fill="url(#green)" d="M563 69l42-42 74 75 62-76 44 36-104 126-48-48z"/>
+    <path fill="url(#green)" d="M565 206l43 43 74-75-42-43z"/>
+    <path fill="url(#silver)" d="M690 149l42-44 95 113h-77z"/>
   </g>
-  <text x="256" y="410" text-anchor="middle" fill="#9fb3c3" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700" letter-spacing="10">ADMIN</text>
+  <text x="256" y="365" text-anchor="middle" fill="#f5f7fa" font-family="Montserrat,Arial,sans-serif" font-size="31" font-weight="400" letter-spacing="12">SOLUTIONS</text>
+  <rect x="222" y="392" width="68" height="4" rx="2" fill="url(#green)"/>
 </svg>
