@@ -14,21 +14,8 @@ type ClientRow = {
   active: boolean
 }
 
-type SecondaryCnae = {
-  code?: string
-  description?: string
-}
-
-type FiscalAddress = {
-  street?: string
-  number?: string
-  complement?: string
-  district?: string
-  city?: string
-  state?: string
-  zipCode?: string
-}
-
+type SecondaryCnae = { code?: string; description?: string }
+type FiscalAddress = { street?: string; number?: string; complement?: string; district?: string; city?: string; state?: string; zipCode?: string }
 type FiscalProfile = {
   client_id: string
   cnpj: string
@@ -73,29 +60,28 @@ const manualRegimes = [
   { value: 'OUTRO', label: 'Outro' },
 ]
 
-function onlyDigits(value?: string | null) {
-  return String(value ?? '').replace(/\D/g, '')
-}
+const stateStatuses = [
+  { value: 'NAO_VERIFICADA', label: 'Não verificada' },
+  { value: 'ATIVA', label: 'Ativa' },
+  { value: 'INATIVA', label: 'Inativa' },
+  { value: 'SUSPENSA', label: 'Suspensa' },
+  { value: 'BAIXADA', label: 'Baixada' },
+  { value: 'PENDENTE', label: 'Pendente' },
+]
 
-function isCnpj(value?: string | null) {
-  return onlyDigits(value).length === 14
-}
-
+function onlyDigits(value?: string | null) { return String(value ?? '').replace(/\D/g, '') }
+function isCnpj(value?: string | null) { return onlyDigits(value).length === 14 }
 function formatCnpj(value?: string | null) {
   const digits = onlyDigits(value)
   if (digits.length !== 14) return value || '—'
   return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
 }
-
 function formatDate(value?: string | null, withTime = false) {
   if (!value) return '—'
   const date = new Date(value.includes('T') ? value : `${value}T12:00:00`)
   if (Number.isNaN(date.getTime())) return value
-  return withTime
-    ? date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-    : date.toLocaleDateString('pt-BR')
+  return withTime ? date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : date.toLocaleDateString('pt-BR')
 }
-
 function labelRegime(value?: string | null) {
   if (!value) return 'A confirmar'
   const known = manualRegimes.find((item) => item.value === value)?.label
@@ -104,21 +90,20 @@ function labelRegime(value?: string | null) {
   if (value === 'MEI') return 'MEI / SIMEI'
   return value.replaceAll('_', ' ').toLocaleLowerCase('pt-BR').replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
 }
-
 function yesNoUnknown(value?: boolean | null) {
   if (value === true) return 'Sim'
   if (value === false) return 'Não'
   return 'Não informado'
 }
-
 function stateLabel(value?: string | null) {
-  const labels: Record<string, string> = {
-    PENDENTE_SEFAZ_AM: 'Pendente SEFAZ-AM',
-    NAO_VERIFICADO: 'Não verificado',
-    HABILITADO: 'Habilitado',
-    NAO_HABILITADO: 'Não habilitado',
-  }
+  const labels: Record<string, string> = { PENDENTE_SEFAZ_AM: 'Pendente SEFAZ-AM', NAO_VERIFICADO: 'Não verificado', HABILITADO: 'Habilitado', NAO_HABILITADO: 'Não habilitado' }
   return value ? labels[value] ?? value.replaceAll('_', ' ') : 'Não verificado'
+}
+function stateValidationFromStatus(status: string) {
+  if (status === 'ATIVA') return 'HABILITADO'
+  if (status === 'PENDENTE') return 'PENDENTE_SEFAZ_AM'
+  if (!status || status === 'NAO_VERIFICADA') return 'NAO_VERIFICADO'
+  return 'NAO_HABILITADO'
 }
 
 async function lookupErrorMessage(error: unknown) {
@@ -149,7 +134,11 @@ export default function AdminFiscalHub() {
   const [loading, setLoading] = useState(false)
   const [busyClientId, setBusyClientId] = useState<string | null>(null)
   const [savingRegime, setSavingRegime] = useState(false)
+  const [savingState, setSavingState] = useState(false)
   const [manualRegime, setManualRegime] = useState('')
+  const [stateRegistration, setStateRegistration] = useState('')
+  const [stateRegistrationStatus, setStateRegistrationStatus] = useState('NAO_VERIFICADA')
+  const [icmsTaxpayer, setIcmsTaxpayer] = useState<'unknown' | 'true' | 'false'>('unknown')
   const [message, setMessage] = useState('')
   const [messageTone, setMessageTone] = useState<'info' | 'success' | 'error'>('info')
 
@@ -180,7 +169,6 @@ export default function AdminFiscalHub() {
         acc[item.client_id] = item
         return acc
       }, {})
-
       setClients(cnpjClients)
       setProfiles(fiscalProfiles)
       setSelectedClientId((current) => {
@@ -196,16 +184,17 @@ export default function AdminFiscalHub() {
     }
   }
 
-  useEffect(() => {
-    if (open) void loadData()
-  }, [open])
+  useEffect(() => { if (open) void loadData() }, [open])
 
   const selectedClient = clients.find((item) => item.id === selectedClientId) ?? null
   const selectedProfile = selectedClient ? profiles[selectedClient.id] ?? null : null
 
   useEffect(() => {
     setManualRegime(selectedProfile?.tax_regime_requires_confirmation ? '' : selectedProfile?.tax_regime ?? '')
-  }, [selectedClientId, selectedProfile?.tax_regime, selectedProfile?.tax_regime_requires_confirmation])
+    setStateRegistration(selectedProfile?.state_registration ?? '')
+    setStateRegistrationStatus(selectedProfile?.state_registration_status ?? 'NAO_VERIFICADA')
+    setIcmsTaxpayer(selectedProfile?.icms_taxpayer === true ? 'true' : selectedProfile?.icms_taxpayer === false ? 'false' : 'unknown')
+  }, [selectedClientId, selectedProfile?.tax_regime, selectedProfile?.tax_regime_requires_confirmation, selectedProfile?.state_registration, selectedProfile?.state_registration_status, selectedProfile?.icms_taxpayer])
 
   const filteredClients = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('pt-BR')
@@ -236,13 +225,9 @@ export default function AdminFiscalHub() {
 
   const confirmTaxRegime = async () => {
     if (!selectedClient || !manualRegime) return
-    setSavingRegime(true)
-    setMessage('')
+    setSavingRegime(true); setMessage('')
     try {
-      const { error } = await hrxSupabase.rpc('hrx_confirm_client_tax_regime', {
-        p_client_id: selectedClient.id,
-        p_tax_regime: manualRegime,
-      })
+      const { error } = await hrxSupabase.rpc('hrx_confirm_client_tax_regime', { p_client_id: selectedClient.id, p_tax_regime: manualRegime })
       if (error) throw error
       await loadData(selectedClient.id)
       setMessage('Regime tributário confirmado manualmente.')
@@ -250,42 +235,45 @@ export default function AdminFiscalHub() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível confirmar o regime tributário.')
       setMessageTone('error')
-    } finally {
-      setSavingRegime(false)
-    }
+    } finally { setSavingRegime(false) }
   }
 
-  const sidebarPortal = sidebarTarget ? createPortal(
-    <button type="button" className="admin-fiscal-nav" onClick={() => setOpen(true)}>
-      <span aria-hidden="true">◇</span>Fiscal
-    </button>,
-    sidebarTarget,
-  ) : null
+  const saveStateRegistration = async () => {
+    if (!selectedClient || !selectedProfile) return
+    setSavingState(true); setMessage('')
+    try {
+      const { error } = await hrxSupabase.rpc('hrx_update_client_state_registration', {
+        p_client_id: selectedClient.id,
+        p_state_registration: stateRegistration.trim() || null,
+        p_state_registration_status: stateRegistrationStatus || null,
+        p_icms_taxpayer: icmsTaxpayer === 'unknown' ? null : icmsTaxpayer === 'true',
+        p_state_validation_status: stateValidationFromStatus(stateRegistrationStatus),
+      })
+      if (error) throw error
+      await loadData(selectedClient.id)
+      setMessage('Cadastro estadual salvo manualmente.')
+      setMessageTone('success')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível salvar a Inscrição Estadual.')
+      setMessageTone('error')
+    } finally { setSavingState(false) }
+  }
 
-  const mobilePortal = mobileTarget ? createPortal(
-    <button type="button" className="admin-fiscal-mobile" onClick={() => setOpen(true)}>
-      <span aria-hidden="true">◇</span>Fiscal
-    </button>,
-    mobileTarget,
-  ) : null
-
+  const sidebarPortal = sidebarTarget ? createPortal(<button type="button" className="admin-fiscal-nav" onClick={() => setOpen(true)}><span aria-hidden="true">◇</span>Fiscal</button>, sidebarTarget) : null
+  const mobilePortal = mobileTarget ? createPortal(<button type="button" className="admin-fiscal-mobile" onClick={() => setOpen(true)}><span aria-hidden="true">◇</span>Fiscal</button>, mobileTarget) : null
   const address = selectedProfile?.fiscal_address
-  const addressText = address
-    ? [[address.street, address.number].filter(Boolean).join(', '), address.complement, address.district, [address.city, address.state].filter(Boolean).join(' - '), address.zipCode ? `CEP ${address.zipCode}` : ''].filter(Boolean).join(' · ')
-    : 'Não consultado'
+  const addressText = address ? [[address.street, address.number].filter(Boolean).join(', '), address.complement, address.district, [address.city, address.state].filter(Boolean).join(' - '), address.zipCode ? `CEP ${address.zipCode}` : ''].filter(Boolean).join(' · ') : 'Não consultado'
   const secondaryCnaes = Array.isArray(selectedProfile?.secondary_cnaes) ? selectedProfile.secondary_cnaes : []
 
   return <>
     {sidebarPortal}{mobilePortal}
-
     {open && <section className="admin-fiscal-shell" role="dialog" aria-modal="true" aria-label="Gestão fiscal de clientes">
       <header className="admin-fiscal-header">
         <div><span>HRX · BACKOFFICE</span><h2>Fiscal</h2><p>Validação cadastral e tributária por CNPJ</p></div>
-        <div className="admin-fiscal-header-actions"><span>{clients.length} cliente(s) PJ</span><button type="button" aria-label="Fechar" onClick={() => setOpen(false)}>×</button></div>
+        <div className="admin-fiscal-header-actions"><button type="button" onClick={() => void loadData(selectedClientId ?? undefined)} disabled={loading}>{loading ? 'Atualizando…' : '↻ Atualizar dados'}</button><span>{clients.length} cliente(s) PJ</span><button type="button" aria-label="Fechar" onClick={() => setOpen(false)}>×</button></div>
       </header>
 
       {message && <div className={`admin-fiscal-message is-${messageTone}`}>{message}</div>}
-
       <div className="admin-fiscal-layout">
         <aside className="admin-fiscal-clients">
           <div className="admin-fiscal-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar empresa ou CNPJ" /></div>
@@ -297,8 +285,7 @@ export default function AdminFiscalHub() {
               const active = profile?.registration_status === 'ATIVA'
               return <button key={client.id} type="button" className={selectedClientId === client.id ? 'admin-fiscal-client is-active' : 'admin-fiscal-client'} onClick={() => setSelectedClientId(client.id)}>
                 <div><strong>{client.company || profile?.trade_name || client.name}</strong><span className={active ? 'is-good' : profile ? 'is-warning' : 'is-muted'}>{profile ? profile.registration_status || 'Verificar' : 'Não consultado'}</span></div>
-                <small>{client.name}</small>
-                <time>{formatCnpj(client.document)}</time>
+                <small>{client.name}</small><time>{formatCnpj(client.document)}</time>
               </button>
             })}
           </div>
@@ -306,7 +293,6 @@ export default function AdminFiscalHub() {
 
         <main className="admin-fiscal-detail">
           {!selectedClient && <div className="admin-fiscal-empty-state"><strong>Nenhum cliente PJ selecionado</strong><p>Cadastre um CNPJ no catálogo de clientes para habilitar a análise fiscal.</p></div>}
-
           {selectedClient && <>
             <section className="admin-fiscal-title">
               <div><span>CLIENTE · {formatCnpj(selectedClient.document)}</span><h3>{selectedProfile?.legal_name || selectedClient.company || selectedClient.name}</h3><p>{selectedProfile?.trade_name || selectedClient.company || 'Nome fantasia não informado'}</p></div>
@@ -349,8 +335,14 @@ export default function AdminFiscalHub() {
 
                 <section className="admin-fiscal-card is-wide">
                   <header><div><span>CADASTRO ESTADUAL</span><h4>Inscrição Estadual / ICMS</h4></div><b className={selectedProfile.state_validation_status === 'HABILITADO' ? 'is-good' : 'is-warning'}>{stateLabel(selectedProfile.state_validation_status)}</b></header>
-                  <div className="admin-fiscal-state-grid"><div><span>Inscrição Estadual</span><strong>{selectedProfile.state_registration || 'Não consultada automaticamente'}</strong></div><div><span>Situação IE</span><strong>{selectedProfile.state_registration_status || 'Pendente'}</strong></div><div><span>Contribuinte ICMS</span><strong>{yesNoUnknown(selectedProfile.icms_taxpayer)}</strong></div></div>
-                  {selectedProfile.sefaz_verification_url && <div className="admin-fiscal-sefaz"><p>A SEFAZ-AM mantém consulta pública própria com validação de segurança. A informação estadual não é inferida pela consulta federal.</p><a href={selectedProfile.sefaz_verification_url} target="_blank" rel="noreferrer">Abrir consulta oficial SEFAZ-AM ↗</a></div>}
+                  <div className="admin-fiscal-state-grid"><div><span>Inscrição Estadual</span><strong>{selectedProfile.state_registration || 'Não informada'}</strong></div><div><span>Situação IE</span><strong>{selectedProfile.state_registration_status || 'Pendente'}</strong></div><div><span>Contribuinte ICMS</span><strong>{yesNoUnknown(selectedProfile.icms_taxpayer)}</strong></div></div>
+                  <div className="admin-fiscal-confirm">
+                    <input aria-label="Inscrição Estadual" placeholder="Inscrição Estadual" value={stateRegistration} onChange={(event) => setStateRegistration(event.target.value)} />
+                    <select aria-label="Situação da Inscrição Estadual" value={stateRegistrationStatus} onChange={(event) => setStateRegistrationStatus(event.target.value)}>{stateStatuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+                    <select aria-label="Contribuinte ICMS" value={icmsTaxpayer} onChange={(event) => setIcmsTaxpayer(event.target.value as 'unknown' | 'true' | 'false')}><option value="unknown">ICMS não informado</option><option value="true">Contribuinte ICMS</option><option value="false">Não contribuinte ICMS</option></select>
+                    <button type="button" disabled={savingState} onClick={() => void saveStateRegistration()}>{savingState ? 'Salvando…' : 'Salvar cadastro estadual'}</button>
+                  </div>
+                  {selectedProfile.sefaz_verification_url && <div className="admin-fiscal-sefaz"><p>A SEFAZ-AM mantém consulta pública própria com validação de segurança. A informação estadual pode ser conferida lá e registrada manualmente acima.</p><a href={selectedProfile.sefaz_verification_url} target="_blank" rel="noreferrer">Abrir consulta oficial SEFAZ-AM ↗</a></div>}
                 </section>
               </div>
 
