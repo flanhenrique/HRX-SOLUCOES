@@ -2,7 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
+import AdminOperationsHub from './quotes/AdminOperationsHub'
 import AdminPasswordControl from './quotes/AdminPasswordControl'
+import SuspendedQuoteGuard from './quotes/SuspendedQuoteGuard'
 import AdminPwaBridge from './AdminPwaBridge'
 import AdminPwaUpdater from './AdminPwaUpdater'
 import { configureAdminAppShell } from './quotes/adminAppShell'
@@ -18,6 +20,6 @@ if (isAdminRoute) configureAdminAppShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAdminRoute ? <><AdminPwaBridge /><AdminPwaUpdater /><AdminPasswordControl /><AdminAuthRouter /></> : <App />}
+    {isAdminRoute ? <><AdminPwaBridge /><AdminPwaUpdater /><AdminPasswordControl /><AdminOperationsHub /><SuspendedQuoteGuard /><AdminAuthRouter /></> : <App />}
   </StrictMode>,
 )
