@@ -1,0 +1,50 @@
+/* HRX brand lockup sourced from the approved visual reference. */
+.brand.brand-authentic {
+  display: block !important;
+  width: 148px;
+  min-width: 148px;
+  height: 86px;
+  background: url('/hrx-logo.svg?v=4') center / contain no-repeat;
+}
+
+.brand-authentic .brand-mark,
+.brand-authentic .brand-word {
+  display: none !important;
+}
+
+.header-inner {
+  min-height: 94px;
+}
+
+.footer-brand-copy .brand.brand-authentic {
+  width: 178px;
+  min-width: 178px;
+  height: 106px;
+}
+
+.admin-login-card::before {
+  content: '';
+  display: block;
+  width: min(190px, 62vw);
+  height: 112px;
+  margin: 0 auto 18px;
+  background: url('/hrx-logo.svg?v=4') center / contain no-repeat;
+}
+
+@media (max-width: 760px) {
+  .brand.brand-authentic {
+    width: 118px;
+    min-width: 118px;
+    height: 70px;
+  }
+
+  .header-inner {
+    min-height: 78px;
+  }
+
+  .footer-brand-copy .brand.brand-authentic {
+    width: 150px;
+    min-width: 150px;
+    height: 90px;
+  }
+}
