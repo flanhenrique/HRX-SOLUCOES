@@ -64,6 +64,6 @@ test('first access is integrated into the login screen without email delivery', 
   assert.match(router, /Ativar e entrar/)
   assert.match(router, /signInWithPassword/)
   assert.match(router, /code_already_used/)
-  assert.match(router, /setMode\('activate'\)/)
+  assert.match(router, /switchMode\('activate'\)/)
   assert.doesNotMatch(main, /<AdminBootstrapAccess \/>/)
 })
