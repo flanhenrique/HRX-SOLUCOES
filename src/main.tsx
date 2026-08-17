@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
 import AdminOperationsHub from './quotes/AdminOperationsHub'
+import AdminFiscalHub from './quotes/AdminFiscalHub'
 import MobileCreateQuoteButton from './quotes/MobileCreateQuoteButton'
 import AdminExperienceLayer from './quotes/AdminExperienceLayer'
 import SuspendedQuoteGuard from './quotes/SuspendedQuoteGuard'
@@ -22,6 +23,6 @@ if (isAdminRoute) configureAdminAppShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAdminRoute ? <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><MobileCreateQuoteButton /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></> : <App />}
+    {isAdminRoute ? <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminFiscalHub /><MobileCreateQuoteButton /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></> : <App />}
   </StrictMode>,
 )
