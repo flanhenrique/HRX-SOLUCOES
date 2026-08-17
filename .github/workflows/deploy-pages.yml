@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Verify admin PWA shell
+        run: npm run test:pwa
+
       - name: Build
         run: npm run build
 
@@ -41,9 +44,25 @@ jobs:
           cp dist/index.html dist/admin/orcamentos/index.html
           python - <<'PY'
           from pathlib import Path
+          import re
+
           path = Path('dist/admin/orcamentos/index.html')
           html = path.read_text()
-          tags = '''\n    <link rel="manifest" href="/admin/manifest.webmanifest" />\n    <meta name="theme-color" content="#061a31" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-title" content="HRX Admin" />\n    <link rel="apple-touch-icon" href="/admin/hrx-admin-icon.svg" />'''
+          locked_viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />'
+          viewport_pattern = r'<meta\s+name=["\']viewport["\'][^>]*>'
+          if re.search(viewport_pattern, html, flags=re.IGNORECASE):
+              html = re.sub(viewport_pattern, locked_viewport, html, count=1, flags=re.IGNORECASE)
+          else:
+              html = html.replace('<head>', f'<head>\n    {locked_viewport}')
+
+          tags = '''
+    <link rel="manifest" href="/admin/manifest.webmanifest" />
+    <meta name="theme-color" content="#061a31" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HRX Admin" />
+    <link rel="apple-touch-icon" href="/admin/hrx-admin-icon.svg" />'''
           html = html.replace('</head>', f'{tags}\n  </head>')
           path.write_text(html)
           PY
