@@ -31,7 +31,7 @@ type AdminDraft = {
   discount_amount: number; final_amount: number; payment_provider: 'none' | 'nubank' | 'mercadopago'; installments: number;
   payment_fee_total: number; retentions: RetentionInput; retention_total: number; retention_pricing_mode: 'informational' | 'preserve_net';
   retention_gross_up_suggestion: number; estimated_net: number; fiscal_review_required: boolean; fiscal_review_confirmed: boolean;
-  notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected'; items?: QuoteItem[]
+  notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected'; items?: QuoteItem[]; updated_at?: string
 }
 type AdminRequest = {
   id: string; protocol: string; created_at: string; name: string; email: string; phone: string; company?: string | null;
