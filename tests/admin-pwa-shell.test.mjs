@@ -52,16 +52,18 @@ test('authenticated admin can change password inside the PWA', async () => {
   assert.match(main, /<AdminPasswordControl \/>/)
 })
 
-test('first access can be activated by a one-time code without email delivery', async () => {
-  const [bootstrap, client, main] = await Promise.all([
-    read('src/quotes/AdminBootstrapAccess.tsx'),
+test('first access is integrated into the login screen without email delivery', async () => {
+  const [router, client, main] = await Promise.all([
+    read('src/quotes/AdminAuthRouter.tsx'),
     read('src/quotes/supabaseClient.ts'),
     read('src/main.tsx'),
   ])
 
   assert.match(client, /admin-bootstrap/)
-  assert.match(bootstrap, /Ativar primeiro acesso/)
-  assert.match(bootstrap, /signInWithPassword/)
-  assert.match(bootstrap, /code_already_used/)
-  assert.match(main, /<AdminBootstrapAccess \/>/)
+  assert.match(router, /Ativar primeiro acesso/)
+  assert.match(router, /Ativar e entrar/)
+  assert.match(router, /signInWithPassword/)
+  assert.match(router, /code_already_used/)
+  assert.match(router, /switchMode\('activate'\)/)
+  assert.doesNotMatch(main, /<AdminBootstrapAccess \/>/)
 })
