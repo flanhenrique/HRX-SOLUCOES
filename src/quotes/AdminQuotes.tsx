@@ -6,13 +6,32 @@ import { hrxPublishableKey, hrxSupabase, quoteAdminEndpoint } from './supabaseCl
 import './quotes.css'
 
 type ProviderRule = { provider: 'nubank' | 'mercadopago'; display_name: string; boleto_fee_per_paid: number; fee_note?: string | null }
+type PricingRule = {
+  service_key: string
+  service_name: string
+  category: string
+  base_amount: number
+  minimum_amount: number
+  fiscal_code?: string | null
+  invoice_description?: string | null
+}
+type QuoteItem = {
+  id?: string
+  draft_id?: string
+  service_key: string
+  service_name: string
+  quantity: number
+  unit_amount: number
+  total_amount: number
+  source: 'engine' | 'manual'
+}
 type AdminDraft = {
   id: string; request_id: string; base_amount: number; complexity_multiplier: number; urgency_multiplier: number;
   pre_discount_amount: number; discount_percent: DiscountLevel; discount_status: 'green' | 'yellow' | 'red' | 'purple';
   discount_amount: number; final_amount: number; payment_provider: 'none' | 'nubank' | 'mercadopago'; installments: number;
   payment_fee_total: number; retentions: RetentionInput; retention_total: number; retention_pricing_mode: 'informational' | 'preserve_net';
   retention_gross_up_suggestion: number; estimated_net: number; fiscal_review_required: boolean; fiscal_review_confirmed: boolean;
-  notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected'
+  notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected'; items?: QuoteItem[]
 }
 type AdminRequest = {
   id: string; protocol: string; created_at: string; name: string; email: string; phone: string; company?: string | null;
@@ -20,10 +39,12 @@ type AdminRequest = {
   interpretation?: { summary: string; suggested_service_keys: string[]; confidence: number; missing_information: string[] } | null;
   draft?: AdminDraft | null
 }
-type AdminResponse = { requests: AdminRequest[]; providers: ProviderRule[] }
+type AdminResponse = { requests: AdminRequest[]; providers: ProviderRule[]; pricingRules: PricingRule[] }
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const emptyRetentions: RetentionInput = { iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0 }
+const authCooldownKey = 'hrx_admin_auth_blocked_until'
+const authCooldownMs = 10 * 60 * 1000
 
 async function adminFetch<T>(session: Session, init?: RequestInit): Promise<T> {
   const response = await fetch(quoteAdminEndpoint, {
@@ -44,19 +65,66 @@ function LoginPanel() {
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageTone, setMessageTone] = useState<'success' | 'warning' | 'error'>('success')
+  const [blockedUntil, setBlockedUntil] = useState(() => Number(window.localStorage.getItem(authCooldownKey) ?? 0))
+  const [clock, setClock] = useState(Date.now())
+  const remainingMs = Math.max(0, blockedUntil - clock)
+  const blocked = remainingMs > 0
+
+  useEffect(() => {
+    if (!blocked) return
+    const timer = window.setInterval(() => setClock(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [blocked])
+
+  useEffect(() => {
+    if (!blockedUntil || blockedUntil > Date.now()) return
+    window.localStorage.removeItem(authCooldownKey)
+    setBlockedUntil(0)
+  }, [blockedUntil, clock])
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (blocked) {
+      setMessageTone('warning')
+      setMessage('Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente. Não reutilize links antigos.')
+      return
+    }
+
     setSending(true)
     setMessage('')
     const redirectTo = `${window.location.origin}/admin/orcamentos`
     const { error } = await hrxSupabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
     })
     setSending(false)
-    setMessage(error ? 'Não foi possível enviar o link de acesso agora.' : 'Link de acesso enviado. Verifique o e-mail informado.')
+
+    if (!error) {
+      window.localStorage.removeItem(authCooldownKey)
+      setBlockedUntil(0)
+      setMessageTone('success')
+      setMessage('Link de acesso enviado. Verifique o e-mail informado e use somente o link mais recente.')
+      return
+    }
+
+    const authError = error as { status?: number; code?: string; message?: string }
+    const rateLimited = authError.status === 429 || /rate.?limit|too many/i.test(`${authError.code ?? ''} ${authError.message ?? ''}`)
+    if (rateLimited) {
+      const until = Date.now() + authCooldownMs
+      window.localStorage.setItem(authCooldownKey, String(until))
+      setBlockedUntil(until)
+      setClock(Date.now())
+      setMessageTone('warning')
+      setMessage('Muitas tentativas de acesso. O envio de novos links foi bloqueado temporariamente. Aguarde alguns minutos e tente novamente. Não reutilize links antigos.')
+      return
+    }
+
+    setMessageTone('error')
+    setMessage('Não foi possível enviar o link de acesso agora. Confira o e-mail e tente novamente mais tarde.')
   }
+
+  const minutesLeft = Math.max(1, Math.ceil(remainingMs / 60_000))
 
   return (
     <main className="admin-login-shell">
@@ -67,8 +135,8 @@ function LoginPanel() {
         <label className="admin-field">E-mail administrativo
           <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
         </label>
-        <button className="button button-primary" type="submit" disabled={sending}>{sending ? 'Enviando…' : 'Enviar link de acesso'}</button>
-        {message && <div className="admin-login-message" role="status">{message}</div>}
+        <button className="button button-primary" type="submit" disabled={sending || blocked}>{sending ? 'Enviando…' : blocked ? `Tente novamente em ~${minutesLeft} min` : 'Enviar link de acesso'}</button>
+        {message && <div className={`admin-login-message is-${messageTone}`} role="status">{message}</div>}
         <a className="admin-back-link" href="/">← Voltar ao site</a>
       </form>
     </main>
@@ -82,6 +150,7 @@ export default function AdminQuotes() {
   const [error, setError] = useState('')
   const [requests, setRequests] = useState<AdminRequest[]>([])
   const [providers, setProviders] = useState<ProviderRule[]>([])
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -96,6 +165,7 @@ export default function AdminQuotes() {
       const result = await adminFetch<AdminResponse>(currentSession)
       setRequests(result.requests)
       setProviders(result.providers)
+      setPricingRules(result.pricingRules ?? [])
       setSelectedId((current) => current && result.requests.some((item) => item.id === current) ? current : result.requests[0]?.id ?? null)
     } catch (loadError) {
       const code = loadError instanceof Error ? loadError.message : ''
@@ -113,6 +183,23 @@ export default function AdminQuotes() {
       await adminFetch(session, { method: 'PATCH', body: JSON.stringify({ action: 'update_draft', requestId: selected.id, ...payload }) })
       await load(session)
     } catch (err) { setError(err instanceof Error ? `Não foi possível atualizar: ${err.message}` : 'Não foi possível atualizar.') }
+  }
+
+  const setItems = async (items: { serviceKey: string; quantity: number }[]) => {
+    if (!session || !selected?.draft) return
+    setError('')
+    try {
+      await adminFetch(session, { method: 'PATCH', body: JSON.stringify({ action: 'set_items', requestId: selected.id, items }) })
+      await load(session)
+    } catch (err) {
+      const code = err instanceof Error ? err.message : ''
+      const messages: Record<string, string> = {
+        invalid_service: 'Há um serviço inválido ou inativo na composição.',
+        invalid_items: 'A composição enviada não é válida.',
+        items_update_failed: 'Não foi possível atualizar os itens do orçamento.',
+      }
+      setError(messages[code] ?? 'Não foi possível aplicar a composição de serviços.')
+    }
   }
 
   const approve = async () => {
@@ -133,7 +220,7 @@ export default function AdminQuotes() {
   return (
     <main className="admin-live-shell">
       <header className="admin-live-header">
-        <div><span className="eyebrow">HRX · BACKOFFICE</span><h1>Motor de orçamentos</h1><p>Solicitações, interpretação, preço, desconto, pagamento, retenções e validação final.</p></div>
+        <div><span className="eyebrow">HRX · BACKOFFICE</span><h1>Motor de orçamentos</h1><p>Solicitações, regras de serviço, composição, preço, desconto, pagamento, retenções e validação final.</p></div>
         <div className="admin-header-actions"><button className="button button-secondary" type="button" onClick={() => void load(session)}>Atualizar</button><button className="admin-signout" type="button" onClick={() => void hrxSupabase.auth.signOut()}>Sair</button></div>
       </header>
       {error && <div className="admin-global-error" role="alert">{error}</div>}
@@ -144,13 +231,20 @@ export default function AdminQuotes() {
           {!loading && requests.length === 0 && <p className="admin-empty">Nenhuma solicitação recebida ainda.</p>}
           {requests.map((request) => <button key={request.id} type="button" className={selectedId === request.id ? 'admin-lead is-active' : 'admin-lead'} onClick={() => setSelectedId(request.id)}><span className="admin-lead-status">{request.status.replaceAll('_',' ')}</span><strong>{request.name}</strong><small>{request.company || request.email}</small><time>{new Date(request.created_at).toLocaleString('pt-BR')}</time></button>)}
         </aside>
-        <section className="admin-detail">{selected ? <QuoteEditor request={selected} providers={providers} onUpdate={updateDraft} onApprove={approve} /> : <div className="admin-card"><h2>Selecione uma solicitação</h2></div>}</section>
+        <section className="admin-detail">{selected ? <QuoteEditor request={selected} providers={providers} pricingRules={pricingRules} onUpdate={updateDraft} onSetItems={setItems} onApprove={approve} /> : <div className="admin-card"><h2>Selecione uma solicitação</h2></div>}</section>
       </div>
     </main>
   )
 }
 
-function QuoteEditor({ request, providers, onUpdate, onApprove }: { request: AdminRequest; providers: ProviderRule[]; onUpdate: (payload: Record<string, unknown>) => Promise<void>; onApprove: () => Promise<void> }) {
+function QuoteEditor({ request, providers, pricingRules, onUpdate, onSetItems, onApprove }: {
+  request: AdminRequest
+  providers: ProviderRule[]
+  pricingRules: PricingRule[]
+  onUpdate: (payload: Record<string, unknown>) => Promise<void>
+  onSetItems: (items: { serviceKey: string; quantity: number }[]) => Promise<void>
+  onApprove: () => Promise<void>
+}) {
   const draft = request.draft
   const [discount, setDiscount] = useState<DiscountLevel>(draft?.discount_percent ?? 0)
   const [complexity, setComplexity] = useState(draft?.complexity_multiplier ?? 1)
@@ -161,12 +255,21 @@ function QuoteEditor({ request, providers, onUpdate, onApprove }: { request: Adm
   const [retentionMode, setRetentionMode] = useState<'informational' | 'preserve_net'>(draft?.retention_pricing_mode ?? 'informational')
   const [fiscalConfirmed, setFiscalConfirmed] = useState(draft?.fiscal_review_confirmed ?? false)
   const [notes, setNotes] = useState(draft?.notes ?? '')
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [applyingItems, setApplyingItems] = useState(false)
 
   useEffect(() => {
     setDiscount(draft?.discount_percent ?? 0); setComplexity(draft?.complexity_multiplier ?? 1); setUrgency(draft?.urgency_multiplier ?? 1)
     setProvider(draft?.payment_provider ?? 'none'); setInstallments(draft?.installments ?? 1); setRetentions(draft?.retentions ?? emptyRetentions)
     setRetentionMode(draft?.retention_pricing_mode ?? 'informational'); setFiscalConfirmed(draft?.fiscal_review_confirmed ?? false); setNotes(draft?.notes ?? '')
-  }, [request.id])
+    setQuantities(Object.fromEntries((draft?.items ?? []).map((item) => [item.service_key, Number(item.quantity) || 1])))
+  }, [request.id, draft?.updated_at])
+
+  const groupedRules = useMemo(() => {
+    const groups = new Map<string, PricingRule[]>()
+    for (const rule of pricingRules) groups.set(rule.category, [...(groups.get(rule.category) ?? []), rule])
+    return [...groups.entries()]
+  }, [pricingRules])
 
   if (!draft) return <div className="admin-card"><h2>Rascunho ainda não disponível</h2></div>
   const assessment = assessDiscount(discount)
@@ -174,11 +277,33 @@ function QuoteEditor({ request, providers, onUpdate, onApprove }: { request: Adm
   const whatsapp = request.phone.replace(/\D/g, '')
   const whatsappText = encodeURIComponent(`Olá, ${request.name}! Aqui é da HRX Solutions. Recebemos sua solicitação ${request.protocol} e estou entrando em contato para validar alguns pontos antes da proposta.`)
   const save = () => onUpdate({ discountPercent: discount, complexityMultiplier: complexity, urgencyMultiplier: urgency, paymentProvider: provider, installments, retentions, retentionPricingMode: retentionMode, fiscalReviewConfirmed: fiscalConfirmed, notes })
+  const selectedRules = pricingRules.filter((rule) => Number(quantities[rule.service_key] ?? 0) > 0)
+  const compositionBase = selectedRules.reduce((sum, rule) => sum + Number(rule.base_amount) * Number(quantities[rule.service_key] ?? 1), 0)
+
+  const toggleRule = (key: string, checked: boolean) => {
+    setQuantities((current) => {
+      const next = { ...current }
+      if (checked) next[key] = Math.max(1, Number(next[key] ?? 1))
+      else delete next[key]
+      return next
+    })
+  }
+
+  const applyComposition = async () => {
+    setApplyingItems(true)
+    try {
+      await onSetItems(Object.entries(quantities).filter(([, quantity]) => quantity > 0).map(([serviceKey, quantity]) => ({ serviceKey, quantity })))
+    } finally {
+      setApplyingItems(false)
+    }
+  }
 
   return <div className="admin-editor-grid">
     <article className="admin-card admin-wide-card"><span className="admin-card-kicker">{request.protocol}</span><div className="admin-title-row"><div><h2>{request.name}</h2><p>{request.company || 'Empresa não informada'}</p></div><span className={`admin-request-state state-${request.status}`}>{request.status.replaceAll('_',' ')}</span></div><div className="admin-contact-row"><a href={`mailto:${request.email}`}>{request.email}</a><a href={`tel:${request.phone}`}>{request.phone}</a>{whatsapp && <a href={`https://wa.me/${whatsapp}?text=${whatsappText}`} target="_blank" rel="noreferrer">WhatsApp ↗</a>}</div><blockquote className="admin-request-text">{request.request_text}</blockquote>{request.desired_deadline && <p className="admin-note"><strong>Prazo:</strong> {request.desired_deadline}</p>}</article>
 
-    <article className="admin-card"><span className="admin-card-kicker">INTERPRETAÇÃO</span><h2>Leitura do motor</h2><p>{request.interpretation?.summary || 'Sem interpretação disponível.'}</p><div className="admin-confidence-line"><span>Confiança</span><strong>{request.interpretation?.confidence ?? 0}%</strong></div><div className="admin-service-tags">{request.interpretation?.suggested_service_keys.map((key) => <span key={key}>{key.replaceAll('_',' ')}</span>)}</div>{!!request.interpretation?.missing_information.length && <div className="admin-missing"><strong>Falta confirmar</strong>{request.interpretation.missing_information.map((item) => <span key={item}>• {item}</span>)}</div>}</article>
+    <article className="admin-card"><span className="admin-card-kicker">INTERPRETAÇÃO</span><h2>Leitura do motor</h2><p>{request.interpretation?.summary || 'Sem interpretação disponível.'}</p><div className="admin-confidence-line"><span>Confiança</span><strong>{request.interpretation?.confidence ?? 0}%</strong></div><div className="admin-service-tags">{request.interpretation?.suggested_service_keys.map((key) => <span key={key}>{pricingRules.find((rule) => rule.service_key === key)?.service_name ?? key.replaceAll('_',' ')}</span>)}</div>{!!request.interpretation?.missing_information.length && <div className="admin-missing"><strong>Falta confirmar</strong>{request.interpretation.missing_information.map((item) => <span key={item}>• {item}</span>)}</div>}</article>
+
+    <article className="admin-card admin-wide-card admin-rules-card"><div className="admin-rules-heading"><div><span className="admin-card-kicker">REGRAS E SERVIÇOS</span><h2>Composição do orçamento</h2><p>Selecione os serviços tabelados e a quantidade. Ao aplicar, o valor-base é recalculado pelo catálogo e volta para validação interna.</p></div><div className="admin-rules-total"><span>{selectedRules.length} serviço(s)</span><strong>{currency.format(compositionBase)}</strong></div></div><div className="admin-rule-groups">{groupedRules.map(([category, rules]) => <section className="admin-rule-group" key={category}><h3>{category}</h3><div className="admin-rule-list">{rules.map((rule) => { const quantity = Number(quantities[rule.service_key] ?? 0); const checked = quantity > 0; return <div className={checked ? 'admin-rule-row is-selected' : 'admin-rule-row'} key={rule.service_key}><label className="admin-rule-check"><input type="checkbox" checked={checked} onChange={(event) => toggleRule(rule.service_key, event.target.checked)} /><span><strong>{rule.service_name}</strong><small>{rule.fiscal_code ? `NFS-e ${rule.fiscal_code}` : 'Código fiscal a validar'} · mínimo interno {currency.format(Number(rule.minimum_amount))}</small></span></label><div className="admin-rule-price"><strong>{currency.format(Number(rule.base_amount))}</strong><small>base</small></div><label className="admin-rule-qty">Qtd.<input type="number" min="1" max="99" disabled={!checked} value={checked ? quantity : 1} onChange={(event) => setQuantities((current) => ({ ...current, [rule.service_key]: Math.min(99, Math.max(1, Math.round(Number(event.target.value) || 1))) }))} /></label></div>})}</div></section>)}</div><div className="admin-rules-actions"><p>{draft.items?.length ? `Composição atual: ${draft.items.length} item(ns), base ${currency.format(Number(draft.base_amount))}.` : 'Nenhum serviço aplicado ao rascunho.'}</p><button className="button button-primary" type="button" disabled={applyingItems} onClick={() => void applyComposition()}>{applyingItems ? 'Aplicando…' : 'Aplicar composição'}</button></div></article>
 
     <article className="admin-card"><span className="admin-card-kicker">PREÇO</span><h2>Base e complexidade</h2><div className="price-summary"><div><span>Base do catálogo</span><strong>{currency.format(Number(draft.base_amount))}</strong></div><div><span>Pré-desconto</span><strong>{currency.format(Number(draft.pre_discount_amount))}</strong></div></div><div className="admin-inline-fields"><label className="admin-field">Complexidade<select value={complexity} onChange={(e) => setComplexity(Number(e.target.value))}><option value={1}>Padrão · 1x</option><option value={1.25}>Intermediária · 1,25x</option><option value={1.5}>Alta · 1,5x</option><option value={2}>Especial · 2x</option></select></label><label className="admin-field">Urgência<select value={urgency} onChange={(e) => setUrgency(Number(e.target.value))}><option value={1}>Normal · 1x</option><option value={1.15}>Prioritária · 1,15x</option><option value={1.3}>Urgente · 1,3x</option></select></label></div></article>
 
