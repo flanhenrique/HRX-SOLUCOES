@@ -1,0 +1,360 @@
+/* Hortifruti Revolução showcase: institutional site + customer PWA. */
+
+.project-card.hortifruti-site,
+.project-card.hortifruti-app {
+  border-color: rgba(198, 170, 99, .18);
+  background:
+    radial-gradient(circle at 82% 12%, rgba(163, 176, 104, .10), transparent 16rem),
+    linear-gradient(155deg, rgba(20, 63, 100, .90), rgba(9, 37, 64, .94));
+}
+
+.horti-preview {
+  display: grid;
+  align-items: end;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+.horti-browser {
+  width: 96%;
+  height: 285px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(216, 194, 134, .18);
+  border-radius: 17px 17px 0 0;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, .28);
+  transform: translateY(25px);
+}
+
+.horti-browser-top {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(14, 29, 24, .94);
+}
+
+.horti-browser-top i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(240, 231, 205, .28);
+}
+
+.horti-browser-top span {
+  margin-left: 8px;
+  overflow: hidden;
+  color: rgba(241, 235, 216, .66);
+  font-size: .48rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.horti-brand-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.horti-brand-mini svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: #d6bf7b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.horti-brand-mini span {
+  display: grid;
+  color: #f5f0df;
+  font-size: .62rem;
+  font-weight: 900;
+  line-height: .88;
+  letter-spacing: .04em;
+}
+
+.horti-brand-mini small {
+  margin-top: 3px;
+  color: #c8b77e;
+  font-size: .27rem;
+  font-weight: 750;
+  letter-spacing: .16em;
+}
+
+.horti-site-shot {
+  position: relative;
+  height: calc(100% - 28px);
+  padding: 17px 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(202, 183, 117, .14), transparent 11rem),
+    radial-gradient(circle at 12% 88%, rgba(119, 139, 77, .13), transparent 9rem),
+    linear-gradient(140deg, #183429, #0f261f 62%, #0c1f1a);
+}
+
+.horti-site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.horti-site-nav > div:last-child {
+  display: flex;
+  gap: 9px;
+  color: rgba(245, 240, 223, .66);
+  font-size: .34rem;
+}
+
+.horti-site-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 245px;
+  margin-top: 31px;
+}
+
+.horti-site-copy > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #d6bf7b;
+  font-size: .35rem;
+  font-weight: 850;
+  letter-spacing: .15em;
+}
+
+.horti-site-copy strong {
+  display: block;
+  color: #f7f2e3;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.03rem;
+  font-weight: 500;
+  line-height: 1.05;
+}
+
+.horti-site-copy p {
+  max-width: 220px;
+  margin: 8px 0 0;
+  color: rgba(238, 234, 216, .67);
+  font-size: .43rem;
+  line-height: 1.48;
+}
+
+.horti-site-cta {
+  display: inline-flex;
+  margin-top: 12px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #d1b86d;
+  color: #173126;
+  font-size: .36rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.horti-produce-grid {
+  position: absolute;
+  right: 17px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 48px);
+  gap: 6px;
+}
+
+.horti-produce-grid i {
+  display: grid;
+  place-items: center;
+  height: 43px;
+  border: 1px solid rgba(214, 191, 123, .17);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .035);
+  color: #d8c381;
+  font-size: .47rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.horti-app-browser {
+  border-color: rgba(37, 67, 52, .14);
+  background: #edf1eb;
+}
+
+.horti-app-browser .horti-browser-top {
+  border-bottom-color: rgba(30, 54, 42, .08);
+  background: rgba(247, 249, 244, .95);
+}
+
+.horti-app-browser .horti-browser-top i {
+  background: rgba(30, 54, 42, .20);
+}
+
+.horti-app-browser .horti-browser-top span {
+  color: #75827a;
+}
+
+.horti-app-shot {
+  height: calc(100% - 28px);
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  background: linear-gradient(145deg, #eef2ed, #e3e9e2);
+  color: #183126;
+}
+
+.horti-app-sidebar {
+  padding: 15px 11px;
+  background: #173429;
+}
+
+.horti-app-sidebar .horti-brand-mini {
+  transform: scale(.86);
+  transform-origin: left top;
+}
+
+.horti-app-nav {
+  display: grid;
+  gap: 6px;
+  margin-top: 25px;
+}
+
+.horti-app-nav span {
+  padding: 7px 8px;
+  border-radius: 7px;
+  color: rgba(245, 240, 223, .57);
+  font-size: .36rem;
+  font-weight: 700;
+}
+
+.horti-app-nav span:first-child {
+  background: rgba(214, 191, 123, .14);
+  color: #e2cd8e;
+}
+
+.horti-app-main {
+  padding: 16px;
+}
+
+.horti-app-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.horti-app-heading span {
+  color: #728076;
+  font-size: .32rem;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.horti-app-heading strong {
+  display: block;
+  margin-top: 3px;
+  font-size: .8rem;
+}
+
+.horti-app-heading em {
+  padding: 6px 8px;
+  border: 1px solid rgba(53, 87, 67, .11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .55);
+  color: #54705f;
+  font-size: .3rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.horti-app-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.horti-app-cards article {
+  min-height: 68px;
+  padding: 10px;
+  border: 1px solid rgba(40, 70, 53, .08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .63);
+  box-shadow: 0 8px 22px rgba(35, 61, 45, .05);
+}
+
+.horti-app-cards span {
+  color: #75837a;
+  font-size: .3rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.horti-app-cards strong {
+  display: block;
+  margin-top: 7px;
+  color: #173429;
+  font-size: .73rem;
+}
+
+.horti-app-list {
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid rgba(40, 70, 53, .08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .55);
+}
+
+.horti-app-list > span {
+  color: #75837a;
+  font-size: .3rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.horti-app-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(40, 70, 53, .07);
+}
+
+.horti-app-row b {
+  font-size: .42rem;
+}
+
+.horti-app-row small {
+  color: #7b887f;
+  font-size: .31rem;
+}
+
+.horti-app-row i {
+  align-self: center;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #e7ddbd;
+  color: #755f24;
+  font-size: .28rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+@media (max-width: 1050px) {
+  .horti-preview { min-height: 100%; }
+  .horti-browser { height: 300px; }
+}
+
+@media (max-width: 760px) {
+  .horti-preview { min-height: 250px; }
+  .horti-browser { width: 100%; height: 270px; }
+  .horti-site-nav > div:last-child { display: none; }
+}
+
+@media (max-width: 430px) {
+  .horti-app-shot { grid-template-columns: 92px 1fr; }
+  .horti-app-main { padding: 12px; }
+  .horti-app-cards { gap: 6px; }
+  .horti-site-copy { max-width: 210px; }
+  .horti-produce-grid { opacity: .72; }
+}
