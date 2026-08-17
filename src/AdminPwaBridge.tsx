@@ -38,7 +38,7 @@ export default function AdminPwaBridge() {
       theme.name = 'theme-color'
       document.head.appendChild(theme)
     }
-    theme.content = '#061a31'
+    theme.content = '#07182a'
 
     let appleCapable = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-capable"]')
     if (!appleCapable) {
@@ -64,18 +64,10 @@ export default function AdminPwaBridge() {
     }
     icon.href = '/admin/hrx-admin-icon.svg'
 
-    if ('serviceWorker' in navigator) {
-      void navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' })
-    }
+    if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' })
 
-    const beforeInstall = (event: Event) => {
-      event.preventDefault()
-      setInstallPrompt(event as InstallPromptEvent)
-    }
-    const onInstalled = () => {
-      setInstalled(true)
-      setInstallPrompt(null)
-    }
+    const beforeInstall = (event: Event) => { event.preventDefault(); setInstallPrompt(event as InstallPromptEvent) }
+    const onInstalled = () => { setInstalled(true); setInstallPrompt(null) }
     const onOnline = () => setOnline(true)
     const onOffline = () => setOnline(false)
 
@@ -103,19 +95,14 @@ export default function AdminPwaBridge() {
     if (ios && !installed) setIosHintOpen((current) => !current)
   }
 
+  const canInstall = !installed && Boolean(installPrompt || ios)
+  if (online && !canInstall && !iosHintOpen) return null
+
   return (
     <div className="admin-pwa-tools" aria-label="Controles do aplicativo HRX Admin">
-      <span className={`admin-pwa-network ${online ? 'is-online' : 'is-offline'}`}>
-        <i /> {online ? 'Online' : 'Sem conexão'}
-      </span>
-      {!installed && (installPrompt || ios) && (
-        <button className="admin-pwa-install" type="button" onClick={install}>Instalar HRX Admin</button>
-      )}
-      {iosHintOpen && (
-        <div className="admin-pwa-ios-hint" role="status">
-          No iPhone/iPad: abra o menu Compartilhar do Safari e escolha “Adicionar à Tela de Início”.
-        </div>
-      )}
+      {!online && <span className="admin-pwa-network is-offline"><i /> Sem conexão</span>}
+      {canInstall && <button className="admin-pwa-install" type="button" onClick={install}>Instalar aplicativo</button>}
+      {iosHintOpen && <div className="admin-pwa-ios-hint" role="status">No iPhone/iPad, use Compartilhar no Safari e escolha “Adicionar à Tela de Início”.</div>}
     </div>
   )
 }
