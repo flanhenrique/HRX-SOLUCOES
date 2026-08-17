@@ -3,16 +3,27 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 type DiscountLevel = 0 | 5 | 10 | 15 | 20
 type RetentionPricingMode = 'informational' | 'preserve_net'
 type Retentions = { iss?: number; irrf?: number; pis?: number; cofins?: number; csll?: number; inss?: number }
-type UpdateDraftPayload = {
-  action: 'update_draft'; requestId: string; discountPercent: DiscountLevel; complexityMultiplier?: number; urgencyMultiplier?: number;
-  paymentProvider?: 'none' | 'nubank' | 'mercadopago'; installments?: number; retentions?: Retentions;
-  retentionPricingMode?: RetentionPricingMode; fiscalReviewConfirmed?: boolean; notes?: string
+type DraftCalculationInput = {
+  discountPercent?: DiscountLevel
+  complexityMultiplier?: number
+  urgencyMultiplier?: number
+  paymentProvider?: 'none' | 'nubank' | 'mercadopago'
+  installments?: number
+  retentions?: Retentions
+  retentionPricingMode?: RetentionPricingMode
+  fiscalReviewConfirmed?: boolean
+  notes?: string
 }
-type SetItemsPayload = {
-  action: 'set_items'; requestId: string; items: { serviceKey: string; quantity?: number }[]
+type UpdateDraftPayload = DraftCalculationInput & { action: 'update_draft'; requestId: string; discountPercent: DiscountLevel }
+type SetItemsPayload = { action: 'set_items'; requestId: string; items: { serviceKey: string; quantity?: number }[] }
+type SaveQuotePayload = DraftCalculationInput & {
+  action: 'save_quote'
+  requestId: string
+  discountPercent: DiscountLevel
+  items: { serviceKey: string; quantity?: number }[]
 }
 type ApprovePayload = { action: 'approve'; requestId: string }
-type ActionPayload = UpdateDraftPayload | SetItemsPayload | ApprovePayload
+type ActionPayload = UpdateDraftPayload | SetItemsPayload | SaveQuotePayload | ApprovePayload
 
 const defaultOrigins = ['http://localhost:5173','https://flanhenrique.github.io','https://hrxsolutions.com.br','https://www.hrxsolutions.com.br']
 function allowedOrigins() {
@@ -50,7 +61,7 @@ async function calculateDraft(
   db: any,
   draft: any,
   baseAmount: number,
-  input?: Partial<UpdateDraftPayload>,
+  input?: DraftCalculationInput,
   resetFiscalReview = false,
 ) {
   const discountPercent = (input?.discountPercent ?? Number(draft.discount_percent ?? 0)) as DiscountLevel
@@ -114,6 +125,48 @@ async function calculateDraft(
     approved_at: null,
     updated_at: now,
   }
+}
+
+async function resolveCatalogRows(db: any, draftId: string, items: { serviceKey: string; quantity?: number }[]) {
+  if (!Array.isArray(items) || items.length > 50) throw new Error('invalid_items')
+
+  const requested = new Map<string, number>()
+  for (const item of items) {
+    const key = String(item.serviceKey ?? '').trim()
+    if (!key) continue
+    const quantity = Math.min(99, Math.max(1, Math.round(Number(item.quantity ?? 1))))
+    requested.set(key, Math.min(99, (requested.get(key) ?? 0) + quantity))
+  }
+
+  const serviceKeys = [...requested.keys()]
+  let pricing: any[] = []
+  if (serviceKeys.length) {
+    const result = await db.from('pricing_rules')
+      .select('service_key,service_name,base_amount,active')
+      .in('service_key', serviceKeys)
+      .eq('active', true)
+    pricing = result.data ?? []
+    if (pricing.length !== serviceKeys.length) throw new Error('invalid_service')
+  }
+
+  const pricingByKey = new Map(pricing.map((item) => [item.service_key, item]))
+  const rows = serviceKeys.map((key, index) => {
+    const rule = pricingByKey.get(key)
+    const quantity = requested.get(key) ?? 1
+    const unitAmount = Number(rule.base_amount)
+    return {
+      draft_id: draftId,
+      service_key: key,
+      service_name: rule.service_name,
+      quantity,
+      unit_amount: unitAmount,
+      total_amount: roundMoney(unitAmount * quantity),
+      source: 'manual',
+      sort_order: index,
+    }
+  })
+
+  return { rows, baseAmount: roundMoney(rows.reduce((sum, item) => sum + item.total_amount, 0)) }
 }
 
 Deno.serve(async (req) => {
@@ -196,45 +249,30 @@ Deno.serve(async (req) => {
     return json({ ok: true, status: 'approved' }, 200, headers)
   }
 
-  if (body.action === 'set_items') {
-    if (!Array.isArray(body.items) || body.items.length > 50) return json({ error: 'invalid_items' }, 422, headers)
-
-    const requested = new Map<string, number>()
-    for (const item of body.items) {
-      const key = String(item.serviceKey ?? '').trim()
-      if (!key) continue
-      const quantity = Math.min(99, Math.max(1, Math.round(Number(item.quantity ?? 1))))
-      requested.set(key, Math.min(99, (requested.get(key) ?? 0) + quantity))
+  if (body.action === 'set_items' || body.action === 'save_quote') {
+    let rows: any[]
+    let baseAmount: number
+    try {
+      const resolved = await resolveCatalogRows(db, draft.id, body.items)
+      rows = resolved.rows
+      baseAmount = resolved.baseAmount
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'invalid_items'
+      return json({ error: code }, 422, headers)
     }
 
-    const serviceKeys = [...requested.keys()]
-    let pricing: any[] = []
-    if (serviceKeys.length) {
-      const result = await db.from('pricing_rules')
-        .select('service_key,service_name,base_amount,active')
-        .in('service_key', serviceKeys)
-        .eq('active', true)
-      pricing = result.data ?? []
-      if (pricing.length !== serviceKeys.length) return json({ error: 'invalid_service' }, 422, headers)
+    let financials
+    try {
+      financials = await calculateDraft(db, draft, baseAmount, body.action === 'save_quote' ? body : undefined, body.action === 'set_items')
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'calculation_failed'
+      return json({ error: code }, 422, headers)
     }
 
-    const pricingByKey = new Map(pricing.map((item) => [item.service_key, item]))
-    const rows = serviceKeys.map((key, index) => {
-      const rule = pricingByKey.get(key)
-      const quantity = requested.get(key) ?? 1
-      const unitAmount = Number(rule.base_amount)
-      return {
-        draft_id: draft.id,
-        service_key: key,
-        service_name: rule.service_name,
-        quantity,
-        unit_amount: unitAmount,
-        total_amount: roundMoney(unitAmount * quantity),
-        source: 'manual',
-        sort_order: index,
-      }
-    })
-    const baseAmount = roundMoney(rows.reduce((sum, item) => sum + item.total_amount, 0))
+    if (financials.fiscal_review_confirmed) {
+      financials.fiscal_review_confirmed_by = user.id
+      financials.fiscal_review_confirmed_at = new Date().toISOString()
+    }
 
     const { error: deleteError } = await db.from('quote_items').delete().eq('draft_id', draft.id)
     if (deleteError) return json({ error: 'items_update_failed' }, 500, headers)
@@ -243,21 +281,19 @@ Deno.serve(async (req) => {
       if (insertError) return json({ error: 'items_update_failed' }, 500, headers)
     }
 
-    let financials
-    try {
-      financials = await calculateDraft(db, draft, baseAmount, undefined, true)
-    } catch (error) {
-      const code = error instanceof Error ? error.message : 'calculation_failed'
-      return json({ error: code }, 422, headers)
-    }
     const { data: updated, error: updateError } = await db.from('quote_drafts').update(financials).eq('id', draft.id).select('*').single()
     if (updateError) return json({ error: 'update_failed' }, 500, headers)
     await db.from('quote_requests').update({ status: baseAmount > 0 ? 'awaiting_review' : 'needs_scope', updated_at: new Date().toISOString() }).eq('id', body.requestId)
     await db.from('quote_audit_log').insert({
       request_id: body.requestId,
       actor_user_id: user.id,
-      event_type: 'draft_items_updated',
-      event_data: { services: rows.map((item) => ({ key: item.service_key, quantity: item.quantity })), baseAmount },
+      event_type: body.action === 'save_quote' ? 'draft_catalog_calculation_saved' : 'draft_items_updated',
+      event_data: {
+        services: rows.map((item) => ({ key: item.service_key, quantity: item.quantity })),
+        baseAmount,
+        finalAmount: financials.final_amount,
+        retentionTotal: financials.retention_total,
+      },
     })
     return json({ draft: updated, items: rows }, 200, headers)
   }
