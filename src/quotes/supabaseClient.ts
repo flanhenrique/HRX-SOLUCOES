@@ -12,4 +12,5 @@ export const hrxSupabase = createClient(supabaseUrl, publishableKey, {
 })
 
 export const quoteAdminEndpoint = `${supabaseUrl}/functions/v1/quote-admin`
+export const adminBootstrapEndpoint = `${supabaseUrl}/functions/v1/admin-bootstrap`
 export const hrxPublishableKey = publishableKey
