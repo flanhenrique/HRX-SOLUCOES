@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import AdminQuotes from './AdminQuotes'
-import { hrxSupabase } from './supabaseClient'
+import { adminBootstrapEndpoint, hrxPublishableKey, hrxSupabase } from './supabaseClient'
 import './admin-auth.css'
 
 type MessageTone = 'success' | 'warning' | 'error'
+type LoginMode = 'login' | 'activate'
 
 function recoveryRequested() {
   const search = new URLSearchParams(window.location.search)
@@ -19,13 +20,20 @@ function clearRecoveryUrl() {
 }
 
 function LoginScreen() {
+  const [mode, setMode] = useState<LoginMode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [activationCode, setActivationCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [tone, setTone] = useState<MessageTone>('success')
+
+  const activationValid = useMemo(() => (
+    email.trim().length > 3 && activationCode.trim().length >= 10 && password.length >= 8 && password === confirmPassword
+  ), [email, activationCode, password, confirmPassword])
 
   const login = async (event: FormEvent) => {
     event.preventDefault()
@@ -53,6 +61,63 @@ function LoginScreen() {
     setMessage('Não foi possível entrar agora. Tente novamente em alguns instantes.')
   }
 
+  const activate = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!activationValid) return
+
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const response = await fetch(adminBootstrapEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: hrxPublishableKey,
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          code: activationCode.trim(),
+          password,
+        }),
+      })
+
+      const body = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) {
+        const messages: Record<string, string> = {
+          invalid_code: 'Código de ativação inválido.',
+          code_already_used: 'Este código já foi utilizado.',
+          code_expired: 'Este código expirou. Solicite um novo código de ativação.',
+          user_not_found: 'Este e-mail não corresponde ao administrador autorizado.',
+          password_update_failed: 'A senha informada não atende aos requisitos do Supabase.',
+          invalid_input: 'Confira o e-mail, o código e a nova senha.',
+        }
+        setTone('error')
+        setMessage(messages[body.error ?? ''] ?? 'Não foi possível ativar o acesso agora.')
+        return
+      }
+
+      const { error: loginError } = await hrxSupabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+
+      if (loginError) {
+        setTone('warning')
+        setMessage('A senha foi definida. Volte para Entrar e use a senha que acabou de criar.')
+        setMode('login')
+        setConfirmPassword('')
+        setActivationCode('')
+        return
+      }
+    } catch {
+      setTone('error')
+      setMessage('Não foi possível conectar ao serviço de ativação. Tente novamente em instantes.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const requestPassword = async () => {
     const normalizedEmail = email.trim()
     if (!normalizedEmail) {
@@ -69,12 +134,89 @@ function LoginScreen() {
 
     if (error) {
       setTone('error')
-      setMessage('Não foi possível iniciar a definição de senha agora.')
+      setMessage('Não foi possível enviar a recuperação de senha agora.')
       return
     }
 
     setTone('success')
-    setMessage('Enviamos um link para definir ou recuperar sua senha. Depois disso, os próximos acessos serão com e-mail e senha.')
+    setMessage('Enviamos um link de recuperação para o e-mail informado.')
+  }
+
+  const switchMode = (nextMode: LoginMode) => {
+    setMode(nextMode)
+    setMessage('')
+    setPassword('')
+    setConfirmPassword('')
+    setActivationCode('')
+  }
+
+  if (mode === 'activate') {
+    return (
+      <main className="admin-login-shell">
+        <form className="admin-login-card admin-password-card" onSubmit={activate}>
+          <span className="eyebrow">HRX · PRIMEIRO ACESSO</span>
+          <h1>Ativar acesso</h1>
+          <p>Use o código de ativação e crie sua senha. Não é necessário receber um novo convite do Supabase.</p>
+
+          <label className="admin-field">
+            E-mail administrativo
+            <input type="email" required inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
+          </label>
+
+          <label className="admin-field">
+            Código de ativação
+            <input
+              type="text"
+              required
+              autoCapitalize="characters"
+              autoComplete="one-time-code"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              value={activationCode}
+              onChange={(event) => setActivationCode(event.target.value.toUpperCase())}
+            />
+          </label>
+
+          <label className="admin-field">
+            Nova senha
+            <span className="admin-password-input">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button type="button" onClick={() => setShowPassword((current) => !current)}>
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </span>
+          </label>
+
+          <label className="admin-field">
+            Confirmar nova senha
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </label>
+
+          {confirmPassword && password !== confirmPassword && <div className="admin-login-message is-warning">As senhas precisam ser iguais.</div>}
+          {message && <div className={`admin-login-message is-${tone}`} role="status">{message}</div>}
+
+          <button className="button button-primary" type="submit" disabled={!activationValid || busy}>
+            {busy ? 'Ativando…' : 'Ativar e entrar'}
+          </button>
+          <button className="admin-recovery-button" type="button" disabled={busy} onClick={() => switchMode('login')}>
+            ← Voltar para o login
+          </button>
+        </form>
+      </main>
+    )
   }
 
   return (
@@ -86,14 +228,7 @@ function LoginScreen() {
 
         <label className="admin-field">
           E-mail administrativo
-          <input
-            type="email"
-            required
-            inputMode="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
+          <input type="email" required inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
         </label>
 
         <label className="admin-field">
@@ -117,8 +252,11 @@ function LoginScreen() {
           {busy ? 'Entrando…' : 'Entrar'}
         </button>
 
+        <button className="admin-recovery-button" type="button" disabled={busy || recoveryBusy} onClick={() => switchMode('activate')}>
+          Ativar primeiro acesso
+        </button>
         <button className="admin-recovery-button" type="button" disabled={busy || recoveryBusy} onClick={() => void requestPassword()}>
-          {recoveryBusy ? 'Enviando…' : 'Primeiro acesso ou esqueci minha senha'}
+          {recoveryBusy ? 'Enviando…' : 'Esqueci minha senha'}
         </button>
 
         {message && <div className={`admin-login-message is-${tone}`} role="status">{message}</div>}
@@ -165,28 +303,14 @@ function PasswordRecoveryScreen({ session, onDone }: { session: Session; onDone:
         <label className="admin-field">
           Nova senha
           <span className="admin-password-input">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+            <input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
             <button type="button" onClick={() => setShowPassword((current) => !current)}>{showPassword ? 'Ocultar' : 'Mostrar'}</button>
           </span>
         </label>
 
         <label className="admin-field">
           Confirmar senha
-          <input
-            type={showPassword ? 'text' : 'password'}
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
+          <input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
         </label>
 
         {confirmPassword && password !== confirmPassword && <div className="admin-login-message is-warning">As senhas precisam ser iguais.</div>}
