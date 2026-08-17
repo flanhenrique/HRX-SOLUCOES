@@ -38,13 +38,35 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Prepare direct admin PWA route
+      - name: Prepare direct admin PWA route and atomic release
         run: |
           mkdir -p dist/admin/orcamentos
           cp dist/index.html dist/admin/orcamentos/index.html
           python - <<'PY'
+          from datetime import datetime, timezone
           from pathlib import Path
+          import json
+          import os
           import re
+
+          build = f"{datetime.now(timezone.utc):%Y%m%d}.{os.environ['GITHUB_RUN_NUMBER']}"
+          released_at = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+
+          version_path = Path('dist/admin/version.json')
+          version = json.loads(version_path.read_text()) if version_path.exists() else {}
+          version.update({
+              'release': build,
+              'build': build,
+              'releasedAt': released_at,
+          })
+          version.setdefault('message', 'Melhorias e correções do HRX Admin estão prontas para instalar.')
+          version_path.write_text(json.dumps(version, ensure_ascii=False, indent=2) + '\n')
+
+          sw_path = Path('dist/admin/sw.js')
+          sw = sw_path.read_text()
+          if '__HRX_ADMIN_BUILD__' not in sw:
+              raise SystemExit('placeholder de build não encontrado no service worker do HRX Admin')
+          sw_path.write_text(sw.replace('__HRX_ADMIN_BUILD__', build))
 
           path = Path('dist/admin/orcamentos/index.html')
           html = path.read_text()
@@ -55,6 +77,7 @@ jobs:
           else:
               html = html.replace('<head>', f'<head>\n    {locked_viewport}')
 
+          build_tag = f'<script>globalThis.__HRX_ADMIN_BUILD__={json.dumps(build)};</script>'
           tags = [
               '<link rel="manifest" href="/admin/manifest.webmanifest" />',
               '<meta name="theme-color" content="#061a31" />',
@@ -63,6 +86,7 @@ jobs:
               '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />',
               '<meta name="apple-mobile-web-app-title" content="HRX Admin" />',
               '<link rel="apple-touch-icon" href="/admin/hrx-admin-icon.svg" />',
+              build_tag,
           ]
           tags_html = '\n    '.join(tags)
           html = html.replace('</head>', f'    {tags_html}\n  </head>')
