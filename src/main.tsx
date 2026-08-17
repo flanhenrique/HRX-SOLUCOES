@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
 import AdminPwaBridge from './AdminPwaBridge'
+import AdminPwaUpdater from './AdminPwaUpdater'
 import { configureAdminAppShell } from './quotes/adminAppShell'
 import './styles.css'
 import './brand-fix.css'
@@ -16,6 +17,6 @@ if (isAdminRoute) configureAdminAppShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAdminRoute ? <><AdminPwaBridge /><AdminAuthRouter /></> : <App />}
+    {isAdminRoute ? <><AdminPwaBridge /><AdminPwaUpdater /><AdminAuthRouter /></> : <App />}
   </StrictMode>,
 )
