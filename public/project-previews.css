@@ -1,0 +1,67 @@
+/* Project demonstrations grounded in the ChatGPT project references. */
+.volt-real-preview .project-browser,
+.nexus-login-preview .project-browser {
+  overflow: hidden;
+}
+
+/* VOLT — use the real project home/dashboard composition instead of the generic desktop mock. */
+.volt-real-preview .volt-dashboard-shot {
+  position: relative !important;
+  display: block !important;
+  min-height: 620px !important;
+  background: #061d1f !important;
+  overflow: hidden !important;
+}
+.volt-real-preview .volt-dashboard-shot > * {
+  display: none !important;
+}
+.volt-real-preview .volt-dashboard-shot::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  background: url('/volt-home-project.svg') center center / contain no-repeat;
+  filter: drop-shadow(0 24px 34px rgba(0,0,0,.26));
+}
+.volt-real-preview .volt-browser .project-browser-top span::before {
+  content: "Tela inicial real do projeto · ";
+  color: #75e8ae;
+  font-weight: 700;
+}
+
+/* NEXUS — corporate intranet login, no game/futuristic treatment. */
+.nexus-login-preview .nexus-login-shot {
+  position: relative !important;
+  display: block !important;
+  min-height: 500px !important;
+  background: #eef3f8 !important;
+  overflow: hidden !important;
+}
+.nexus-login-preview .nexus-login-shot > * {
+  display: none !important;
+}
+.nexus-login-preview .nexus-login-shot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url('/nexus-login-project.svg') center center / cover no-repeat;
+}
+.nexus-login-preview .nexus-browser-top {
+  background: #eef3f8 !important;
+  border-bottom-color: #d5e0ea !important;
+}
+.nexus-login-preview .nexus-browser-top span {
+  color: #31546f !important;
+  font-weight: 700;
+}
+.nexus-login-preview .nexus-browser-top span::after {
+  content: " · INTRANET · ACESSO RESTRITO";
+  color: #1d6b9f;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .volt-real-preview .volt-dashboard-shot { min-height: 540px !important; }
+  .volt-real-preview .volt-dashboard-shot::before { inset: 12px; }
+  .nexus-login-preview .nexus-login-shot { min-height: 390px !important; }
+  .nexus-login-preview .nexus-login-shot::before { background-size: cover; background-position: center; }
+}
