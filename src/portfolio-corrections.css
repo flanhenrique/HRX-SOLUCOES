@@ -1,0 +1,243 @@
+/* Public portfolio corrections: surface Hortifruti on the home and fail safely on NEXUS capture errors. */
+
+.authentic-showcase {
+  min-height: 570px !important;
+}
+
+.authentic-hortifruti {
+  left: 21%;
+  top: 452px;
+  width: 355px;
+  height: 104px;
+  padding: 15px 18px;
+  border-radius: 19px;
+  border-color: rgba(214, 191, 123, .30) !important;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(214, 191, 123, .15), transparent 9rem),
+    linear-gradient(145deg, #183429, #0d251d) !important;
+  box-shadow: 0 22px 55px rgba(0, 14, 25, .35);
+  color: #f5f0df;
+  transform: none;
+  z-index: 8;
+}
+
+.authentic-hortifruti:hover {
+  transform: translateY(-4px) !important;
+  border-color: rgba(225, 204, 143, .48) !important;
+}
+
+.portfolio-horti-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portfolio-horti-topline > span:last-child {
+  padding: 4px 7px;
+  border: 1px solid rgba(214, 191, 123, .24);
+  border-radius: 999px;
+  color: #d8c381;
+  font-size: .38rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.portfolio-horti-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.portfolio-horti-lockup svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: #d6bf7b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.portfolio-horti-lockup > span {
+  display: grid;
+  color: #f5f0df;
+  font-size: .62rem;
+  font-weight: 900;
+  line-height: .86;
+  letter-spacing: .045em;
+}
+
+.portfolio-horti-lockup small {
+  margin-top: 3px;
+  color: #c8b77e;
+  font-size: .27rem;
+  font-weight: 750;
+  letter-spacing: .16em;
+}
+
+.authentic-hortifruti > strong {
+  display: block;
+  max-width: 255px;
+  margin-top: 9px;
+  color: #f7f2e3;
+  font-size: .85rem;
+  line-height: 1.05;
+}
+
+.authentic-hortifruti > p {
+  max-width: 235px;
+  margin: 4px 0 0;
+  color: rgba(239, 235, 218, .67);
+  font-size: .48rem;
+  line-height: 1.35;
+}
+
+.portfolio-horti-action {
+  left: auto;
+  right: 17px;
+  bottom: 15px;
+  color: #d8c381;
+  font-size: .48rem;
+}
+
+/* Put the exact areas under correction above the fold on the Projects page. */
+.project-card.nexus { order: -3; }
+.project-card.hortifruti-site { order: -2; }
+.project-card.hortifruti-app { order: -1; }
+
+.project-card.hortifruti-site .project-tag::before,
+.project-card.hortifruti-app .project-tag::before {
+  content: 'NOVO · ';
+  color: #d8c381;
+}
+
+/* The old rule hides the reconstructed NEXUS markup and points to the real capture.
+   This later stylesheet keeps the real capture, but restores a truthful fallback if the binary is invalid. */
+.nexus-login-shot {
+  position: relative;
+  display: block !important;
+  background: #0f5f92 !important;
+}
+
+.nexus-login-shot > section {
+  display: none !important;
+}
+
+.nexus-login-shot > .nexus-capture-image {
+  display: block !important;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background: #0f5f92;
+}
+
+.nexus-login-shot > .nexus-capture-unavailable {
+  display: grid !important;
+  place-content: center;
+  height: 100%;
+  padding: 28px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(125, 225, 75, .13), transparent 12rem),
+    linear-gradient(145deg, #0d3558, #0a2845);
+}
+
+.nexus-capture-unavailable > span {
+  color: #79db48;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.nexus-capture-unavailable > strong {
+  margin-top: 6px;
+  color: #f4f8fb;
+  font-size: 1.2rem;
+  letter-spacing: .18em;
+}
+
+.nexus-capture-unavailable > p {
+  margin: 13px 0 0;
+  color: #bdced9;
+  font-size: .48rem;
+}
+
+.nexus-capture-unavailable > small {
+  max-width: 260px;
+  margin: 7px auto 0;
+  color: #7893a6;
+  font-size: .34rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  .authentic-showcase {
+    min-height: 565px !important;
+  }
+
+  .authentic-hortifruti {
+    left: 24%;
+    top: 445px;
+    width: 350px;
+  }
+}
+
+@media (max-width: 760px) {
+  .authentic-showcase {
+    min-height: 540px !important;
+  }
+
+  .authentic-hortifruti {
+    left: 10%;
+    top: 430px;
+    width: 80%;
+    height: 94px;
+    padding: 13px 15px;
+  }
+
+  .authentic-hortifruti > strong {
+    margin-top: 7px;
+    font-size: .78rem;
+  }
+
+  .authentic-hortifruti > p {
+    font-size: .43rem;
+  }
+
+  .portfolio-horti-action {
+    right: 14px;
+    bottom: 13px;
+  }
+}
+
+@media (max-width: 520px) {
+  .authentic-showcase {
+    min-height: 500px !important;
+  }
+
+  .authentic-hortifruti {
+    left: 5%;
+    top: 390px;
+    width: 90%;
+    height: 90px;
+  }
+
+  .portfolio-horti-topline > span:last-child {
+    font-size: .32rem;
+  }
+
+  .portfolio-horti-lockup svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .portfolio-horti-lockup > span {
+    font-size: .54rem;
+  }
+
+  .authentic-hortifruti > p {
+    max-width: 205px;
+  }
+}
