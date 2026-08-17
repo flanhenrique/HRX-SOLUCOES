@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { hrxSupabase } from './supabaseClient'
+import { passwordMeetsPolicy, passwordRequirementText, secureUpdateAdminPassword } from './passwordSecurity'
 import './admin-password-control.css'
 
 function isRecoveryFlow() {
@@ -25,7 +26,7 @@ export default function AdminPasswordControl() {
   }, [])
 
   const valid = useMemo(
-    () => password.length >= 8 && password === confirmPassword,
+    () => passwordMeetsPolicy(password) && password === confirmPassword,
     [password, confirmPassword],
   )
 
@@ -48,18 +49,18 @@ export default function AdminPasswordControl() {
     setMessage('')
     setSuccess(false)
 
-    const { error } = await hrxSupabase.auth.updateUser({ password })
+    const result = await secureUpdateAdminPassword(password)
     setBusy(false)
 
-    if (error) {
-      setMessage('Não foi possível alterar a senha agora. Entre novamente e tente outra vez.')
+    if (!result.ok) {
+      setMessage(result.message)
       return
     }
 
     setPassword('')
     setConfirmPassword('')
     setSuccess(true)
-    setMessage('Senha alterada com sucesso. Ela já vale para o próximo acesso.')
+    setMessage('Senha alterada com sucesso. A nova senha passou pela política de força e pela verificação contra vazamentos conhecidos.')
   }
 
   return (
@@ -89,7 +90,7 @@ export default function AdminPasswordControl() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  minLength={8}
+                  minLength={12}
                   autoComplete="new-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -98,6 +99,7 @@ export default function AdminPasswordControl() {
                   {showPassword ? 'Ocultar' : 'Mostrar'}
                 </button>
               </span>
+              <small>{passwordRequirementText}</small>
             </label>
 
             <label className="admin-field">
@@ -105,13 +107,16 @@ export default function AdminPasswordControl() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                minLength={8}
+                minLength={12}
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
               />
             </label>
 
+            {password && !passwordMeetsPolicy(password) && (
+              <div className="admin-login-message is-warning">{passwordRequirementText}</div>
+            )}
             {confirmPassword && password !== confirmPassword && (
               <div className="admin-login-message is-warning">As senhas precisam ser iguais.</div>
             )}
@@ -122,7 +127,7 @@ export default function AdminPasswordControl() {
             <div className="admin-password-actions">
               <button type="button" className="button button-secondary" onClick={close} disabled={busy}>Cancelar</button>
               <button type="submit" className="button button-primary" disabled={!valid || busy}>
-                {busy ? 'Alterando…' : 'Salvar nova senha'}
+                {busy ? 'Validando segurança…' : 'Salvar nova senha'}
               </button>
             </div>
           </form>
