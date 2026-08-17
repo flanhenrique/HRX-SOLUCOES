@@ -1,18 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HRX Solutions">
-  <defs>
-    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#dce1e7"/><stop offset="1" stop-color="#f6f8fa"/>
-    </linearGradient>
-    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#58e48c"/><stop offset="0.55" stop-color="#20bf6f"/><stop offset="1" stop-color="#0b8f5a"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="118" fill="#07182d"/>
-  <g transform="translate(46 142) scale(.48)">
-    <path fill="url(#silver)" d="M0 0h62v82h104V0h62v218h-62v-82H62v82H0z"/>
-    <path fill="url(#silver)" fill-rule="evenodd" d="M250 0h170c76 0 124 39 124 101 0 47-28 80-74 94l91 93h-82l-82-86h-85v86h-62V0zm62 55v94h103c43 0 65-16 65-47 0-31-22-47-65-47H312z"/>
-    <path fill="url(#green)" d="M563 69l42-42 74 75 62-76 44 36-104 126-48-48z"/>
-    <path fill="url(#green)" d="M565 206l43 43 74-75-42-43z"/>
-    <path fill="url(#silver)" d="M690 149l42-44 95 113h-77z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="25 20 730 315" role="img" aria-label="HRX">
+<defs>
+<linearGradient id="silver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".48" stop-color="#e7eaee"/><stop offset=".72" stop-color="#c8ced5"/><stop offset="1" stop-color="#f7f9fb"/></linearGradient>
+<linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#62dd8a"/><stop offset=".5" stop-color="#24b96d"/><stop offset="1" stop-color="#0e8052"/></linearGradient>
+</defs>
+<path d="M 593 229 L 669 316 L 733 316 L 625 194 Z M 262 35 L 262 134 L 312 134 L 312 83 L 314 81 L 438 81 L 456 86 L 471 99 L 479 117 L 479 136 L 472 154 L 457 168 L 443 173 L 347 174 L 476 316 L 539 316 L 451 218 L 475 212 L 494 201 L 512 183 L 523 163 L 529 138 L 528 107 L 523 89 L 507 63 L 486 46 L 468 38 L 452 35 Z M 46 35 L 46 316 L 101 316 L 102 198 L 260 199 L 261 316 L 312 316 L 311 160 L 300 153 L 102 153 L 101 35 Z" fill="url(#silver)" fill-rule="evenodd"/>
+<path d="M 538 101 L 540 142 L 535 164 L 553 185 L 490 259 L 517 288 L 524 284 L 612 183 Z M 739 35 L 682 35 L 597 134 L 625 167 L 736 41 Z" fill="url(#green)" fill-rule="evenodd"/>
 </svg>
