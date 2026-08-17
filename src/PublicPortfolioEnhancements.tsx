@@ -42,8 +42,8 @@ function NexusCapture() {
       <div className="nexus-capture-unavailable" role="status">
         <span>MAP.i</span>
         <strong>NEXUS</strong>
-        <p>Captura real indisponível nesta publicação.</p>
-        <small>A estrutura está preparada para receber o arquivo original sem reconstruir a tela.</small>
+        <p>Aplicação corporativa de acesso restrito.</p>
+        <small>Gestão comercial e operacional em ambiente interno.</small>
       </div>
     )
   }
