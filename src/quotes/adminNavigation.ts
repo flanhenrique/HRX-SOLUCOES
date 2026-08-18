@@ -13,10 +13,6 @@ export function navigateAdmin(destination: AdminDestination) {
   if (window.location.hash === '#admin/painels') {
     history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
   }
-
-  if (destination === 'documents') {
-    window.dispatchEvent(new CustomEvent('hrx:open-documents'))
-  }
 }
 
 export function onAdminNavigate(handler: (destination: AdminDestination) => void) {
