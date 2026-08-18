@@ -187,6 +187,9 @@ Deno.serve(async (req) => {
   const user = userResult.user
   if (userError || !user) return json({ error: 'unauthorized' }, 401, headers)
 
+  const { data: claimsResult, error: claimsError } = await db.auth.getClaims(bearer)
+  if (claimsError || claimsResult?.claims?.aal !== 'aal2') return json({ error: 'mfa_required' }, 403, headers)
+
   const { data: admin } = await db.from('admin_users').select('user_id,role').eq('user_id', user.id).maybeSingle()
   if (!admin) return json({ error: 'forbidden' }, 403, headers)
 
