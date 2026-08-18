@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { hrxSupabase } from './supabaseClient'
+import { navigateAdmin, type AdminDestination } from './adminNavigation'
 import { passwordMeetsPolicy, passwordRequirementText, secureUpdateAdminPassword } from './passwordSecurity'
 import './admin-experience.css'
 
@@ -138,6 +139,11 @@ export default function AdminExperienceLayer() {
     setSettingsOpen(true)
   }
 
+  const openDestination = (destination: AdminDestination) => {
+    setMobileMenuOpen(false)
+    navigateAdmin(destination)
+  }
+
   const changePassword = async (event: FormEvent) => {
     event.preventDefault()
     if (!passwordValid) return
@@ -157,34 +163,6 @@ export default function AdminExperienceLayer() {
     setConfirmPassword('')
     setPasswordSuccess(true)
     setPasswordMessage('Senha alterada com sucesso e validada pela política de segurança da HRX.')
-  }
-
-  const openOperation = (index: number) => {
-    setMobileMenuOpen(false)
-    const buttons = Array.from(document.querySelectorAll('.admin-ops-nav')) as HTMLButtonElement[]
-    buttons[index]?.click()
-  }
-
-  const openQuotes = () => {
-    setMobileMenuOpen(false)
-    const closeButton = document.querySelector('.admin-ops-header button[aria-label="Fechar"]') as HTMLButtonElement | null
-    closeButton?.click()
-  }
-
-  const openDocuments = () => {
-    setMobileMenuOpen(false)
-    window.dispatchEvent(new CustomEvent('hrx:open-documents'))
-  }
-
-  const openPanels = () => {
-    setMobileMenuOpen(false)
-    window.location.hash = '#admin/painels'
-  }
-
-  const openFiscal = () => {
-    setMobileMenuOpen(false)
-    const fiscalButton = document.querySelector<HTMLButtonElement>('.admin-fiscal-nav')
-    fiscalButton?.click()
   }
 
   const lookupCnpj = async () => {
@@ -262,12 +240,12 @@ export default function AdminExperienceLayer() {
       <section className="hrx-mobile-menu" role="dialog" aria-modal="true" aria-label="Menu do HRX Admin">
         <header><div><span>HRX ADMIN</span><h2>Navegação</h2></div><button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Fechar">×</button></header>
         <div className="hrx-mobile-menu-grid">
-          <button type="button" onClick={openQuotes}><span>▦</span><strong>Orçamentos</strong><small>Fila e editor</small></button>
-          <button type="button" onClick={() => openOperation(0)}><span>♙</span><strong>Clientes</strong><small>Catálogo e histórico</small></button>
-          <button type="button" onClick={() => openOperation(1)}><span>Ⅱ</span><strong>Suspensões</strong><small>Parados e retomadas</small></button>
-          <button type="button" onClick={openDocuments}><span>▤</span><strong>Central de documentos</strong><small>Arquivos, contratos e governança</small></button>
-          <button type="button" onClick={openPanels}><span>▦</span><strong>Painéis</strong><small>Projetos, prioridades e progresso</small></button>
-          <button type="button" onClick={openFiscal}><span>◇</span><strong>Fiscal</strong><small>Cadastro e situação tributária</small></button>
+          <button type="button" onClick={() => openDestination('quotes')}><span>▦</span><strong>Orçamentos</strong><small>Fila e editor</small></button>
+          <button type="button" onClick={() => openDestination('clients')}><span>♙</span><strong>Clientes</strong><small>Catálogo e histórico</small></button>
+          <button type="button" onClick={() => openDestination('suspensions')}><span>Ⅱ</span><strong>Suspensões</strong><small>Parados e retomadas</small></button>
+          <button type="button" onClick={() => openDestination('documents')}><span>▤</span><strong>Central de documentos</strong><small>Arquivos, contratos e governança</small></button>
+          <button type="button" onClick={() => openDestination('panels')}><span>▦</span><strong>Painéis</strong><small>Projetos, prioridades e progresso</small></button>
+          <button type="button" onClick={() => openDestination('fiscal')}><span>◇</span><strong>Fiscal</strong><small>Cadastro e situação tributária</small></button>
           <button type="button" onClick={openSettings}><span>⚙</span><strong>Configurações</strong><small>Conta e segurança</small></button>
         </div>
         <button type="button" className="hrx-mobile-refresh" onClick={() => window.location.reload()}>↻ Atualizar dados</button>
