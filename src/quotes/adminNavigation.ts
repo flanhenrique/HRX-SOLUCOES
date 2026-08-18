@@ -1,4 +1,4 @@
-export type AdminDestination = 'quotes' | 'clients' | 'suspensions' | 'documents' | 'panels' | 'fiscal' | 'settings'
+export type AdminDestination = 'executive' | 'quotes' | 'clients' | 'suspensions' | 'documents' | 'panels' | 'fiscal' | 'settings'
 
 export const ADMIN_NAVIGATE_EVENT = 'hrx:admin-navigate'
 
