@@ -116,6 +116,7 @@ async function lookupErrorMessage(error: unknown) {
       client_not_found: 'O cliente não foi localizado no cadastro.',
       client_cnpj_mismatch: 'O CNPJ informado não corresponde ao documento salvo no cliente.',
       fiscal_profile_save_failed: 'A consulta funcionou, mas o perfil fiscal não pôde ser gravado.',
+      mfa_required: 'Confirme a verificação em duas etapas para acessar dados fiscais.',
       forbidden: 'Seu usuário não tem permissão para consultar dados fiscais.',
     }
     return messages[payload.error ?? ''] ?? 'Não foi possível atualizar a situação fiscal.'
@@ -125,7 +126,6 @@ async function lookupErrorMessage(error: unknown) {
 
 export default function AdminFiscalHub() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
-  const [mobileTarget, setMobileTarget] = useState<Element | null>(null)
   const [open, setOpen] = useState(false)
   const [clients, setClients] = useState<ClientRow[]>([])
   const [profiles, setProfiles] = useState<Record<string, FiscalProfile>>({})
@@ -143,12 +143,9 @@ export default function AdminFiscalHub() {
   const [messageTone, setMessageTone] = useState<'info' | 'success' | 'error'>('info')
 
   useEffect(() => {
-    const updateTargets = () => {
-      setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
-      setMobileTarget(document.querySelector('.admin-mobile-nav'))
-    }
-    updateTargets()
-    const observer = new MutationObserver(updateTargets)
+    const updateTarget = () => setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
+    updateTarget()
+    const observer = new MutationObserver(updateTarget)
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
@@ -260,13 +257,12 @@ export default function AdminFiscalHub() {
   }
 
   const sidebarPortal = sidebarTarget ? createPortal(<button type="button" className="admin-fiscal-nav" onClick={() => setOpen(true)}><span aria-hidden="true">◇</span>Fiscal</button>, sidebarTarget) : null
-  const mobilePortal = mobileTarget ? createPortal(<button type="button" className="admin-fiscal-mobile" onClick={() => setOpen(true)}><span aria-hidden="true">◇</span>Fiscal</button>, mobileTarget) : null
   const address = selectedProfile?.fiscal_address
   const addressText = address ? [[address.street, address.number].filter(Boolean).join(', '), address.complement, address.district, [address.city, address.state].filter(Boolean).join(' - '), address.zipCode ? `CEP ${address.zipCode}` : ''].filter(Boolean).join(' · ') : 'Não consultado'
   const secondaryCnaes = Array.isArray(selectedProfile?.secondary_cnaes) ? selectedProfile.secondary_cnaes : []
 
   return <>
-    {sidebarPortal}{mobilePortal}
+    {sidebarPortal}
     {open && <section className="admin-fiscal-shell" role="dialog" aria-modal="true" aria-label="Gestão fiscal de clientes">
       <header className="admin-fiscal-header">
         <div><span>HRX · BACKOFFICE</span><h2>Fiscal</h2><p>Validação cadastral e tributária por CNPJ</p></div>
