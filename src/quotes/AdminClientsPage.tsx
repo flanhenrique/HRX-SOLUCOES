@@ -41,6 +41,7 @@ export default function AdminClientsPage() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const [clientFormOpen, setClientFormOpen] = useState(false)
   const [quoteFormOpen, setQuoteFormOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -48,7 +49,10 @@ export default function AdminClientsPage() {
 
   useEffect(() => onAdminNavigate((destination) => {
     setOpen(destination === 'clients')
-    if (destination !== 'clients') setQuoteFormOpen(false)
+    if (destination !== 'clients') {
+      setQuoteFormOpen(false)
+      setMobileDetailOpen(false)
+    }
   }), [])
 
   const load = async () => {
@@ -85,6 +89,11 @@ export default function AdminClientsPage() {
   const selectedQuotes = quotes.filter((item) => item.client_id === selectedId)
   const volume = selectedQuotes.reduce((sum, item) => sum + Number(item.draft?.final_amount ?? 0), 0)
 
+  const selectClient = (id: string) => {
+    setSelectedId(id)
+    setMobileDetailOpen(true)
+  }
+
   const openManualQuote = (clientId?: string) => {
     setManualForm({ clientId: clientId ?? selectedId ?? clients[0]?.id ?? '', requestText: '', desiredDeadline: '', preferredContact: 'whatsapp' })
     setQuoteFormOpen(true)
@@ -111,7 +120,7 @@ export default function AdminClientsPage() {
 
   if (!open) return null
 
-  return <section className="hrx-clients-page" aria-label="Clientes HRX">
+  return <section className={`hrx-clients-page${mobileDetailOpen ? ' is-mobile-detail-open' : ''}`} aria-label="Clientes HRX">
     <header className="hrx-clients-header">
       <div><span>HRX SOLUTIONS · RELACIONAMENTO</span><h1>Clientes</h1><p>Carteira, histórico comercial e criação de novas oportunidades.</p></div>
       <div><button type="button" onClick={() => setClientFormOpen(true)}>+ Cliente</button><button type="button" className="is-primary" onClick={() => openManualQuote()}>+ Orçamento</button></div>
@@ -120,9 +129,10 @@ export default function AdminClientsPage() {
     <main className="hrx-clients-content">
       <aside className="hrx-clients-list">
         <div className="hrx-clients-list-head"><div><strong>Carteira</strong><span>{clients.length}</span></div><label><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar cliente" /></label></div>
-        <div className="hrx-clients-scroll">{loading && <p className="hrx-clients-empty">Carregando clientes…</p>}{!loading && filtered.map((client) => <button key={client.id} type="button" className={selectedId === client.id ? 'is-active' : ''} onClick={() => setSelectedId(client.id)}><div><strong>{client.name}</strong>{!client.active && <span>Inativo</span>}</div><small>{client.company || client.email || client.phone || 'Sem contato'}</small><time>{client.last_quote_at ? new Date(client.last_quote_at).toLocaleDateString('pt-BR') : 'Sem orçamento'}</time></button>)}</div>
+        <div className="hrx-clients-scroll">{loading && <p className="hrx-clients-empty">Carregando clientes…</p>}{!loading && filtered.map((client) => <button key={client.id} type="button" className={selectedId === client.id ? 'is-active' : ''} onClick={() => selectClient(client.id)}><div><strong>{client.name}</strong>{!client.active && <span>Inativo</span>}</div><small>{client.company || client.email || client.phone || 'Sem contato'}</small><time>{client.last_quote_at ? new Date(client.last_quote_at).toLocaleDateString('pt-BR') : 'Sem orçamento'}</time></button>)}</div>
       </aside>
       <section className="hrx-client-detail">{selected ? <>
+        <button type="button" className="hrx-client-mobile-back" onClick={() => setMobileDetailOpen(false)}>← Clientes</button>
         <div className="hrx-client-title"><div className="hrx-client-avatar">{selected.name.slice(0, 2).toUpperCase()}</div><div><span>CLIENTE</span><h2>{selected.name}</h2><p>{selected.company || 'Sem empresa informada'}</p></div><button type="button" onClick={() => openManualQuote(selected.id)}>Novo orçamento</button></div>
         <div className="hrx-client-kpis"><article><span>Orçamentos</span><strong>{selectedQuotes.length}</strong></article><article><span>Volume histórico</span><strong>{currency.format(volume)}</strong></article><article><span>Último orçamento</span><strong>{selected.last_quote_at ? new Date(selected.last_quote_at).toLocaleDateString('pt-BR') : '—'}</strong></article></div>
         <div className="hrx-client-info"><article><span>E-mail</span><strong>{selected.email || 'Não informado'}</strong></article><article><span>Telefone</span><strong>{selected.phone || 'Não informado'}</strong></article><article><span>Documento</span><strong>{selected.document || 'Não informado'}</strong></article><article><span>Origem</span><strong>{selected.source.replaceAll('_', ' ')}</strong></article></div>
@@ -131,7 +141,7 @@ export default function AdminClientsPage() {
       </> : <div className="hrx-clients-empty-state"><h2>Selecione um cliente</h2><p>Escolha um cadastro para ver contatos e histórico.</p></div>}</section>
     </main>
 
-    {clientFormOpen && <AdminClientForm onClose={() => setClientFormOpen(false)} onCreated={async (id) => { await load(); if (id) setSelectedId(id) }} />}
+    {clientFormOpen && <AdminClientForm onClose={() => setClientFormOpen(false)} onCreated={async (id) => { await load(); if (id) { setSelectedId(id); setMobileDetailOpen(true) } }} />}
     {quoteFormOpen && <div className="hrx-clients-modal-backdrop"><form className="hrx-clients-modal" onSubmit={createManualQuote}><header><div><span>OPORTUNIDADE COMERCIAL</span><h2>Novo orçamento</h2></div><button type="button" onClick={() => setQuoteFormOpen(false)}>×</button></header><label>Cliente<select required value={manualForm.clientId} onChange={(event) => setManualForm({ ...manualForm, clientId: event.target.value })}><option value="">Selecione</option>{clients.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}{item.company ? ` · ${item.company}` : ''}</option>)}</select></label><div className="hrx-clients-form-row"><label>Prazo desejado<input value={manualForm.desiredDeadline} onChange={(event) => setManualForm({ ...manualForm, desiredDeadline: event.target.value })} placeholder="Ex.: 30 dias" /></label><label>Contato preferencial<select value={manualForm.preferredContact} onChange={(event) => setManualForm({ ...manualForm, preferredContact: event.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option></select></label></div><label>Escopo inicial<textarea rows={5} value={manualForm.requestText} onChange={(event) => setManualForm({ ...manualForm, requestText: event.target.value })} placeholder="Descreva a demanda inicial." /></label><footer><button type="button" onClick={() => setQuoteFormOpen(false)}>Cancelar</button><button type="submit" className="is-primary" disabled={busy || !manualForm.clientId}>{busy ? 'Criando…' : 'Criar orçamento'}</button></footer></form></div>}
   </section>
 }
