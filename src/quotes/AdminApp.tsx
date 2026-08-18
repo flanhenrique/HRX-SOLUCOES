@@ -9,6 +9,7 @@ import AdminExperienceLayer from './AdminExperienceLayer'
 import SuspendedQuoteGuard from './SuspendedQuoteGuard'
 import './admin-page-system.css'
 import './admin-feedback.css'
+import './admin-interactions.css'
 
 export default function AdminApp() {
   return <>
