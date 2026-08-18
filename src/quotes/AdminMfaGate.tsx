@@ -11,7 +11,7 @@ type Enrollment = {
   secret: string
 }
 
-export default function AdminMfaGate({ session, children }: { session: Session; children: ReactNode }) {
+export default function AdminMfaGate({ session, children, allowEnrollment = true }: { session: Session; children: ReactNode; allowEnrollment?: boolean }) {
   const [phase, setPhase] = useState<Phase>('checking')
   const [factorId, setFactorId] = useState('')
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
@@ -40,8 +40,20 @@ export default function AdminMfaGate({ session, children }: { session: Session; 
     }
 
     const verifiedTotp = factors.totp.find((factor) => factor.status === 'verified')
-    if (verifiedTotp || aal.nextLevel === 'aal2') {
-      setFactorId(verifiedTotp?.id ?? factors.totp[0]?.id ?? '')
+    if (verifiedTotp) {
+      setFactorId(verifiedTotp.id)
+      setPhase('challenge')
+      return
+    }
+
+    if (!allowEnrollment) {
+      setMessage('A recuperação exige um autenticador que já tenha sido verificado nesta conta. Entre em contato com o administrador responsável se o fator não estiver disponível.')
+      setPhase('error')
+      return
+    }
+
+    if (aal.nextLevel === 'aal2' && factors.totp[0]?.id) {
+      setFactorId(factors.totp[0].id)
       setPhase('challenge')
       return
     }
@@ -49,9 +61,10 @@ export default function AdminMfaGate({ session, children }: { session: Session; 
     setPhase('enroll')
   }
 
-  useEffect(() => { void evaluate() }, [session.access_token])
+  useEffect(() => { void evaluate() }, [session.access_token, allowEnrollment])
 
   const startEnrollment = async () => {
+    if (!allowEnrollment) return
     setBusy(true)
     setMessage('')
     setPhase('enrolling')
