@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin navigation is centralized and shell-native pages avoid DOM bridges', async () => {
-  const [navigation, executive, documents, clients, suspensions, experience, fiscal, panels, desktopNavigation, main] = await Promise.all([
+test('admin application is centralized behind MFA and shell-native pages avoid DOM bridges', async () => {
+  const [navigation, executive, documents, clients, suspensions, experience, fiscal, panels, desktopNavigation, adminApp, authRouter, main] = await Promise.all([
     read('src/quotes/adminNavigation.ts'),
     read('src/quotes/AdminExecutiveDashboard.tsx'),
     read('src/quotes/AdminDocumentsPage.tsx'),
@@ -15,6 +15,8 @@ test('admin navigation is centralized and shell-native pages avoid DOM bridges',
     read('src/quotes/AdminFiscalPage.tsx'),
     read('src/quotes/AdminProjectPanelsPage.tsx'),
     read('src/quotes/AdminDesktopNavigation.tsx'),
+    read('src/quotes/AdminApp.tsx'),
+    read('src/quotes/AdminAuthRouter.tsx'),
     read('src/main.tsx'),
   ])
 
@@ -22,8 +24,6 @@ test('admin navigation is centralized and shell-native pages avoid DOM bridges',
   assert.match(navigation, /ADMIN_NAVIGATE_EVENT/)
   assert.doesNotMatch(navigation, /hrx:open-documents/)
   assert.match(executive, /VISÃO EXECUTIVA/)
-  assert.match(executive, /getAuthenticatorAssuranceLevel/)
-  assert.match(executive, /aal\.currentLevel !== 'aal2'/)
   assert.match(documents, /destination === 'documents'/)
   assert.match(documents, /createSignedUrl/)
   assert.doesNotMatch(documents, /createPortal|MutationObserver/)
@@ -40,11 +40,11 @@ test('admin navigation is centralized and shell-native pages avoid DOM bridges',
   assert.match(panels, /destination === 'panels'/)
   assert.doesNotMatch(panels, /createPortal|MutationObserver/)
   assert.match(desktopNavigation, /destination: 'executive'/)
-  assert.match(main, /<AdminExecutiveDashboard \/>/)
-  assert.match(main, /<AdminClientsPage \/>/)
-  assert.match(main, /<AdminSuspensionsPage \/>/)
-  assert.match(main, /<AdminDocumentsPage \/>/)
-  assert.doesNotMatch(main, /AdminOperationsHub|AdminDocumentsHub|AdminLegacyNavigationBridge/)
+
+  for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminDesktopNavigation', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
+  assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
+  assert.match(main, /<AdminAuthRouter \/>/)
+  assert.doesNotMatch(main, /AdminClientsPage|AdminDocumentsPage|AdminExecutiveDashboard|AdminOperationsHub|AdminDocumentsHub/)
   assert.doesNotMatch(experience, /\.admin-ops-nav|\.admin-fiscal-nav/)
 })
 
@@ -55,7 +55,6 @@ test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', a
     read('src/quotes/AdminClientsPage.tsx'),
     read('src/quotes/admin-client-form.css'),
   ])
-
   assert.match(clientForm, /functions\.invoke<CnpjLookup>\('cnpj-lookup'/)
   assert.match(clientForm, /Consultar CNPJ/)
   assert.match(clients, /<AdminClientForm/)
