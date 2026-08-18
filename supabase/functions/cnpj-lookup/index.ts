@@ -18,21 +18,18 @@ function allowedOrigins() {
 
 function cors(origin: string | null) {
   const origins = allowedOrigins();
-  const allowedOrigin = origin && origins.includes(origin) ? origin : origins[0];
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin && origins.includes(origin) ? origin : origins[0],
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
 const json = (body: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { ...headers, "Content-Type": "application/json" } });
-
-function digits(value: string) {
-  return value.replace(/\D/g, "");
-}
+const digits = (value: string) => value.replace(/\D/g, "");
+const nullableBoolean = (value: unknown) => value === true ? true : value === false ? false : null;
 
 function validCnpj(value: string) {
   const cnpj = digits(value);
@@ -45,10 +42,6 @@ function validCnpj(value: string) {
   const d1 = calc(cnpj.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
   const d2 = calc(cnpj.slice(0, 12) + d1, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
   return cnpj.endsWith(`${d1}${d2}`);
-}
-
-function nullableBoolean(value: unknown) {
-  return value === true ? true : value === false ? false : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -68,15 +61,16 @@ Deno.serve(async (req: Request) => {
   const db = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: userData, error: userError } = await db.auth.getUser(bearer);
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401, headers);
-  const { data: admin } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
+
+  const { data: claimsData, error: claimsError } = await db.auth.getClaims(bearer);
+  if (claimsError || claimsData?.claims?.aal !== "aal2") return json({ error: "mfa_required" }, 403, headers);
+
+  const { data: admin, error: adminError } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
+  if (adminError) return json({ error: "admin_lookup_failed" }, 500, headers);
   if (!admin) return json({ error: "forbidden" }, 403, headers);
 
   let body: { cnpj?: string; clientId?: string } = {};
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "invalid_json" }, 400, headers);
-  }
+  try { body = await req.json(); } catch { return json({ error: "invalid_json" }, 400, headers); }
 
   let client: { id: string; document: string | null } | null = null;
   if (body.clientId) {
@@ -94,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, {
-      headers: { Accept: "application/json", "User-Agent": "HRX-Solutions-Admin/2.0" },
+      headers: { Accept: "application/json", "User-Agent": "HRX-Solutions-Admin/2.1" },
     });
     if (response.status === 404) return json({ error: "cnpj_not_found" }, 404, headers);
     if (!response.ok) return json({ error: "lookup_unavailable" }, 502, headers);
@@ -149,7 +143,7 @@ Deno.serve(async (req: Request) => {
     const preserveManualRegime = !automaticRegime && existing?.tax_regime_source === "manual_admin" && Boolean(existing?.tax_regime);
     const taxRegime = automaticRegime ?? (preserveManualRegime ? String(existing?.tax_regime) : null);
     const taxRegimeSource = automaticRegime ? "public_cnpj_data" : preserveManualRegime ? "manual_admin" : "requires_confirmation";
-    const taxRegimeRequiresConfirmation = automaticRegime ? false : preserveManualRegime ? false : true;
+    const taxRegimeRequiresConfirmation = automaticRegime ? false : !preserveManualRegime;
 
     if (client) {
       const profile = {
