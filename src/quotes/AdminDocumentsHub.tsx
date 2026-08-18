@@ -43,13 +43,17 @@ function repoFolder(path: string) {
 
 export default function AdminDocumentsHub() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
+  const [mobileTarget, setMobileTarget] = useState<Element | null>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    const syncTarget = () => setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
-    syncTarget()
-    const observer = new MutationObserver(syncTarget)
+    const syncTargets = () => {
+      setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
+      setMobileTarget(document.querySelector('.admin-mobile-nav'))
+    }
+    syncTargets()
+    const observer = new MutationObserver(syncTargets)
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
@@ -79,8 +83,17 @@ export default function AdminDocumentsHub() {
     sidebarTarget,
   ) : null
 
+  const mobilePortal = mobileTarget ? createPortal(
+    <button type="button" className={`hrx-mobile-documents${open ? ' is-active' : ''}`} onClick={() => setOpen(true)}>
+      <span aria-hidden="true">▤</span>
+      Documentos
+    </button>,
+    mobileTarget,
+  ) : null
+
   return <>
     {sidebarPortal}
+    {mobilePortal}
 
     {open && <section className="hrx-documents-shell" role="dialog" aria-modal="true" aria-label="Repositório de documentos HRX">
       <header className="hrx-documents-header">
@@ -97,21 +110,9 @@ export default function AdminDocumentsHub() {
 
       <main className="hrx-documents-content">
         <section className="hrx-documents-summary">
-          <article>
-            <span>ESTRUTURA</span>
-            <strong>8 áreas</strong>
-            <small>Organização documental principal</small>
-          </article>
-          <article>
-            <span>CLIENTES</span>
-            <strong>1 ativo</strong>
-            <small>Hortifruti Revolução</small>
-          </article>
-          <article>
-            <span>PADRÃO</span>
-            <strong>Versionado</strong>
-            <small>Histórico preservado no GitHub</small>
-          </article>
+          <article><span>ESTRUTURA</span><strong>8 áreas</strong><small>Organização documental principal</small></article>
+          <article><span>CLIENTES</span><strong>1 ativo</strong><small>Hortifruti Revolução</small></article>
+          <article><span>PADRÃO</span><strong>Versionado</strong><small>Histórico preservado no GitHub</small></article>
         </section>
 
         <section className="hrx-documents-section">
