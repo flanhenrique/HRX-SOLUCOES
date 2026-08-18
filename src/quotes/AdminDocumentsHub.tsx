@@ -26,19 +26,15 @@ const hortifrutiFolders = ['Documentos recebidos', 'Levantamento', 'Propostas', 
 
 export default function AdminDocumentsHub() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
-  const [mobileTarget, setMobileTarget] = useState<Element | null>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedArea, setSelectedArea] = useState<DocumentArea | null>(null)
   const [clientOpen, setClientOpen] = useState(false)
 
   useEffect(() => {
-    const syncTargets = () => {
-      setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
-      setMobileTarget(document.querySelector('.admin-mobile-nav'))
-    }
-    syncTargets()
-    const observer = new MutationObserver(syncTargets)
+    const syncTarget = () => setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
+    syncTarget()
+    const observer = new MutationObserver(syncTarget)
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
@@ -64,11 +60,10 @@ export default function AdminDocumentsHub() {
   const back = () => { if (clientOpen) setClientOpen(false); else setSelectedArea(null) }
 
   const sidebarPortal = sidebarTarget ? createPortal(<button type="button" className={`hrx-documents-nav${open ? ' is-active' : ''}`} onClick={() => setOpen(true)}><span aria-hidden="true">▤</span>Central de documentos</button>, sidebarTarget) : null
-  const mobilePortal = mobileTarget ? createPortal(<button type="button" className={`hrx-mobile-documents${open ? ' is-active' : ''}`} onClick={() => setOpen(true)}><span aria-hidden="true">▤</span>Documentos</button>, mobileTarget) : null
 
   const detail = clientOpen ? { title: 'Hortifruti Revolução', eyebrow: 'DOSSIÊ DO CLIENTE', description: 'Documentação organizada pelo ciclo do projeto.', folders: hortifrutiFolders, governance: 'Cliente ativo · controle por projeto' } : selectedArea ? { title: selectedArea.title, eyebrow: 'ÁREA DOCUMENTAL', description: selectedArea.description, folders: selectedArea.folders, governance: selectedArea.governance } : null
 
-  return <>{sidebarPortal}{mobilePortal}{open && <section className="hrx-documents-shell" role="dialog" aria-modal="true" aria-label="Central de Documentos HRX">
+  return <>{sidebarPortal}{open && <section className="hrx-documents-shell" role="dialog" aria-modal="true" aria-label="Central de Documentos HRX">
     <header className="hrx-documents-header">
       <div className="hrx-documents-heading">{detail && <button type="button" className="hrx-documents-back" onClick={back} aria-label="Voltar">←</button>}<div><span>HRX · GOVERNANÇA DOCUMENTAL</span><h2>{detail ? detail.title : 'Central de Documentos'}</h2><p>{detail ? detail.description : 'Documentos internos organizados por função, projeto, vigência e responsabilidade.'}</p></div></div>
       <div className="hrx-documents-header-actions"><button type="button" onClick={closeCenter} aria-label="Fechar Central de Documentos">×</button></div>
