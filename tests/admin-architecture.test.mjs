@@ -51,6 +51,7 @@ test('admin application is centralized behind MFA and shell-native pages avoid D
   for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
   assert.match(adminApp, /admin-page-system\.css/)
   assert.match(adminApp, /admin-feedback\.css/)
+  assert.match(adminApp, /admin-interactions\.css/)
   assert.doesNotMatch(adminApp, /AdminDesktopNavigation|AdminOperationsHub|AdminDocumentsHub/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.match(main, /<AdminAuthRouter \/>/)
@@ -133,4 +134,13 @@ test('premium feedback distinguishes loading empty success and error states', as
   assert.match(documents, /role=\{messageTone === 'error' \? 'alert' : 'status'\}/)
   assert.match(fiscal, /showMessage\('success', 'Regime tributário confirmado\.'\)/)
   assert.match(fiscal, /role=\{messageTone === 'error' \? 'alert' : 'status'\}/)
+})
+
+test('premium interaction system protects keyboard focus and reduced motion', async () => {
+  const interactions = await read('src/quotes/admin-interactions.css')
+  assert.match(interactions, /:focus-visible/)
+  assert.match(interactions, /--hrx-focus-ring/)
+  assert.match(interactions, /button:disabled/)
+  assert.match(interactions, /@media\(hover:hover\) and \(pointer:fine\)/)
+  assert.match(interactions, /prefers-reduced-motion:reduce/)
 })
