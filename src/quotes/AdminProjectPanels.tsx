@@ -50,10 +50,7 @@ const projects: ProjectPanel[] = [
     summary: 'Aplicação para registrar leituras, acompanhar ciclos de consumo, alertas e relatórios de energia e água.',
     completed: ['PWA instalável e domínio próprio', 'Leituras e ciclos de consumo', 'Dashboard e histórico', 'Base de alertas e relatórios'],
     pending: ['Resolver falhas remanescentes do quality gate', 'Concluir revisão visual claro/escuro', 'Revalidar responsividade e navegação mobile'],
-    links: [
-      { label: 'Abrir VOLT', href: 'https://www.voltconsumo.com.br' },
-      { label: 'Repositório', href: 'https://github.com/flanhenrique/Volt-consumo' },
-    ],
+    links: [{ label: 'Abrir VOLT', href: 'https://www.voltconsumo.com.br' }],
   },
   {
     id: 'somma',
@@ -65,10 +62,7 @@ const projects: ProjectPanel[] = [
     summary: 'Presença institucional premium para consultoria hoteleira e condomínios, com páginas comerciais, metodologia, cases e contato.',
     completed: ['Site institucional publicado', 'Domínio próprio configurado', 'Identidade visual premium', 'Fluxos de contato e WhatsApp'],
     pending: ['Manter revisão periódica de conteúdo', 'Consolidar melhorias comerciais futuras', 'Monitorar publicação e HTTPS'],
-    links: [
-      { label: 'Abrir SOMMA', href: 'https://sommaconsulthtl.com.br' },
-      { label: 'Repositório', href: 'https://github.com/flanhenrique/somma' },
-    ],
+    links: [{ label: 'Abrir SOMMA', href: 'https://sommaconsulthtl.com.br' }],
   },
 ]
 
