@@ -7,6 +7,7 @@ import AdminDocumentsHub from './quotes/AdminDocumentsHub'
 import AdminFiscalHub from './quotes/AdminFiscalHub'
 import AdminProjectPanels from './quotes/AdminProjectPanels'
 import AdminExperienceLayer from './quotes/AdminExperienceLayer'
+import AdminLegacyNavigationBridge from './quotes/AdminLegacyNavigationBridge'
 import SuspendedQuoteGuard from './quotes/SuspendedQuoteGuard'
 import AdminPwaBridge from './AdminPwaBridge'
 import AdminPwaUpdater from './AdminPwaUpdater'
@@ -32,7 +33,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><AdminFiscalHub /><AdminProjectPanels /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><AdminFiscalHub /><AdminProjectPanels /><AdminLegacyNavigationBridge /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
