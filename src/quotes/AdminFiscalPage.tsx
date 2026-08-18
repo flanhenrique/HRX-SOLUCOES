@@ -35,6 +35,8 @@ type FiscalProfile = {
   sefaz_verification_url?: string | null
 }
 
+type MessageTone = 'success' | 'error'
+
 const regimes = [
   { value: 'LUCRO_PRESUMIDO', label: 'Lucro Presumido' },
   { value: 'LUCRO_REAL', label: 'Lucro Real' },
@@ -94,19 +96,23 @@ export default function AdminFiscalPage() {
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageTone, setMessageTone] = useState<MessageTone>('success')
   const [manualRegime, setManualRegime] = useState('')
   const [stateRegistration, setStateRegistration] = useState('')
   const [stateRegistrationStatus, setStateRegistrationStatus] = useState('NAO_VERIFICADA')
   const [icmsTaxpayer, setIcmsTaxpayer] = useState<'unknown' | 'true' | 'false'>('unknown')
 
+  const clearMessage = () => { setMessage(''); setMessageTone('success') }
+  const showMessage = (tone: MessageTone, text: string) => { setMessageTone(tone); setMessage(text) }
+
   useEffect(() => onAdminNavigate((destination) => {
     if (destination === 'fiscal') setOpen(true)
-    if (destination === 'quotes' || destination === 'clients' || destination === 'suspensions' || destination === 'documents' || destination === 'panels') setOpen(false)
+    else setOpen(false)
   }), [])
 
   const loadData = async (preferredClientId?: string) => {
     setLoading(true)
-    setMessage('')
+    clearMessage()
     try {
       const [clientsResult, profilesResult] = await Promise.all([
         hrxSupabase.from('clients').select('id,name,company,document,active').eq('active', true).order('name'),
@@ -127,8 +133,8 @@ export default function AdminFiscalPage() {
         if (current && nextClients.some((client) => client.id === current)) return current
         return nextClients[0]?.id ?? null
       })
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível carregar os dados fiscais.')
+    } catch {
+      showMessage('error', 'Não foi possível carregar os dados fiscais agora.')
     } finally {
       setLoading(false)
     }
@@ -159,14 +165,14 @@ export default function AdminFiscalPage() {
   const refreshSelected = async () => {
     if (!selectedClient) return
     setBusy(true)
-    setMessage('')
+    clearMessage()
     try {
       const { error } = await hrxSupabase.functions.invoke('cnpj-lookup', { body: { clientId: selectedClient.id } })
       if (error) throw error
       await loadData(selectedClient.id)
-      setMessage('Dados cadastrais e tributários atualizados.')
+      showMessage('success', 'Dados cadastrais e tributários atualizados.')
     } catch (error) {
-      setMessage(await readableLookupError(error))
+      showMessage('error', await readableLookupError(error))
     } finally {
       setBusy(false)
     }
@@ -175,17 +181,17 @@ export default function AdminFiscalPage() {
   const confirmRegime = async () => {
     if (!selectedClient || !manualRegime) return
     setBusy(true)
-    setMessage('')
+    clearMessage()
     const { error } = await hrxSupabase.rpc('hrx_confirm_client_tax_regime', { p_client_id: selectedClient.id, p_tax_regime: manualRegime })
-    if (error) setMessage(await readableLookupError(error))
-    else { await loadData(selectedClient.id); setMessage('Regime tributário confirmado.') }
+    if (error) showMessage('error', await readableLookupError(error))
+    else { await loadData(selectedClient.id); showMessage('success', 'Regime tributário confirmado.') }
     setBusy(false)
   }
 
   const saveState = async () => {
     if (!selectedClient || !selectedProfile) return
     setBusy(true)
-    setMessage('')
+    clearMessage()
     const { error } = await hrxSupabase.rpc('hrx_update_client_state_registration', {
       p_client_id: selectedClient.id,
       p_state_registration: stateRegistration.trim() || null,
@@ -193,32 +199,32 @@ export default function AdminFiscalPage() {
       p_icms_taxpayer: icmsTaxpayer === 'unknown' ? null : icmsTaxpayer === 'true',
       p_state_validation_status: stateValidation(stateRegistrationStatus),
     })
-    if (error) setMessage(await readableLookupError(error))
-    else { await loadData(selectedClient.id); setMessage('Cadastro estadual atualizado.') }
+    if (error) showMessage('error', await readableLookupError(error))
+    else { await loadData(selectedClient.id); showMessage('success', 'Cadastro estadual atualizado.') }
     setBusy(false)
   }
 
   if (!open) return null
 
-  return <section className="hrx-fiscal-page" role="dialog" aria-modal="true" aria-label="Gestão fiscal de clientes">
+  return <section className="hrx-fiscal-page" aria-label="Gestão fiscal de clientes">
     <header className="hrx-fiscal-header">
       <div><span>HRX · FISCAL</span><h2>Gestão fiscal</h2><p>Consulta cadastral, regime tributário e situação estadual.</p></div>
-      <div><button type="button" onClick={() => void loadData(selectedClientId ?? undefined)} disabled={loading}>{loading ? 'Atualizando…' : '↻ Atualizar'}</button><button type="button" aria-label="Fechar" onClick={() => setOpen(false)}>×</button></div>
+      <div><button type="button" onClick={() => void loadData(selectedClientId ?? undefined)} disabled={loading}>{loading ? 'Atualizando…' : '↻ Atualizar'}</button></div>
     </header>
 
-    {message && <div className="hrx-fiscal-message" role="status">{message}</div>}
+    {message && <div className={`hrx-fiscal-message is-${messageTone}`} role={messageTone === 'error' ? 'alert' : 'status'}>{message}</div>}
 
     <div className="hrx-fiscal-layout">
       <aside className="hrx-fiscal-list">
         <label><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar empresa ou CNPJ" /></label>
-        <div>{loading && <p>Carregando clientes…</p>}{!loading && filteredClients.length === 0 && <p>Nenhum cliente PJ cadastrado.</p>}{filteredClients.map((client) => {
+        <div>{loading && <p>Carregando clientes…</p>}{!loading && filteredClients.length === 0 && <p>{query ? 'Nenhum cliente encontrado para esta busca.' : 'Nenhum cliente PJ cadastrado.'}</p>}{filteredClients.map((client) => {
           const profile = profiles[client.id]
           return <button key={client.id} type="button" className={selectedClientId === client.id ? 'is-active' : ''} onClick={() => setSelectedClientId(client.id)}><strong>{client.company || profile?.trade_name || client.name}</strong><small>{client.name}</small><span>{formatCnpj(client.document)}</span></button>
         })}</div>
       </aside>
 
       <main className="hrx-fiscal-content">
-        {!selectedClient && <div className="hrx-fiscal-empty"><strong>Nenhum cliente selecionado</strong><p>Cadastre um CNPJ em Clientes para habilitar a análise fiscal.</p></div>}
+        {!selectedClient && <div className="hrx-fiscal-empty"><strong>{loading ? 'Preparando carteira fiscal…' : 'Nenhum cliente selecionado'}</strong><p>{loading ? 'Os cadastros com CNPJ estão sendo consolidados.' : 'Cadastre um CNPJ em Clientes para habilitar a análise fiscal.'}</p></div>}
         {selectedClient && <>
           <section className="hrx-fiscal-title"><div><span>{formatCnpj(selectedClient.document)}</span><h3>{selectedProfile?.legal_name || selectedClient.company || selectedClient.name}</h3><p>{selectedProfile?.trade_name || selectedClient.company || 'Empresa sem nome fantasia informado'}</p></div><button type="button" onClick={() => void refreshSelected()} disabled={busy}>{busy ? 'Consultando…' : selectedProfile ? 'Atualizar consulta' : 'Consultar CNPJ'}</button></section>
 
