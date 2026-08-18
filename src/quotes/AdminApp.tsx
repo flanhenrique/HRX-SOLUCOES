@@ -5,7 +5,6 @@ import AdminDocumentsPage from './AdminDocumentsPage'
 import AdminFiscalPage from './AdminFiscalPage'
 import AdminProjectPanelsPage from './AdminProjectPanelsPage'
 import AdminExecutiveDashboard from './AdminExecutiveDashboard'
-import AdminDesktopNavigation from './AdminDesktopNavigation'
 import AdminExperienceLayer from './AdminExperienceLayer'
 import SuspendedQuoteGuard from './SuspendedQuoteGuard'
 
@@ -18,7 +17,6 @@ export default function AdminApp() {
     <AdminFiscalPage />
     <AdminProjectPanelsPage />
     <AdminExecutiveDashboard />
-    <AdminDesktopNavigation />
     <AdminExperienceLayer />
     <SuspendedQuoteGuard />
   </>
