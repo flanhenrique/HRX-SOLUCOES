@@ -3,10 +3,14 @@ name: Validate HRX site
 on:
   pull_request:
   push:
-    branches-ignore: [main]
+    branches: [main]
 
 permissions:
   contents: read
+
+concurrency:
+  group: hrx-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
