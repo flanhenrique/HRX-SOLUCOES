@@ -32,3 +32,19 @@ test('document center uses private Supabase storage protected by AAL2', async ()
   assert.match(aal2Migration, /bucket_id = 'hrx-documents'/)
   assert.match(css, /hrx-document-file-list/)
 })
+
+test('VOLT library stays inside the HRX document center', async () => {
+  const [hub, css] = await Promise.all([
+    read('src/quotes/AdminDocumentsHub.tsx'),
+    read('src/quotes/admin-documents-storage.css'),
+  ])
+
+  assert.match(hub, /VOLT · BIBLIOTECA DOCUMENTAL/)
+  assert.match(hub, /raw\.githubusercontent\.com\/flanhenrique\/Volt-consumo\/main/)
+  assert.match(hub, /openVoltDocument/)
+  assert.match(hub, /hrx-document-viewer-overlay/)
+  assert.match(hub, /Leitura interna · sem redirecionamento externo/)
+  assert.doesNotMatch(hub, /window\.open\(/)
+  assert.match(css, /hrx-volt-library-list/)
+  assert.match(css, /hrx-document-viewer-body/)
+})
