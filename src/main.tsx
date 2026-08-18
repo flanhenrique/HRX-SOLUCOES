@@ -6,7 +6,6 @@ import AdminOperationsHub from './quotes/AdminOperationsHub'
 import AdminDocumentsHub from './quotes/AdminDocumentsHub'
 import AdminFiscalHub from './quotes/AdminFiscalHub'
 import AdminProjectPanels from './quotes/AdminProjectPanels'
-import MobileCreateQuoteButton from './quotes/MobileCreateQuoteButton'
 import AdminExperienceLayer from './quotes/AdminExperienceLayer'
 import SuspendedQuoteGuard from './quotes/SuspendedQuoteGuard'
 import AdminPwaBridge from './AdminPwaBridge'
@@ -19,6 +18,7 @@ import './quotes/rules.css'
 import './quotes/app-shell.css'
 import './quotes/admin-fiscal-manual-state.css'
 import './quotes/admin-refresh.css'
+import './quotes/mobile-create-quote.css'
 import './nexus-screen.css'
 import './portfolio-corrections.css'
 
@@ -32,7 +32,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><AdminFiscalHub /><AdminProjectPanels /><MobileCreateQuoteButton /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><AdminFiscalHub /><AdminProjectPanels /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
