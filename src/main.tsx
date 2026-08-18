@@ -5,8 +5,6 @@ import AdminAuthRouter from './quotes/AdminAuthRouter'
 import AdminClientsPage from './quotes/AdminClientsPage'
 import AdminSuspensionsPage from './quotes/AdminSuspensionsPage'
 import AdminDocumentsPage from './quotes/AdminDocumentsPage'
-import VoltZipImporter from './quotes/VoltZipImporter'
-import VoltDocumentFolders from './quotes/VoltDocumentFolders'
 import AdminFiscalPage from './quotes/AdminFiscalPage'
 import AdminProjectPanelsPage from './quotes/AdminProjectPanelsPage'
 import AdminExecutiveDashboard from './quotes/AdminExecutiveDashboard'
@@ -23,8 +21,6 @@ import './quotes/rules.css'
 import './quotes/app-shell.css'
 import './quotes/admin-refresh.css'
 import './quotes/mobile-create-quote.css'
-import './quotes/volt-zip-importer.css'
-import './quotes/volt-document-folders.css'
 import './nexus-screen.css'
 import './portfolio-corrections.css'
 
@@ -38,7 +34,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminClientsPage /><AdminSuspensionsPage /><AdminDocumentsPage /><VoltZipImporter /><VoltDocumentFolders /><AdminFiscalPage /><AdminProjectPanelsPage /><AdminExecutiveDashboard /><AdminDesktopNavigation /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminClientsPage /><AdminSuspensionsPage /><AdminDocumentsPage /><AdminFiscalPage /><AdminProjectPanelsPage /><AdminExecutiveDashboard /><AdminDesktopNavigation /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
