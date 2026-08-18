@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
 import AdminOperationsHub from './quotes/AdminOperationsHub'
+import AdminDocumentsHub from './quotes/AdminDocumentsHub'
 import AdminFiscalHub from './quotes/AdminFiscalHub'
 import MobileCreateQuoteButton from './quotes/MobileCreateQuoteButton'
 import AdminExperienceLayer from './quotes/AdminExperienceLayer'
@@ -16,6 +17,7 @@ import './brand-fix.css'
 import './quotes/rules.css'
 import './quotes/app-shell.css'
 import './quotes/admin-fiscal-manual-state.css'
+import './quotes/admin-refresh.css'
 import './nexus-screen.css'
 import './portfolio-corrections.css'
 
@@ -27,7 +29,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminFiscalHub /><MobileCreateQuoteButton /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><AdminFiscalHub /><MobileCreateQuoteButton /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
