@@ -6,11 +6,10 @@ import AdminOperationsHub from './quotes/AdminOperationsHub'
 import AdminDocumentsHub from './quotes/AdminDocumentsHub'
 import VoltZipImporter from './quotes/VoltZipImporter'
 import VoltDocumentFolders from './quotes/VoltDocumentFolders'
-import AdminFiscalHub from './quotes/AdminFiscalHub'
+import AdminFiscalPage from './quotes/AdminFiscalPage'
 import AdminProjectPanels from './quotes/AdminProjectPanels'
 import AdminExperienceLayer from './quotes/AdminExperienceLayer'
 import AdminDesktopNavigation from './quotes/AdminDesktopNavigation'
-import AdminLegacyNavigationBridge from './quotes/AdminLegacyNavigationBridge'
 import SuspendedQuoteGuard from './quotes/SuspendedQuoteGuard'
 import AdminPwaBridge from './AdminPwaBridge'
 import AdminPwaUpdater from './AdminPwaUpdater'
@@ -38,7 +37,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><VoltZipImporter /><VoltDocumentFolders /><AdminFiscalHub /><AdminProjectPanels /><AdminDesktopNavigation /><AdminLegacyNavigationBridge /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><VoltZipImporter /><VoltDocumentFolders /><AdminFiscalPage /><AdminProjectPanels /><AdminDesktopNavigation /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
