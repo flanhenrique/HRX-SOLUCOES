@@ -21,6 +21,7 @@ import './quotes/app-shell.css'
 import './quotes/admin-fiscal-manual-state.css'
 import './quotes/admin-refresh.css'
 import './quotes/mobile-create-quote.css'
+import './quotes/volt-zip-importer.css'
 import './nexus-screen.css'
 import './portfolio-corrections.css'
 
