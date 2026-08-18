@@ -1,10 +1,8 @@
-.hrx-mobile-create-quote{display:none}
-
 @media(max-width:860px){
-  .admin-exec-system>button:not(.hrx-mobile-create-quote){display:none!important}
+  .admin-exec-system>button:not(.admin-ops-new-quote){display:none!important}
   .admin-exec-system>.admin-online-dot{display:block}
-  .hrx-mobile-create-quote{
-    min-height:36px;
+  .admin-ops-new-quote{
+    min-height:36px!important;
     height:36px;
     margin-left:4px!important;
     padding:0 12px!important;
@@ -23,12 +21,13 @@
     cursor:pointer;
     box-shadow:0 4px 12px rgba(47,113,40,.18);
   }
-  .hrx-mobile-create-quote span{font-size:.9rem;line-height:1}
+  .admin-mobile-nav.has-admin-ops{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .admin-ops-mobile{display:none!important}
 }
 
 @media(max-width:430px){
   .admin-exec-topbar{gap:8px}
   .admin-exec-system{gap:4px}
   .admin-exec-system>.admin-online-dot{display:none}
-  .hrx-mobile-create-quote{padding:0 10px!important;font-size:.64rem!important}
+  .admin-ops-new-quote{padding:0 10px!important;font-size:.64rem!important}
 }
