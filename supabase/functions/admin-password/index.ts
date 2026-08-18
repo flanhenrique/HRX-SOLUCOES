@@ -60,6 +60,9 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userError } = await db.auth.getUser(bearer);
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401, headers);
 
+  const { data: claimsResult, error: claimsError } = await db.auth.getClaims(bearer);
+  if (claimsError || claimsResult?.claims?.aal !== "aal2") return json({ error: "mfa_required" }, 403, headers);
+
   const { data: admin, error: adminError } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
   if (adminError) return json({ error: "admin_lookup_failed" }, 500, headers);
   if (!admin) return json({ error: "forbidden" }, 403, headers);
