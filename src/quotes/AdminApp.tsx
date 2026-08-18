@@ -7,6 +7,7 @@ import AdminProjectPanelsPage from './AdminProjectPanelsPage'
 import AdminExecutiveDashboard from './AdminExecutiveDashboard'
 import AdminExperienceLayer from './AdminExperienceLayer'
 import SuspendedQuoteGuard from './SuspendedQuoteGuard'
+import './admin-page-system.css'
 
 export default function AdminApp() {
   return <>
