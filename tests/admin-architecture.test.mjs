@@ -97,3 +97,18 @@ test('executive, operational and document pages share one visual system', async 
   assert.match(css, /hrx-fiscal-header button\[aria-label="Fechar"\]\{display:none!important\}/)
   assert.match(css, /@media\(max-width:760px\)/)
 })
+
+test('login hierarchy is concise and mobile menu stays compact', async () => {
+  const [auth, authCss, experienceCss] = await Promise.all([
+    read('src/quotes/AdminAuthRouter.tsx'),
+    read('src/quotes/admin-auth.css'),
+    read('src/quotes/admin-experience.css'),
+  ])
+  assert.match(auth, /ACESSO ADMINISTRATIVO/)
+  assert.match(auth, /<h1>HRX Admin<\/h1>/)
+  assert.match(auth, /Entre com suas credenciais administrativas\./)
+  assert.doesNotMatch(auth, /admin-auth-trust|2FA obrigatório|Sessão protegida|Acesso restrito/)
+  assert.match(authCss, /width:min\(430px,100%\)/)
+  assert.match(experienceCss, /\.hrx-mobile-menu-grid>button\{min-width:0;min-height:82px/)
+  assert.match(experienceCss, /\.hrx-mobile-menu-grid>button\.hrx-mobile-signout/)
+})
