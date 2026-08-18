@@ -23,6 +23,7 @@ export async function secureUpdateAdminPassword(password: string) {
       pwned_check_unavailable: 'A verificação de segurança de senhas está indisponível. Por segurança, a alteração não foi concluída.',
       unauthorized: 'Sua sessão expirou. Entre novamente antes de alterar a senha.',
       forbidden: 'Seu usuário não possui permissão administrativa para alterar a senha por este fluxo.',
+      mfa_required: 'Confirme o código do Google Authenticator antes de alterar a senha.',
       password_update_failed: 'A senha passou pela validação, mas o Supabase não conseguiu concluir a alteração.',
     }
     return { ok: false as const, message: messages[payload.error ?? ''] ?? 'Não foi possível validar e alterar a senha agora.' }
