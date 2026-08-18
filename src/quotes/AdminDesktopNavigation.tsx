@@ -4,6 +4,7 @@ import { navigateAdmin, onAdminNavigate, type AdminDestination } from './adminNa
 import './admin-desktop-navigation.css'
 
 const items: { destination: AdminDestination; icon: string; label: string }[] = [
+  { destination: 'executive', icon: '◫', label: 'Visão executiva' },
   { destination: 'quotes', icon: '▦', label: 'Orçamentos' },
   { destination: 'clients', icon: '♙', label: 'Clientes' },
   { destination: 'suspensions', icon: 'Ⅱ', label: 'Suspensões' },
@@ -14,7 +15,7 @@ const items: { destination: AdminDestination; icon: string; label: string }[] = 
 
 export default function AdminDesktopNavigation() {
   const [target, setTarget] = useState<Element | null>(null)
-  const [active, setActive] = useState<AdminDestination>(() => window.location.hash === '#admin/painels' ? 'panels' : 'quotes')
+  const [active, setActive] = useState<AdminDestination>(() => window.location.hash === '#admin/painels' ? 'panels' : 'executive')
 
   useEffect(() => {
     const sync = () => setTarget(document.querySelector('.admin-exec-sidebar nav'))
@@ -31,7 +32,7 @@ export default function AdminDesktopNavigation() {
   if (!target) return null
 
   return createPortal(<div className="hrx-admin-desktop-nav" aria-label="Áreas administrativas">
-    <div className="hrx-admin-desktop-divider"><span>OPERAÇÃO</span></div>
+    <div className="hrx-admin-desktop-divider"><span>GESTÃO</span></div>
     {items.map((item) => <button key={item.destination} className={active === item.destination ? 'is-active' : ''} type="button" onClick={() => navigateAdmin(item.destination)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}
   </div>, target)
 }
