@@ -50,6 +50,7 @@ test('admin application is centralized behind MFA and shell-native pages avoid D
 
   for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
   assert.match(adminApp, /admin-page-system\.css/)
+  assert.match(adminApp, /admin-feedback\.css/)
   assert.doesNotMatch(adminApp, /AdminDesktopNavigation|AdminOperationsHub|AdminDocumentsHub/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.match(main, /<AdminAuthRouter \/>/)
@@ -85,7 +86,11 @@ test('desktop and mobile navigation belong to the HRX shell instead of the quote
 })
 
 test('executive, operational and document pages share one visual system', async () => {
-  const css = await read('src/quotes/admin-page-system.css')
+  const [css, feedback, fiscal] = await Promise.all([
+    read('src/quotes/admin-page-system.css'),
+    read('src/quotes/admin-feedback.css'),
+    read('src/quotes/AdminFiscalPage.tsx'),
+  ])
   for (const page of ['hrx-executive-page', 'hrx-clients-page', 'hrx-suspensions-page', 'hrx-documents-page', 'hrx-fiscal-page', 'admin-projects-shell']) assert.match(css, new RegExp(`\\.${page}`))
   assert.match(css, /--hrx-admin-sidebar-width:244px/)
   assert.match(css, /--hrx-page-bg:#f4f6f8/)
@@ -94,7 +99,10 @@ test('executive, operational and document pages share one visual system', async 
   assert.match(css, /\.admin-live-shell>\.admin-exec-sidebar\{display:none!important\}/)
   assert.match(css, /\.admin-exec-topbar\{height:88px!important/)
   assert.match(css, /admin-projects-close\{display:none!important\}/)
-  assert.match(css, /hrx-fiscal-header button\[aria-label="Fechar"\]\{display:none!important\}/)
+  assert.match(feedback, /\.hrx-executive-state/)
+  assert.match(feedback, /\.hrx-documents-page-message\.is-success/)
+  assert.match(feedback, /\.hrx-fiscal-message\.is-error/)
+  assert.doesNotMatch(fiscal, /aria-modal="true"|aria-label="Fechar"/)
   assert.match(css, /@media\(max-width:760px\)/)
 })
 
@@ -111,4 +119,18 @@ test('login hierarchy is concise and mobile menu stays compact', async () => {
   assert.match(authCss, /width:min\(430px,100%\)/)
   assert.match(experienceCss, /\.hrx-mobile-menu-grid>button\{min-width:0;min-height:82px/)
   assert.match(experienceCss, /\.hrx-mobile-menu-grid>button\.hrx-mobile-signout/)
+})
+
+test('premium feedback distinguishes loading empty success and error states', async () => {
+  const [executive, documents, fiscal] = await Promise.all([
+    read('src/quotes/AdminExecutiveDashboard.tsx'),
+    read('src/quotes/AdminDocumentsPage.tsx'),
+    read('src/quotes/AdminFiscalPage.tsx'),
+  ])
+  assert.match(executive, /Consolidando indicadores/)
+  assert.match(executive, /O cockpit está pronto para receber a operação/)
+  assert.match(documents, /showMessage\('success', 'Documento arquivado com sucesso\.'\)/)
+  assert.match(documents, /role=\{messageTone === 'error' \? 'alert' : 'status'\}/)
+  assert.match(fiscal, /showMessage\('success', 'Regime tributário confirmado\.'\)/)
+  assert.match(fiscal, /role=\{messageTone === 'error' \? 'alert' : 'status'\}/)
 })
