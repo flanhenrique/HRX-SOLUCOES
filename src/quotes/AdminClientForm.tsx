@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { hrxSupabase } from './supabaseClient'
+import './admin-client-form.css'
 
 type ClientFormState = {
   name: string
