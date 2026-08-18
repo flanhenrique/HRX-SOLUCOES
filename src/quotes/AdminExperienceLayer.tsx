@@ -3,6 +3,7 @@ import { hrxSupabase } from './supabaseClient'
 import { navigateAdmin, onAdminNavigate, type AdminDestination } from './adminNavigation'
 import { passwordMeetsPolicy, passwordRequirementText, secureUpdateAdminPassword } from './passwordSecurity'
 import './admin-experience.css'
+import './admin-shell-navigation.css'
 
 type SettingsView = 'home' | 'password'
 
