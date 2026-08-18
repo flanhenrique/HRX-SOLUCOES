@@ -28,6 +28,8 @@ type DocumentRow = {
   created_at: string
 }
 
+type MessageTone = 'success' | 'error'
+
 const areas: Area[] = [
   { key: 'institutional', title: 'Institucional', description: 'Identidade, registros, certidões, apresentações e políticas corporativas.', governance: 'Governança corporativa', folders: ['Identidade e marca', 'Registros e certidões', 'Apresentações institucionais', 'Políticas e procedimentos'] },
   { key: 'clients', title: 'Clientes', description: 'Dossiês de clientes, propostas, contratos, entregas e aceites.', governance: 'Controle por cliente e projeto', folders: ['Hortifruti Revolução', 'Novos clientes', 'Encerrados'] },
@@ -69,6 +71,10 @@ export default function AdminDocumentsPage() {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageTone, setMessageTone] = useState<MessageTone>('success')
+
+  const clearMessage = () => { setMessage(''); setMessageTone('success') }
+  const showMessage = (tone: MessageTone, text: string) => { setMessageTone(tone); setMessage(text) }
 
   useEffect(() => onAdminNavigate((destination) => {
     setOpen(destination === 'documents')
@@ -76,7 +82,7 @@ export default function AdminDocumentsPage() {
       setArea(null)
       setFolder(null)
       setDocuments([])
-      setMessage('')
+      clearMessage()
     }
   }), [])
 
@@ -88,22 +94,23 @@ export default function AdminDocumentsPage() {
 
   const loadDocuments = async (selectedArea: Area, selectedFolder: string) => {
     setLoading(true)
-    setMessage('')
+    clearMessage()
     const { data, error } = await hrxSupabase.from('hrx_documents').select('*').eq('area_key', selectedArea.key).eq('folder', selectedFolder).neq('status', 'archived').order('created_at', { ascending: false })
     setLoading(false)
     if (error) {
       setDocuments([])
-      setMessage('Não foi possível carregar esta pasta. Confirme sua sessão de segurança.')
-      return
+      showMessage('error', 'Não foi possível carregar esta pasta. Confirme sua sessão de segurança.')
+      return false
     }
     setDocuments((data ?? []) as DocumentRow[])
+    return true
   }
 
   const selectFolder = (selectedFolder: string) => {
     if (!area) return
     setFolder(selectedFolder)
     setDocuments([])
-    setMessage('')
+    clearMessage()
     if (!(area.key === 'internal' && selectedFolder === 'VOLT')) void loadDocuments(area, selectedFolder)
   }
 
@@ -112,17 +119,17 @@ export default function AdminDocumentsPage() {
     event.target.value = ''
     if (!file || !area || !folder) return
     if (file.size > 25 * 1024 * 1024) {
-      setMessage('O arquivo excede o limite de 25 MB.')
+      showMessage('error', 'O arquivo excede o limite de 25 MB.')
       return
     }
 
     setUploading(true)
-    setMessage('')
+    clearMessage()
     const objectPath = `${area.key}/geral/${slug(folder)}/${Date.now()}_${safeFileName(file.name)}`
     const { error: uploadError } = await hrxSupabase.storage.from('hrx-documents').upload(objectPath, file, { contentType: file.type || undefined, upsert: false })
     if (uploadError) {
       setUploading(false)
-      setMessage('Não foi possível enviar o arquivo. Verifique formato, tamanho e autenticação.')
+      showMessage('error', 'Não foi possível enviar o arquivo. Verifique formato, tamanho e autenticação.')
       return
     }
 
@@ -143,20 +150,20 @@ export default function AdminDocumentsPage() {
     if (metadataError) {
       await hrxSupabase.storage.from('hrx-documents').remove([objectPath])
       setUploading(false)
-      setMessage('O arquivo foi removido porque os metadados não puderam ser registrados.')
+      showMessage('error', 'O arquivo foi removido porque os metadados não puderam ser registrados.')
       return
     }
 
     setUploading(false)
-    setMessage('Documento arquivado com sucesso.')
-    await loadDocuments(area, folder)
+    const refreshed = await loadDocuments(area, folder)
+    if (refreshed) showMessage('success', 'Documento arquivado com sucesso.')
   }
 
   const openDocument = async (document: DocumentRow) => {
-    setMessage('')
+    clearMessage()
     const { data, error } = await hrxSupabase.storage.from('hrx-documents').createSignedUrl(document.object_path, 60)
     if (error || !data?.signedUrl) {
-      setMessage('Não foi possível gerar o acesso temporário ao documento.')
+      showMessage('error', 'Não foi possível gerar o acesso temporário ao documento.')
       return
     }
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
@@ -169,7 +176,7 @@ export default function AdminDocumentsPage() {
     <header className="hrx-documents-page-header">
       <div><span>HRX SOLUTIONS · GOVERNANÇA DOCUMENTAL</span><h1>{folder ?? area?.title ?? 'Central de Documentos'}</h1><p>{folder ? `${area?.title} · arquivos protegidos e versionados` : area?.description ?? 'Informação corporativa organizada por função, cliente, projeto, vigência e responsabilidade.'}</p></div>
       <div className="hrx-documents-page-actions">
-        {(area || folder) && <button type="button" onClick={() => folder ? (setFolder(null), setDocuments([]), setMessage('')) : setArea(null)}>← Voltar</button>}
+        {(area || folder) && <button type="button" onClick={() => folder ? (setFolder(null), setDocuments([]), clearMessage()) : setArea(null)}>← Voltar</button>}
         <button type="button" onClick={() => navigateAdmin('executive')}>Visão executiva</button>
       </div>
     </header>
@@ -183,6 +190,7 @@ export default function AdminDocumentsPage() {
         </section>
         <label className="hrx-documents-page-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar área ou categoria documental" /></label>
         <section className="hrx-documents-page-grid">{filteredAreas.map((item) => <button type="button" key={item.key} onClick={() => setArea(item)}><span>{item.governance}</span><strong>{item.title}</strong><p>{item.description}</p><b>→</b></button>)}</section>
+        {!filteredAreas.length && <div className="hrx-documents-empty"><strong>Nenhuma categoria encontrada.</strong><span>Revise o termo de busca ou navegue pelas áreas documentais disponíveis.</span></div>}
       </>}
 
       {area && !folder && <>
@@ -195,9 +203,9 @@ export default function AdminDocumentsPage() {
 
       {area && folder && !isVolt && <>
         <section className="hrx-documents-storage-bar"><div><span>{documents.length} documento(s)</span><small>Limite de 25 MB por arquivo · URL temporária de 60 segundos</small></div><label className={uploading ? 'is-disabled' : ''}>{uploading ? 'Enviando…' : '+ Adicionar documento'}<input type="file" accept={acceptedTypes} disabled={uploading} onChange={(event) => void uploadDocument(event)} /></label></section>
-        {message && <div className="hrx-documents-page-message" role="status">{message}</div>}
+        {message && <div className={`hrx-documents-page-message is-${messageTone}`} role={messageTone === 'error' ? 'alert' : 'status'}>{message}</div>}
         <section className="hrx-documents-file-list">
-          {loading && <p className="hrx-documents-empty">Carregando documentos…</p>}
+          {loading && <div className="hrx-documents-empty"><strong>Carregando documentos…</strong><span>Atualizando o conteúdo protegido desta categoria.</span></div>}
           {!loading && !documents.length && <div className="hrx-documents-empty"><strong>Nenhum documento cadastrado.</strong><span>Use “Adicionar documento” para iniciar esta categoria.</span></div>}
           {!loading && documents.map((document) => <button type="button" key={document.id} onClick={() => void openDocument(document)}><span>▤</span><div><strong>{document.title}</strong><small>V{String(document.version).padStart(2, '0')} · {document.document_type || 'ARQUIVO'} · {formatBytes(document.size_bytes)}</small><time>{new Date(document.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</time></div><b>{document.access_class === 'confidential' ? 'Confidencial' : document.access_class === 'restricted' ? 'Restrito' : 'Interno'} →</b></button>)}
         </section>
