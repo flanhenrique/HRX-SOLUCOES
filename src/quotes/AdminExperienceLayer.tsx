@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { hrxSupabase } from './supabaseClient'
+import { passwordMeetsPolicy, passwordRequirementText, secureUpdateAdminPassword } from './passwordSecurity'
 import './admin-experience.css'
 
 type CnpjLookup = {
@@ -116,7 +117,10 @@ export default function AdminExperienceLayer() {
     }
   }, [settingsOpen, mobileMenuOpen])
 
-  const passwordValid = useMemo(() => password.length >= 8 && password === confirmPassword, [password, confirmPassword])
+  const passwordValid = useMemo(
+    () => passwordMeetsPolicy(password) && password === confirmPassword,
+    [password, confirmPassword],
+  )
 
   const closeSettings = () => {
     if (passwordBusy) return
@@ -140,16 +144,19 @@ export default function AdminExperienceLayer() {
     setPasswordBusy(true)
     setPasswordMessage('')
     setPasswordSuccess(false)
-    const { error } = await hrxSupabase.auth.updateUser({ password })
+
+    const result = await secureUpdateAdminPassword(password)
     setPasswordBusy(false)
-    if (error) {
-      setPasswordMessage('Não foi possível alterar a senha. Entre novamente e tente outra vez.')
+
+    if (!result.ok) {
+      setPasswordMessage(result.message)
       return
     }
+
     setPassword('')
     setConfirmPassword('')
     setPasswordSuccess(true)
-    setPasswordMessage('Senha alterada com sucesso. A nova senha já vale para o próximo acesso.')
+    setPasswordMessage('Senha alterada com sucesso e validada pela política de segurança da HRX.')
   }
 
   const openOperation = (index: number) => {
@@ -162,6 +169,22 @@ export default function AdminExperienceLayer() {
     setMobileMenuOpen(false)
     const closeButton = document.querySelector('.admin-ops-header button[aria-label="Fechar"]') as HTMLButtonElement | null
     closeButton?.click()
+  }
+
+  const openDocuments = () => {
+    setMobileMenuOpen(false)
+    window.dispatchEvent(new CustomEvent('hrx:open-documents'))
+  }
+
+  const openPanels = () => {
+    setMobileMenuOpen(false)
+    window.location.hash = '#admin/painels'
+  }
+
+  const openFiscal = () => {
+    setMobileMenuOpen(false)
+    const fiscalButton = document.querySelector<HTMLButtonElement>('.admin-fiscal-nav')
+    fiscalButton?.click()
   }
 
   const lookupCnpj = async () => {
@@ -242,6 +265,9 @@ export default function AdminExperienceLayer() {
           <button type="button" onClick={openQuotes}><span>▦</span><strong>Orçamentos</strong><small>Fila e editor</small></button>
           <button type="button" onClick={() => openOperation(0)}><span>♙</span><strong>Clientes</strong><small>Catálogo e histórico</small></button>
           <button type="button" onClick={() => openOperation(1)}><span>Ⅱ</span><strong>Suspensões</strong><small>Parados e retomadas</small></button>
+          <button type="button" onClick={openDocuments}><span>▤</span><strong>Central de documentos</strong><small>Arquivos, contratos e governança</small></button>
+          <button type="button" onClick={openPanels}><span>▦</span><strong>Painéis</strong><small>Projetos, prioridades e progresso</small></button>
+          <button type="button" onClick={openFiscal}><span>◇</span><strong>Fiscal</strong><small>Cadastro e situação tributária</small></button>
           <button type="button" onClick={openSettings}><span>⚙</span><strong>Configurações</strong><small>Conta e segurança</small></button>
         </div>
         <button type="button" className="hrx-mobile-refresh" onClick={() => window.location.reload()}>↻ Atualizar dados</button>
@@ -263,16 +289,17 @@ export default function AdminExperienceLayer() {
               <div className="hrx-settings-account"><span>HR</span><div><strong>Administrador HRX</strong><small>{email || 'Conta autenticada'}</small></div></div>
               <dl><div><dt>Perfil</dt><dd>Administrador</dd></div><div><dt>Ambiente</dt><dd>HRX Admin PWA</dd></div></dl>
             </section>
-            <section className="hrx-settings-card hrx-settings-security-row"><div><span>SEGURANÇA</span><strong>Senha de acesso</strong><small>Troque sua senha periodicamente e não reutilize credenciais.</small></div><button type="button" onClick={() => setSettingsView('password')}>Alterar senha</button></section>
+            <section className="hrx-settings-card hrx-settings-security-row"><div><span>SEGURANÇA</span><strong>Senha de acesso</strong><small>Use uma senha exclusiva e mantenha a verificação em duas etapas ativa.</small></div><button type="button" onClick={() => setSettingsView('password')}>Alterar senha</button></section>
           </>}
 
           {settingsView === 'password' && <form className="hrx-settings-password" onSubmit={changePassword}>
-            <div className="hrx-settings-title"><span>SEGURANÇA</span><h3>Alterar senha</h3><p>A nova senha será usada nos próximos acessos ao painel administrativo.</p></div>
-            <label>Nova senha<div className="hrx-settings-password-field"><input type={showPassword ? 'text' : 'password'} minLength={8} required autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setShowPassword((current) => !current)}>{showPassword ? 'Ocultar' : 'Mostrar'}</button></div><small>Mínimo de 8 caracteres.</small></label>
-            <label>Confirmar nova senha<input type={showPassword ? 'text' : 'password'} minLength={8} required autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>
+            <div className="hrx-settings-title"><span>SEGURANÇA</span><h3>Alterar senha</h3><p>A nova senha será validada pela mesma política usada no login e na recuperação de acesso.</p></div>
+            <label>Nova senha<div className="hrx-settings-password-field"><input type={showPassword ? 'text' : 'password'} minLength={12} required autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setShowPassword((current) => !current)}>{showPassword ? 'Ocultar' : 'Mostrar'}</button></div><small>{passwordRequirementText}</small></label>
+            <label>Confirmar nova senha<input type={showPassword ? 'text' : 'password'} minLength={12} required autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>
+            {password && !passwordMeetsPolicy(password) && <div className="hrx-settings-message is-warning">{passwordRequirementText}</div>}
             {confirmPassword && password !== confirmPassword && <div className="hrx-settings-message is-warning">As senhas precisam ser iguais.</div>}
             {passwordMessage && <div className={`hrx-settings-message ${passwordSuccess ? 'is-success' : 'is-error'}`}>{passwordMessage}</div>}
-            <div className="hrx-settings-actions"><button type="button" onClick={() => setSettingsView('home')}>Cancelar</button><button className="is-primary" type="submit" disabled={!passwordValid || passwordBusy}>{passwordBusy ? 'Alterando…' : 'Salvar nova senha'}</button></div>
+            <div className="hrx-settings-actions"><button type="button" onClick={() => setSettingsView('home')}>Cancelar</button><button className="is-primary" type="submit" disabled={!passwordValid || passwordBusy}>{passwordBusy ? 'Validando segurança…' : 'Salvar nova senha'}</button></div>
           </form>}
         </main>
       </div>
