@@ -22,7 +22,7 @@ export default function AdminPwaBridge() {
   const ios = useMemo(isIos, [])
 
   useEffect(() => {
-    document.title = 'HRX Admin · Orçamentos'
+    document.title = 'HRX Admin'
 
     let manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
     if (!manifest) {
