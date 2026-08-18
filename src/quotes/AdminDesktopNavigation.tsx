@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { navigateAdmin, type AdminDestination } from './adminNavigation'
+import { navigateAdmin, onAdminNavigate, type AdminDestination } from './adminNavigation'
 import './admin-desktop-navigation.css'
 
 const items: { destination: AdminDestination; icon: string; label: string }[] = [
+  { destination: 'quotes', icon: '▦', label: 'Orçamentos' },
   { destination: 'clients', icon: '♙', label: 'Clientes' },
   { destination: 'suspensions', icon: 'Ⅱ', label: 'Suspensões' },
   { destination: 'documents', icon: '▤', label: 'Central de documentos' },
@@ -13,6 +14,7 @@ const items: { destination: AdminDestination; icon: string; label: string }[] = 
 
 export default function AdminDesktopNavigation() {
   const [target, setTarget] = useState<Element | null>(null)
+  const [active, setActive] = useState<AdminDestination>(() => window.location.hash === '#admin/painels' ? 'panels' : 'quotes')
 
   useEffect(() => {
     const sync = () => setTarget(document.querySelector('.admin-exec-sidebar nav'))
@@ -22,10 +24,14 @@ export default function AdminDesktopNavigation() {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => onAdminNavigate((destination) => {
+    if (destination !== 'settings') setActive(destination)
+  }), [])
+
   if (!target) return null
 
   return createPortal(<div className="hrx-admin-desktop-nav" aria-label="Áreas administrativas">
-    <div className="hrx-admin-desktop-divider"><span>GESTÃO</span></div>
-    {items.map((item) => <button key={item.destination} type="button" onClick={() => navigateAdmin(item.destination)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}
+    <div className="hrx-admin-desktop-divider"><span>OPERAÇÃO</span></div>
+    {items.map((item) => <button key={item.destination} className={active === item.destination ? 'is-active' : ''} type="button" onClick={() => navigateAdmin(item.destination)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}
   </div>, target)
 }
