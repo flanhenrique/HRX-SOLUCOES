@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { hrxSupabase } from './supabaseClient'
+import { onAdminNavigate } from './adminNavigation'
+import AdminClientForm from './AdminClientForm'
 import './admin-operations.css'
 
 type ClientRow = {
@@ -45,8 +47,6 @@ const suspensionReasons = ['Aguardando retorno do cliente', 'Aguardando document
 
 function messageFromError(error: unknown) {
   const text = error instanceof Error ? error.message : String((error as { message?: string } | null)?.message ?? '')
-  if (text.includes('duplicate_client')) return 'Já existe um cliente cadastrado com este e-mail.'
-  if (text.includes('invalid_client')) return 'Informe o nome e ao menos um contato válido.'
   if (text.includes('suspension_reason_required')) return 'Selecione um motivo para suspender o orçamento.'
   if (text.includes('already_suspended')) return 'Este orçamento já está suspenso.'
   if (text.includes('client_not_found')) return 'Cliente não encontrado ou inativo.'
@@ -56,7 +56,6 @@ function messageFromError(error: unknown) {
 export default function AdminOperationsHub() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
   const [topbarTarget, setTopbarTarget] = useState<Element | null>(null)
-  const [mobileTarget, setMobileTarget] = useState<Element | null>(null)
   const [panel, setPanel] = useState<Panel>(null)
   const [clients, setClients] = useState<ClientRow[]>([])
   const [quotes, setQuotes] = useState<QuoteRow[]>([])
@@ -69,28 +68,25 @@ export default function AdminOperationsHub() {
   const [quoteFormOpen, setQuoteFormOpen] = useState(false)
   const [suspendTarget, setSuspendTarget] = useState<QuoteRow | null>(null)
   const [busy, setBusy] = useState(false)
-  const [clientForm, setClientForm] = useState({ name: '', company: '', email: '', phone: '', document: '', notes: '' })
   const [manualForm, setManualForm] = useState({ clientId: '', requestText: '', desiredDeadline: '', preferredContact: 'whatsapp' })
   const [suspensionForm, setSuspensionForm] = useState({ reason: suspensionReasons[0], note: '' })
 
   useEffect(() => {
-    const updateTargets = () => {
-      const sidebar = document.querySelector('.admin-exec-sidebar nav')
-      const topbar = document.querySelector('.admin-exec-topbar .admin-exec-system')
-      const mobile = document.querySelector('.admin-mobile-nav')
-      setSidebarTarget(sidebar)
-      setTopbarTarget(topbar)
-      setMobileTarget(mobile)
-      mobile?.classList.add('has-admin-ops')
+    const syncTargets = () => {
+      setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
+      setTopbarTarget(document.querySelector('.admin-exec-topbar .admin-exec-system'))
     }
-    updateTargets()
-    const observer = new MutationObserver(updateTargets)
+    syncTargets()
+    const observer = new MutationObserver(syncTargets)
     observer.observe(document.body, { childList: true, subtree: true })
-    return () => {
-      observer.disconnect()
-      document.querySelector('.admin-mobile-nav')?.classList.remove('has-admin-ops')
-    }
+    return () => observer.disconnect()
   }, [])
+
+  useEffect(() => onAdminNavigate((destination) => {
+    if (destination === 'clients') setPanel('clients')
+    if (destination === 'suspensions') setPanel('suspensions')
+    if (destination === 'quotes') setPanel(null)
+  }), [])
 
   const loadData = async () => {
     setLoading(true)
@@ -108,8 +104,8 @@ export default function AdminOperationsHub() {
       const clientRows = (clientsResult.data ?? []) as ClientRow[]
       const requestRows = (requestsResult.data ?? []) as Omit<QuoteRow, 'draft'>[]
       const draftMap = new Map((draftsResult.data ?? []).map((item) => [item.request_id, item]))
-
       const byEmail = new Map(clientRows.filter((item) => item.email).map((item) => [String(item.email).toLowerCase(), item]))
+
       for (const request of requestRows) {
         if (request.client_id || !request.email) continue
         const matching = byEmail.get(request.email.toLowerCase())
@@ -154,27 +150,6 @@ export default function AdminOperationsHub() {
     setQuoteFormOpen(true)
   }
 
-  const createClient = async (event: FormEvent) => {
-    event.preventDefault()
-    setBusy(true); setError('')
-    try {
-      const { data, error: rpcError } = await hrxSupabase.rpc('hrx_create_client', {
-        p_name: clientForm.name,
-        p_company: clientForm.company || null,
-        p_email: clientForm.email || null,
-        p_phone: clientForm.phone || null,
-        p_document: clientForm.document || null,
-        p_notes: clientForm.notes || null,
-      })
-      if (rpcError) throw rpcError
-      setClientFormOpen(false)
-      setClientForm({ name: '', company: '', email: '', phone: '', document: '', notes: '' })
-      await loadData()
-      if (typeof data === 'string') setSelectedClientId(data)
-    } catch (createError) { setError(messageFromError(createError)) }
-    finally { setBusy(false) }
-  }
-
   const createManualQuote = async (event: FormEvent) => {
     event.preventDefault()
     if (!manualForm.clientId) return
@@ -202,8 +177,10 @@ export default function AdminOperationsHub() {
         p_note: suspensionForm.note || null,
       })
       if (rpcError) throw rpcError
-      window.location.reload()
-    } catch (suspendError) { setError(messageFromError(suspendError)); setBusy(false) }
+      await loadData()
+      setSuspendTarget(null)
+    } catch (suspendError) { setError(messageFromError(suspendError)) }
+    finally { setBusy(false) }
   }
 
   const resumeQuote = async (requestId: string) => {
@@ -211,8 +188,9 @@ export default function AdminOperationsHub() {
     try {
       const { error: rpcError } = await hrxSupabase.rpc('hrx_resume_quote', { p_request_id: requestId })
       if (rpcError) throw rpcError
-      window.location.reload()
-    } catch (resumeError) { setError(messageFromError(resumeError)); setBusy(false) }
+      await loadData()
+    } catch (resumeError) { setError(messageFromError(resumeError)) }
+    finally { setBusy(false) }
   }
 
   const sidebarPortal = sidebarTarget ? createPortal(<>
@@ -225,13 +203,8 @@ export default function AdminOperationsHub() {
     topbarTarget,
   ) : null
 
-  const mobilePortal = mobileTarget ? createPortal(
-    <button type="button" className="admin-ops-mobile" onClick={() => setPanel('clients')}><span>♙</span>Gestão</button>,
-    mobileTarget,
-  ) : null
-
   return <>
-    {sidebarPortal}{topbarPortal}{mobilePortal}
+    {sidebarPortal}{topbarPortal}
 
     {panel && <section className="admin-ops-shell" role="dialog" aria-modal="true" aria-label={panel === 'clients' ? 'Catálogo de clientes' : 'Suspensões de orçamentos'}>
       <header className="admin-ops-header"><div><span>HRX · BACKOFFICE</span><h2>{panel === 'clients' ? 'Clientes' : 'Suspensões'}</h2></div><div><button type="button" onClick={() => setPanel(panel === 'clients' ? 'suspensions' : 'clients')}>{panel === 'clients' ? `Suspensões${suspendedCount ? ` · ${suspendedCount}` : ''}` : 'Clientes'}</button>{panel === 'clients' && <button className="is-primary" type="button" onClick={() => openManualQuote()}>+ Orçamento manual</button>}<button type="button" aria-label="Fechar" onClick={() => setPanel(null)}>×</button></div></header>
@@ -245,7 +218,7 @@ export default function AdminOperationsHub() {
       {panel === 'suspensions' && <div className="admin-ops-suspensions"><div className="admin-ops-suspension-toolbar"><label className="admin-ops-search"><span>⌕</span><input value={quoteQuery} onChange={(event) => setQuoteQuery(event.target.value)} placeholder="Buscar orçamento ou cliente" /></label><div><strong>{suspendedCount}</strong><span>suspenso(s)</span></div></div><div className="admin-ops-suspension-list">{loading && <p className="admin-ops-empty">Carregando orçamentos…</p>}{!loading && filteredQuotes.map((quote) => { const suspended = quote.draft?.status === 'suspended'; return <article key={quote.id} className={suspended ? 'is-suspended' : ''}><div className="admin-ops-quote-main"><span className={suspended ? 'admin-ops-status is-suspended' : 'admin-ops-status'}>{suspended ? 'Suspenso' : quote.draft?.status?.replaceAll('_', ' ') || quote.status}</span><strong>{quote.protocol}</strong><h3>{quote.name}</h3><p>{quote.company || quote.email}</p>{suspended && <small><b>Motivo:</b> {quote.draft?.suspension_reason}{quote.draft?.suspension_note ? ` · ${quote.draft.suspension_note}` : ''}</small>}</div><div className="admin-ops-quote-value"><span>{new Date(quote.created_at).toLocaleDateString('pt-BR')}</span><strong>{currency.format(Number(quote.draft?.final_amount ?? 0))}</strong>{suspended ? <button type="button" disabled={busy} onClick={() => void resumeQuote(quote.id)}>Retomar</button> : <button type="button" disabled={busy} onClick={() => { setSuspendTarget(quote); setSuspensionForm({ reason: suspensionReasons[0], note: '' }) }}>Suspender</button>}</div></article> })}</div></div>}
     </section>}
 
-    {clientFormOpen && <div className="admin-ops-modal-backdrop"><form className="admin-ops-modal" onSubmit={createClient}><header><div><span>NOVO CADASTRO</span><h3>Adicionar cliente</h3></div><button type="button" onClick={() => setClientFormOpen(false)}>×</button></header><div className="admin-ops-form-grid"><label>Nome / responsável<input required value={clientForm.name} onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })} /></label><label>Empresa<input value={clientForm.company} onChange={(e) => setClientForm({ ...clientForm, company: e.target.value })} /></label><label>E-mail<input type="email" value={clientForm.email} onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })} /></label><label>Telefone / WhatsApp<input value={clientForm.phone} onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })} /></label><label>CPF/CNPJ<input value={clientForm.document} onChange={(e) => setClientForm({ ...clientForm, document: e.target.value })} /></label><label className="is-wide">Observações<textarea rows={4} value={clientForm.notes} onChange={(e) => setClientForm({ ...clientForm, notes: e.target.value })} /></label></div><footer><button type="button" onClick={() => setClientFormOpen(false)}>Cancelar</button><button className="is-primary" disabled={busy || !clientForm.name || (!clientForm.email && !clientForm.phone)} type="submit">{busy ? 'Salvando…' : 'Salvar cliente'}</button></footer></form></div>}
+    {clientFormOpen && <AdminClientForm onClose={() => setClientFormOpen(false)} onCreated={async (id) => { await loadData(); if (id) setSelectedClientId(id) }} />}
 
     {quoteFormOpen && <div className="admin-ops-modal-backdrop"><form className="admin-ops-modal" onSubmit={createManualQuote}><header><div><span>ORÇAMENTO MANUAL</span><h3>Novo orçamento</h3></div><button type="button" onClick={() => setQuoteFormOpen(false)}>×</button></header><div className="admin-ops-form-grid"><label className="is-wide">Cliente<select required value={manualForm.clientId} onChange={(e) => setManualForm({ ...manualForm, clientId: e.target.value })}><option value="">Selecione</option>{clients.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}{item.company ? ` · ${item.company}` : ''}</option>)}</select></label><label>Prazo desejado<input value={manualForm.desiredDeadline} onChange={(e) => setManualForm({ ...manualForm, desiredDeadline: e.target.value })} placeholder="Ex.: 30 dias" /></label><label>Contato preferencial<select value={manualForm.preferredContact} onChange={(e) => setManualForm({ ...manualForm, preferredContact: e.target.value })}><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option></select></label><label className="is-wide">Escopo inicial<textarea rows={5} value={manualForm.requestText} onChange={(e) => setManualForm({ ...manualForm, requestText: e.target.value })} placeholder="Descreva a demanda. O catálogo e os valores serão definidos no editor do orçamento." /></label></div><footer><button type="button" onClick={() => setQuoteFormOpen(false)}>Cancelar</button><button className="is-primary" disabled={busy || !manualForm.clientId} type="submit">{busy ? 'Criando…' : 'Criar orçamento'}</button></footer></form></div>}
 
