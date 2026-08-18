@@ -5,61 +5,7 @@ import { navigateAdmin, type AdminDestination } from './adminNavigation'
 import { passwordMeetsPolicy, passwordRequirementText, secureUpdateAdminPassword } from './passwordSecurity'
 import './admin-experience.css'
 
-type CnpjLookup = {
-  cnpj: string
-  legalName: string
-  tradeName: string
-  status: string
-  openedAt?: string | null
-  phone: string
-  email: string
-  address: string
-  city: string
-  state: string
-  zipCode: string
-  cnaeCode?: string | number | null
-  cnaeDescription: string
-  source: string
-  officialAutomatic: boolean
-  officialNote: string
-  sefazVerificationUrl?: string | null
-  checkedAt: string
-}
-
 type SettingsView = 'home' | 'password'
-
-function setReactInputValue(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
-  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
-  const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value')
-  descriptor?.set?.call(input, value)
-  input.dispatchEvent(new Event('input', { bubbles: true }))
-  input.dispatchEvent(new Event('change', { bubbles: true }))
-}
-
-function findField(modal: Element, labelText: string) {
-  const labels = Array.from(modal.querySelectorAll('label'))
-  const label = labels.find((item) => item.textContent?.trim().startsWith(labelText))
-  return label?.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement | null
-}
-
-function formatCnpj(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 14)
-  if (digits.length !== 14) return digits
-  return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
-}
-
-function buildFiscalNotes(data: CnpjLookup, current: string) {
-  const lines = [
-    current.trim(),
-    `Consulta CNPJ: ${data.legalName || data.tradeName}`,
-    data.status ? `Situação cadastral: ${data.status}` : '',
-    data.address ? `Endereço cadastral: ${data.address}` : '',
-    data.cnaeDescription ? `CNAE principal: ${data.cnaeCode ? `${data.cnaeCode} · ` : ''}${data.cnaeDescription}` : '',
-    `Fonte da consulta automática: ${data.source}`,
-    `Consultado em: ${new Date(data.checkedAt).toLocaleString('pt-BR')}`,
-  ].filter(Boolean)
-  return [...new Set(lines)].join('\n')
-}
 
 export default function AdminExperienceLayer() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
@@ -67,11 +13,6 @@ export default function AdminExperienceLayer() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsView, setSettingsView] = useState<SettingsView>('home')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [clientDocumentTarget, setClientDocumentTarget] = useState<Element | null>(null)
-  const [clientModal, setClientModal] = useState<Element | null>(null)
-  const [cnpjBusy, setCnpjBusy] = useState(false)
-  const [cnpjMessage, setCnpjMessage] = useState('')
-  const [cnpjResult, setCnpjResult] = useState<CnpjLookup | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -88,21 +29,7 @@ export default function AdminExperienceLayer() {
     const syncTargets = () => {
       setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
       setMobileTarget(document.querySelector('.admin-mobile-nav'))
-
-      const modals = Array.from(document.querySelectorAll('.admin-ops-modal'))
-      const addClientModal = modals.find((modal) => modal.querySelector('h3')?.textContent?.trim() === 'Adicionar cliente') ?? null
-      setClientModal(addClientModal)
-      if (!addClientModal) {
-        setClientDocumentTarget(null)
-        setCnpjResult(null)
-        setCnpjMessage('')
-        return
-      }
-      const labels = Array.from(addClientModal.querySelectorAll('label'))
-      const documentLabel = labels.find((label) => label.textContent?.trim().startsWith('CPF/CNPJ')) ?? null
-      setClientDocumentTarget(documentLabel)
     }
-
     syncTargets()
     const observer = new MutationObserver(syncTargets)
     observer.observe(document.body, { childList: true, subtree: true })
@@ -165,45 +92,6 @@ export default function AdminExperienceLayer() {
     setPasswordMessage('Senha alterada com sucesso e validada pela política de segurança da HRX.')
   }
 
-  const lookupCnpj = async () => {
-    if (!clientModal) return
-    const documentInput = findField(clientModal, 'CPF/CNPJ') as HTMLInputElement | null
-    const raw = documentInput?.value ?? ''
-    const cnpj = raw.replace(/\D/g, '')
-    if (cnpj.length !== 14) {
-      setCnpjResult(null)
-      setCnpjMessage('Informe um CNPJ com 14 dígitos para consultar.')
-      return
-    }
-
-    setCnpjBusy(true)
-    setCnpjMessage('Consultando cadastro…')
-    setCnpjResult(null)
-    const { data, error } = await hrxSupabase.functions.invoke<CnpjLookup>('cnpj-lookup', { body: { cnpj } })
-    setCnpjBusy(false)
-
-    if (error || !data) {
-      setCnpjMessage('Não foi possível consultar este CNPJ agora. Confira o número e tente novamente.')
-      return
-    }
-
-    const nameInput = findField(clientModal, 'Nome / responsável')
-    const companyInput = findField(clientModal, 'Empresa')
-    const emailInput = findField(clientModal, 'E-mail')
-    const phoneInput = findField(clientModal, 'Telefone / WhatsApp')
-    const notesInput = findField(clientModal, 'Observações') as HTMLTextAreaElement | null
-
-    if (documentInput) setReactInputValue(documentInput, formatCnpj(data.cnpj))
-    if (companyInput) setReactInputValue(companyInput, data.tradeName || data.legalName || '')
-    if (nameInput && !nameInput.value.trim()) setReactInputValue(nameInput, data.legalName || data.tradeName || '')
-    if (emailInput && !emailInput.value.trim() && data.email) setReactInputValue(emailInput, data.email)
-    if (phoneInput && !phoneInput.value.trim() && data.phone) setReactInputValue(phoneInput, data.phone)
-    if (notesInput) setReactInputValue(notesInput, buildFiscalNotes(data, notesInput.value))
-
-    setCnpjResult(data)
-    setCnpjMessage('Dados encontrados e preenchidos. Revise antes de salvar o cliente.')
-  }
-
   const desktopSettingsPortal = sidebarTarget ? createPortal(
     <>
       <div className="hrx-nav-divider"><span>SISTEMA</span></div>
@@ -217,24 +105,9 @@ export default function AdminExperienceLayer() {
     mobileTarget,
   ) : null
 
-  const cnpjPortal = clientDocumentTarget ? createPortal(
-    <div className="hrx-cnpj-assistant">
-      <button type="button" onClick={() => void lookupCnpj()} disabled={cnpjBusy}>{cnpjBusy ? 'Consultando…' : 'Consultar CNPJ'}</button>
-      <small>{cnpjMessage || 'Preencha o CNPJ e use a consulta para completar os dados cadastrais.'}</small>
-      {cnpjResult && <div className="hrx-cnpj-result">
-        <strong>{cnpjResult.legalName || cnpjResult.tradeName}</strong>
-        <span>{cnpjResult.status || 'Situação não informada'}{cnpjResult.city ? ` · ${cnpjResult.city}/${cnpjResult.state}` : ''}</span>
-        <em>Fonte automática: {cnpjResult.source}</em>
-        {cnpjResult.sefazVerificationUrl && <a href={cnpjResult.sefazVerificationUrl} target="_blank" rel="noreferrer">Verificar cadastro na SEFAZ/AM ↗</a>}
-      </div>}
-    </div>,
-    clientDocumentTarget,
-  ) : null
-
   return <>
     {desktopSettingsPortal}
     {mobileMenuPortal}
-    {cnpjPortal}
 
     {mobileMenuOpen && <div className="hrx-mobile-menu-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setMobileMenuOpen(false) }}>
       <section className="hrx-mobile-menu" role="dialog" aria-modal="true" aria-label="Menu do HRX Admin">
