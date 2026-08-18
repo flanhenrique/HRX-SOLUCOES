@@ -21,6 +21,7 @@ async function loadRequests(session: Session) {
 
 export default function AdminExecutiveDashboard() {
   const [open, setOpen] = useState(() => window.location.hash !== '#admin/painels')
+  const [ready, setReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [state, setState] = useState<DashboardState>({ requests: [], activeClients: 0, documents: 0 })
@@ -29,8 +30,11 @@ export default function AdminExecutiveDashboard() {
 
   const load = async (session?: Session | null) => {
     const currentSession = session ?? (await hrxSupabase.auth.getSession()).data.session
-    if (!currentSession) { setLoading(false); return }
-    setLoading(true); setError('')
+    if (!currentSession) { setReady(false); setLoading(false); return }
+    const { data: aal, error: aalError } = await hrxSupabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aalError || aal.currentLevel !== 'aal2') { setReady(false); setLoading(false); return }
+
+    setReady(true); setLoading(true); setError('')
     try {
       const [requests, clientsResult, documentsResult] = await Promise.all([
         loadRequests(currentSession),
@@ -44,7 +48,7 @@ export default function AdminExecutiveDashboard() {
 
   useEffect(() => {
     void load()
-    const { data } = hrxSupabase.auth.onAuthStateChange((_event, session) => { if (session) void load(session) })
+    const { data } = hrxSupabase.auth.onAuthStateChange((_event, session) => { void load(session) })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -59,7 +63,7 @@ export default function AdminExecutiveDashboard() {
     return { pipeline, awaiting, scope, approved, suspended, recent }
   }, [state.requests])
 
-  if (!open) return null
+  if (!open || !ready) return null
   const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
   const attention = metrics.awaiting + metrics.scope + metrics.suspended
 
