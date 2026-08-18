@@ -2,7 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
-import AdminOperationsHub from './quotes/AdminOperationsHub'
+import AdminClientsPage from './quotes/AdminClientsPage'
+import AdminSuspensionsPage from './quotes/AdminSuspensionsPage'
 import AdminDocumentsPage from './quotes/AdminDocumentsPage'
 import VoltZipImporter from './quotes/VoltZipImporter'
 import VoltDocumentFolders from './quotes/VoltDocumentFolders'
@@ -37,7 +38,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsPage /><VoltZipImporter /><VoltDocumentFolders /><AdminFiscalPage /><AdminProjectPanelsPage /><AdminExecutiveDashboard /><AdminDesktopNavigation /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminClientsPage /><AdminSuspensionsPage /><AdminDocumentsPage /><VoltZipImporter /><VoltDocumentFolders /><AdminFiscalPage /><AdminProjectPanelsPage /><AdminExecutiveDashboard /><AdminDesktopNavigation /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
