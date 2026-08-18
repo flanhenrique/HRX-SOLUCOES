@@ -38,9 +38,7 @@ const projects: ProjectPanel[] = [
       'Executar revisão final web desktop e mobile',
       'Consolidar documentação técnica e de entrega',
     ],
-    links: [
-      { label: 'Abrir aplicação', href: 'https://hortifruti-revolucao.vercel.app' },
-    ],
+    links: [{ label: 'Abrir aplicação', href: 'https://hortifruti-revolucao.vercel.app' }],
   },
   {
     id: 'volt',
@@ -50,17 +48,8 @@ const projects: ProjectPanel[] = [
     progress: 82,
     currentPriority: 'Fechar estabilidade, qualidade visual e pendências do quality gate.',
     summary: 'Aplicação para registrar leituras, acompanhar ciclos de consumo, alertas e relatórios de energia e água.',
-    completed: [
-      'PWA instalável e domínio próprio',
-      'Leituras e ciclos de consumo',
-      'Dashboard e histórico',
-      'Base de alertas e relatórios',
-    ],
-    pending: [
-      'Resolver falhas remanescentes do quality gate',
-      'Concluir revisão visual claro/escuro',
-      'Revalidar responsividade e navegação mobile',
-    ],
+    completed: ['PWA instalável e domínio próprio', 'Leituras e ciclos de consumo', 'Dashboard e histórico', 'Base de alertas e relatórios'],
+    pending: ['Resolver falhas remanescentes do quality gate', 'Concluir revisão visual claro/escuro', 'Revalidar responsividade e navegação mobile'],
     links: [
       { label: 'Abrir VOLT', href: 'https://www.voltconsumo.com.br' },
       { label: 'Repositório', href: 'https://github.com/flanhenrique/Volt-consumo' },
@@ -74,17 +63,8 @@ const projects: ProjectPanel[] = [
     progress: 91,
     currentPriority: 'Manutenção, acabamento e evolução comercial do site.',
     summary: 'Presença institucional premium para consultoria hoteleira e condomínios, com páginas comerciais, metodologia, cases e contato.',
-    completed: [
-      'Site institucional publicado',
-      'Domínio próprio configurado',
-      'Identidade visual premium',
-      'Fluxos de contato e WhatsApp',
-    ],
-    pending: [
-      'Manter revisão periódica de conteúdo',
-      'Consolidar melhorias comerciais futuras',
-      'Monitorar publicação e HTTPS',
-    ],
+    completed: ['Site institucional publicado', 'Domínio próprio configurado', 'Identidade visual premium', 'Fluxos de contato e WhatsApp'],
+    pending: ['Manter revisão periódica de conteúdo', 'Consolidar melhorias comerciais futuras', 'Monitorar publicação e HTTPS'],
     links: [
       { label: 'Abrir SOMMA', href: 'https://sommaconsulthtl.com.br' },
       { label: 'Repositório', href: 'https://github.com/flanhenrique/somma' },
@@ -96,18 +76,13 @@ const PANELS_HASH = '#admin/painels'
 
 export default function AdminProjectPanels() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
-  const [mobileTarget, setMobileTarget] = useState<Element | null>(null)
   const [open, setOpen] = useState(() => window.location.hash === PANELS_HASH)
   const [selectedId, setSelectedId] = useState<ProjectId>('hortifruti')
 
   useEffect(() => {
-    const updateTargets = () => {
-      setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
-      setMobileTarget(document.querySelector('.admin-mobile-nav'))
-    }
-
-    updateTargets()
-    const observer = new MutationObserver(updateTargets)
+    const updateTarget = () => setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
+    updateTarget()
+    const observer = new MutationObserver(updateTarget)
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, [])
@@ -134,30 +109,15 @@ export default function AdminProjectPanels() {
   }
 
   const sidebarPortal = sidebarTarget ? createPortal(
-    <button type="button" className="admin-projects-nav" onClick={() => openPanel()}>
-      <span aria-hidden="true">▦</span>Painéis
-    </button>,
+    <button type="button" className="admin-projects-nav" onClick={() => openPanel()}><span aria-hidden="true">▦</span>Painéis</button>,
     sidebarTarget,
-  ) : null
-
-  const mobilePortal = mobileTarget ? createPortal(
-    <button type="button" className="admin-projects-mobile" onClick={() => openPanel()}>
-      <span>▦</span>Painéis
-    </button>,
-    mobileTarget,
   ) : null
 
   return <>
     {sidebarPortal}
-    {mobilePortal}
-
     {open && <section className="admin-projects-shell" role="dialog" aria-modal="true" aria-label="Painéis de projetos da HRX Solutions">
       <header className="admin-projects-header">
-        <div>
-          <span>HRX SOLUTIONS · GESTÃO DE PROJETOS</span>
-          <h2>Painéis</h2>
-          <p>Visão central de status, prioridades e próximos passos.</p>
-        </div>
+        <div><span>HRX SOLUTIONS · GESTÃO DE PROJETOS</span><h2>Painéis</h2><p>Visão central de status, prioridades e próximos passos.</p></div>
         <button type="button" className="admin-projects-close" aria-label="Fechar painéis" onClick={closePanel}>×</button>
       </header>
 
@@ -180,30 +140,13 @@ export default function AdminProjectPanels() {
         </aside>
 
         <main className="admin-project-detail">
-          <div className="admin-project-title">
-            <div><span>{selected.category.toUpperCase()}</span><h3>{selected.name}</h3><p>{selected.summary}</p></div>
-            <strong>{selected.progress}%</strong>
-          </div>
-
-          <section className="admin-project-priority">
-            <span>PRIORIDADE ATUAL</span>
-            <strong>{selected.currentPriority}</strong>
-          </section>
-
+          <div className="admin-project-title"><div><span>{selected.category.toUpperCase()}</span><h3>{selected.name}</h3><p>{selected.summary}</p></div><strong>{selected.progress}%</strong></div>
+          <section className="admin-project-priority"><span>PRIORIDADE ATUAL</span><strong>{selected.currentPriority}</strong></section>
           <div className="admin-project-columns">
-            <section>
-              <header><span>CONCLUÍDO</span><strong>{selected.completed.length}</strong></header>
-              {selected.completed.map((item) => <p key={item}><i>✓</i>{item}</p>)}
-            </section>
-            <section>
-              <header><span>PRÓXIMOS PASSOS</span><strong>{selected.pending.length}</strong></header>
-              {selected.pending.map((item, index) => <p key={item}><i>{index + 1}</i>{item}</p>)}
-            </section>
+            <section><header><span>CONCLUÍDO</span><strong>{selected.completed.length}</strong></header>{selected.completed.map((item) => <p key={item}><i>✓</i>{item}</p>)}</section>
+            <section><header><span>PRÓXIMOS PASSOS</span><strong>{selected.pending.length}</strong></header>{selected.pending.map((item, index) => <p key={item}><i>{index + 1}</i>{item}</p>)}</section>
           </div>
-
-          <footer className="admin-project-links">
-            {selected.links.map((link) => <a key={link.href} href={link.href} target="_blank" rel="noreferrer">{link.label} ↗</a>)}
-          </footer>
+          <footer className="admin-project-links">{selected.links.map((link) => <a key={link.href} href={link.href} target="_blank" rel="noreferrer">{link.label} ↗</a>)}</footer>
         </main>
       </div>
     </section>}
