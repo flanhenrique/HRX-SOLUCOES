@@ -36,7 +36,6 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
   assert.match(deploy, /user-scalable=no/)
   assert.match(deploy, /maximum-scale=1/)
   assert.match(deploy, /viewport-fit=cover/)
-
   assert.doesNotMatch(publicIndex, /user-scalable=no/)
 })
 
@@ -71,8 +70,8 @@ test('first access is integrated into the login screen without email delivery', 
   ])
 
   assert.match(client, /admin-bootstrap/)
-  assert.match(router, /Ativar primeiro acesso/)
-  assert.match(router, /Ativar e entrar/)
+  assert.match(router, />Primeiro acesso</)
+  assert.match(router, />Ativar acesso</)
   assert.match(router, /signInWithPassword/)
   assert.match(router, /code_already_used/)
   assert.match(router, /switchMode\('activate'\)/)
