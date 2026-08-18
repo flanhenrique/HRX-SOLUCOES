@@ -5,9 +5,10 @@ import { readFile } from 'node:fs/promises'
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('admin route uses password auth router with hardened password flows', async () => {
-  const [main, authRouter, passwordSecurity] = await Promise.all([
+  const [main, authRouter, mfaGate, passwordSecurity] = await Promise.all([
     read('src/main.tsx'),
     read('src/quotes/AdminAuthRouter.tsx'),
+    read('src/quotes/AdminMfaGate.tsx'),
     read('src/quotes/passwordSecurity.ts'),
   ])
 
@@ -23,9 +24,13 @@ test('admin route uses password auth router with hardened password flows', async
   assert.match(authRouter, /Esqueci minha senha/)
   assert.match(authRouter, /autoComplete="current-password"/)
   assert.match(authRouter, /autoComplete="new-password"/)
+  assert.match(authRouter, /allowEnrollment=\{false\}/)
+  assert.match(mfaGate, /allowEnrollment = true/)
+  assert.match(mfaGate, /fator não estiver disponível/)
 
   assert.match(passwordSecurity, /functions\.invoke\('admin-password'/)
   assert.match(passwordSecurity, /pwned_password/)
   assert.match(passwordSecurity, /pwned_check_unavailable/)
+  assert.match(passwordSecurity, /mfa_required/)
   assert.match(passwordSecurity, /password\.length >= 12/)
 })
