@@ -4,12 +4,13 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin navigation is centralized and experience layer does not click module DOM', async () => {
-  const [navigation, experience, operations, bridge, main] = await Promise.all([
+test('admin navigation is centralized and fiscal no longer depends on DOM bridge', async () => {
+  const [navigation, experience, operations, fiscal, desktopNavigation, main] = await Promise.all([
     read('src/quotes/adminNavigation.ts'),
     read('src/quotes/AdminExperienceLayer.tsx'),
     read('src/quotes/AdminOperationsHub.tsx'),
-    read('src/quotes/AdminLegacyNavigationBridge.tsx'),
+    read('src/quotes/AdminFiscalPage.tsx'),
+    read('src/quotes/AdminDesktopNavigation.tsx'),
     read('src/main.tsx'),
   ])
 
@@ -21,9 +22,15 @@ test('admin navigation is centralized and experience layer does not click module
   assert.match(operations, /onAdminNavigate/)
   assert.match(operations, /destination === 'clients'/)
   assert.match(operations, /destination === 'suspensions'/)
-  assert.match(bridge, /destination === 'fiscal'/)
-  assert.doesNotMatch(bridge, /destination === 'clients'/)
-  assert.match(main, /<AdminLegacyNavigationBridge \/>/)
+  assert.match(fiscal, /onAdminNavigate/)
+  assert.match(fiscal, /destination === 'fiscal'/)
+  assert.doesNotMatch(fiscal, /createPortal/)
+  assert.doesNotMatch(fiscal, /MutationObserver/)
+  assert.match(desktopNavigation, /navigateAdmin\(item\.destination\)/)
+  assert.match(main, /<AdminFiscalPage \/>/)
+  assert.match(main, /<AdminDesktopNavigation \/>/)
+  assert.doesNotMatch(main, /AdminLegacyNavigationBridge/)
+  assert.doesNotMatch(main, /AdminFiscalHub/)
 })
 
 test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', async () => {
@@ -42,6 +49,23 @@ test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', a
   assert.doesNotMatch(experience, /findField/)
   assert.doesNotMatch(experience, /clientDocumentTarget/)
   assert.match(css, /hrx-cnpj-inline/)
+})
+
+test('desktop modules share one visible navigation group', async () => {
+  const [desktopNavigation, css] = await Promise.all([
+    read('src/quotes/AdminDesktopNavigation.tsx'),
+    read('src/quotes/admin-desktop-navigation.css'),
+  ])
+
+  assert.match(desktopNavigation, /Clientes/)
+  assert.match(desktopNavigation, /Suspensões/)
+  assert.match(desktopNavigation, /Central de documentos/)
+  assert.match(desktopNavigation, /Painéis/)
+  assert.match(desktopNavigation, /Fiscal/)
+  assert.match(css, /\.admin-ops-nav/)
+  assert.match(css, /\.hrx-documents-nav/)
+  assert.match(css, /\.admin-projects-nav/)
+  assert.match(css, /\.admin-fiscal-nav/)
 })
 
 test('mobile navigation has exactly two native destinations plus the central menu', async () => {
