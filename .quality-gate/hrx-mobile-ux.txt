@@ -1,0 +1,1 @@
+Validate mobile Clients flow, native logout and page system.
