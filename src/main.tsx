@@ -2,15 +2,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
-import AdminClientsPage from './quotes/AdminClientsPage'
-import AdminSuspensionsPage from './quotes/AdminSuspensionsPage'
-import AdminDocumentsPage from './quotes/AdminDocumentsPage'
-import AdminFiscalPage from './quotes/AdminFiscalPage'
-import AdminProjectPanelsPage from './quotes/AdminProjectPanelsPage'
-import AdminExecutiveDashboard from './quotes/AdminExecutiveDashboard'
-import AdminExperienceLayer from './quotes/AdminExperienceLayer'
-import AdminDesktopNavigation from './quotes/AdminDesktopNavigation'
-import SuspendedQuoteGuard from './quotes/SuspendedQuoteGuard'
 import AdminPwaBridge from './AdminPwaBridge'
 import AdminPwaUpdater from './AdminPwaUpdater'
 import PublicPortfolioEnhancements from './PublicPortfolioEnhancements'
@@ -33,7 +24,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminClientsPage /><AdminSuspensionsPage /><AdminDocumentsPage /><AdminFiscalPage /><AdminProjectPanelsPage /><AdminExecutiveDashboard /><AdminDesktopNavigation /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
