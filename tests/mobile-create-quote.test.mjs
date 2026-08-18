@@ -4,21 +4,18 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('PWA mobile keeps a visible create quote action without a duplicate bridge component', async () => {
-  const [main, css, operations] = await Promise.all([
+test('manual quote creation lives in Clients without a duplicate mobile bridge', async () => {
+  const [main, clients, experience] = await Promise.all([
     read('src/main.tsx'),
-    read('src/quotes/mobile-create-quote.css'),
-    read('src/quotes/AdminOperationsHub.tsx'),
+    read('src/quotes/AdminClientsPage.tsx'),
+    read('src/quotes/AdminExperienceLayer.tsx'),
   ])
 
-  assert.doesNotMatch(main, /MobileCreateQuoteButton/)
-  assert.match(main, /mobile-create-quote\.css/)
-  assert.match(operations, /className="admin-ops-new-quote"/)
-  assert.match(operations, /\+ Orçamento manual/)
-  assert.match(operations, /hrx_create_manual_quote/)
-  assert.match(css, /@media\(max-width:860px\)/)
-  assert.match(css, /\.admin-ops-new-quote/)
-  assert.match(css, /display:inline-flex!important/)
-  assert.match(css, /\.admin-ops-mobile\{display:none!important\}/)
-  assert.match(css, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/)
+  assert.doesNotMatch(main, /MobileCreateQuoteButton|AdminOperationsHub|mobile-create-quote\.css/)
+  assert.match(main, /<AdminClientsPage \/>/)
+  assert.match(clients, /\+ Orçamento/)
+  assert.match(clients, /Novo orçamento/)
+  assert.match(clients, /hrx_create_manual_quote/)
+  assert.match(experience, /openDestination\('clients'\)/)
+  assert.doesNotMatch(clients, /createPortal|MutationObserver/)
 })
