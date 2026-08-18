@@ -28,10 +28,17 @@ export default function AdminNavigationRefinement() {
     window.location.hash = '#admin/painels'
   }
 
+  const openFiscal = () => {
+    closeMenu()
+    const fiscalButton = document.querySelector<HTMLButtonElement>('.admin-fiscal-nav')
+    fiscalButton?.click()
+  }
+
   if (!menuGrid) return null
 
   return createPortal(<>
     <button type="button" className="hrx-audit-menu-card" onClick={openDocuments}><span>▤</span><strong>Central de documentos</strong><small>Arquivos, contratos e governança</small></button>
     <button type="button" className="hrx-audit-menu-card" onClick={openPanels}><span>▦</span><strong>Painéis</strong><small>Projetos, prioridades e progresso</small></button>
+    <button type="button" className="hrx-audit-menu-card" onClick={openFiscal}><span>◇</span><strong>Fiscal</strong><small>Cadastro e situação tributária</small></button>
   </>, menuGrid)
 }
