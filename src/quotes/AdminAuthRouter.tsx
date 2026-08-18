@@ -153,7 +153,7 @@ export default function AdminAuthRouter() {
   }, [])
 
   if (checking) return <main className="admin-login-shell"><div className="admin-login-card"><p>Validando acesso seguro…</p></div></main>
-  if (recovery && session) return <PasswordRecoveryScreen session={session} onDone={() => setRecovery(false)} />
+  if (recovery && session) return <AdminMfaGate session={session}><PasswordRecoveryScreen session={session} onDone={() => setRecovery(false)} /></AdminMfaGate>
   if (!session) return <LoginScreen />
   return <AdminMfaGate session={session}><AdminQuotes /></AdminMfaGate>
 }
