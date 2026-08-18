@@ -50,6 +50,7 @@ test('admin application is centralized behind MFA and shell-native pages avoid D
   assert.match(shellCss, /\.admin-live-shell>\.admin-exec-sidebar\{visibility:hidden/)
 
   for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
+  assert.match(adminApp, /admin-page-system\.css/)
   assert.doesNotMatch(adminApp, /AdminDesktopNavigation|AdminOperationsHub|AdminDocumentsHub/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.match(main, /<AdminAuthRouter \/>/)
@@ -82,4 +83,15 @@ test('desktop and mobile navigation belong to the HRX shell instead of the quote
   assert.match(shellCss, /\.admin-mobile-nav\{display:none!important\}/)
   assert.match(quotes, /className="admin-mobile-nav"/)
   assert.doesNotMatch(experience, /\.admin-exec-sidebar|\.admin-mobile-nav/)
+})
+
+test('executive, operational and document pages share one visual system', async () => {
+  const css = await read('src/quotes/admin-page-system.css')
+  for (const page of ['hrx-executive-page', 'hrx-clients-page', 'hrx-suspensions-page', 'hrx-documents-page', 'hrx-fiscal-page', 'admin-projects-shell']) assert.match(css, new RegExp(`\\.${page}`))
+  assert.match(css, /--hrx-admin-sidebar-width:244px/)
+  assert.match(css, /--hrx-page-bg:#f4f6f8/)
+  assert.match(css, /--hrx-page-surface:#fff/)
+  assert.match(css, /admin-projects-close\{display:none!important\}/)
+  assert.match(css, /hrx-fiscal-header button\[aria-label="Fechar"\]\{display:none!important\}/)
+  assert.match(css, /@media\(max-width:760px\)/)
 })
