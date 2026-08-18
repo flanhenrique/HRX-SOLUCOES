@@ -4,12 +4,13 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin navigation is centralized and fiscal no longer depends on DOM bridge', async () => {
-  const [navigation, experience, operations, fiscal, desktopNavigation, main] = await Promise.all([
+test('admin navigation is centralized and fiscal/panels no longer depend on DOM bridges', async () => {
+  const [navigation, experience, operations, fiscal, panels, desktopNavigation, main] = await Promise.all([
     read('src/quotes/adminNavigation.ts'),
     read('src/quotes/AdminExperienceLayer.tsx'),
     read('src/quotes/AdminOperationsHub.tsx'),
     read('src/quotes/AdminFiscalPage.tsx'),
+    read('src/quotes/AdminProjectPanelsPage.tsx'),
     read('src/quotes/AdminDesktopNavigation.tsx'),
     read('src/main.tsx'),
   ])
@@ -26,11 +27,17 @@ test('admin navigation is centralized and fiscal no longer depends on DOM bridge
   assert.match(fiscal, /destination === 'fiscal'/)
   assert.doesNotMatch(fiscal, /createPortal/)
   assert.doesNotMatch(fiscal, /MutationObserver/)
+  assert.match(panels, /onAdminNavigate/)
+  assert.match(panels, /destination === 'panels'/)
+  assert.doesNotMatch(panels, /createPortal/)
+  assert.doesNotMatch(panels, /MutationObserver/)
   assert.match(desktopNavigation, /navigateAdmin\(item\.destination\)/)
   assert.match(main, /<AdminFiscalPage \/>/)
+  assert.match(main, /<AdminProjectPanelsPage \/>/)
   assert.match(main, /<AdminDesktopNavigation \/>/)
   assert.doesNotMatch(main, /AdminLegacyNavigationBridge/)
   assert.doesNotMatch(main, /AdminFiscalHub/)
+  assert.doesNotMatch(main, /AdminProjectPanels from/)
 })
 
 test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', async () => {
