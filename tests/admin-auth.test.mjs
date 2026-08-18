@@ -22,7 +22,7 @@ test('admin route uses password auth router with hardened password flows', async
   assert.match(authRouter, /minLength=\{12\}/)
   assert.match(authRouter, />Primeiro acesso</)
   assert.match(authRouter, />Ativar acesso</)
-  assert.match(authRouter, /Esqueci minha senha/)
+  assert.match(authRouter, /Recuperar senha/)
   assert.match(authRouter, /autoComplete="current-password"/)
   assert.match(authRouter, /autoComplete="new-password"/)
   assert.match(authRouter, /allowEnrollment=\{false\}/)
