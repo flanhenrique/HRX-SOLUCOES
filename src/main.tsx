@@ -23,7 +23,9 @@ import './nexus-screen.css'
 import './portfolio-corrections.css'
 
 const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
-const isAdminRoute = pathname === '/admin/orcamentos' || window.location.hash === '#admin/orcamentos'
+const adminHashes = new Set(['#admin/orcamentos', '#admin/painels'])
+const isAdminPath = pathname === '/admin/orcamentos' || pathname.startsWith('/admin/')
+const isAdminRoute = isAdminPath || adminHashes.has(window.location.hash)
 
 if (isAdminRoute) configureAdminAppShell()
 
