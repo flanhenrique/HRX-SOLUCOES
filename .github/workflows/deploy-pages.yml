@@ -70,12 +70,12 @@ jobs:
 
           path = Path('dist/admin/orcamentos/index.html')
           html = path.read_text()
-          locked_viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />'
+          admin_viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />'
           viewport_pattern = r"<meta\s+name=['\"]viewport['\"][^>]*>"
           if re.search(viewport_pattern, html, flags=re.IGNORECASE):
-              html = re.sub(viewport_pattern, locked_viewport, html, count=1, flags=re.IGNORECASE)
+              html = re.sub(viewport_pattern, admin_viewport, html, count=1, flags=re.IGNORECASE)
           else:
-              html = html.replace('<head>', f'<head>\n    {locked_viewport}')
+              html = html.replace('<head>', f'<head>\n    {admin_viewport}')
 
           build_tag = f'<script>globalThis.__HRX_ADMIN_BUILD__={json.dumps(build)};</script>'
           tags = [
