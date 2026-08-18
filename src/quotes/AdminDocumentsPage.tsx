@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { hrxSupabase } from './supabaseClient'
 import { navigateAdmin, onAdminNavigate } from './adminNavigation'
+import VoltDocumentsWorkspace from './VoltDocumentsWorkspace'
 import './admin-documents-page.css'
 
 type Area = {
@@ -101,7 +102,9 @@ export default function AdminDocumentsPage() {
   const selectFolder = (selectedFolder: string) => {
     if (!area) return
     setFolder(selectedFolder)
-    void loadDocuments(area, selectedFolder)
+    setDocuments([])
+    setMessage('')
+    if (!(area.key === 'internal' && selectedFolder === 'VOLT')) void loadDocuments(area, selectedFolder)
   }
 
   const uploadDocument = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -160,6 +163,7 @@ export default function AdminDocumentsPage() {
   }
 
   if (!open) return null
+  const isVolt = area?.key === 'internal' && folder === 'VOLT'
 
   return <section className="hrx-documents-page" aria-label="Central de Documentos HRX">
     <header className="hrx-documents-page-header">
@@ -183,11 +187,13 @@ export default function AdminDocumentsPage() {
 
       {area && !folder && <>
         <section className="hrx-documents-page-context"><span>ÁREA DOCUMENTAL</span><strong>{area.governance}</strong><p>Selecione uma categoria para acessar os arquivos controlados.</p></section>
-        <section className="hrx-documents-folder-grid">{area.folders.map((item) => <button type="button" key={item} onClick={() => selectFolder(item)}><span>▱</span><strong>{item}</strong><small>Categoria documental</small><b>→</b></button>)}</section>
+        <section className="hrx-documents-folder-grid">{area.folders.map((item) => <button type="button" key={item} onClick={() => selectFolder(item)}><span>▱</span><strong>{item}</strong><small>{item === 'VOLT' ? 'Biblioteca técnica controlada' : 'Categoria documental'}</small><b>→</b></button>)}</section>
         {area.key === 'legal' && <aside className="hrx-documents-contract-check"><span>ANÁLISE CONTRATUAL</span><h2>Checklist executivo</h2><div><p>Partes e representação</p><p>Objeto e escopo</p><p>Valores e reajustes</p><p>Prazo e vigência</p><p>Obrigações e SLAs</p><p>Multas e rescisão</p><p>Confidencialidade e LGPD</p><p>Foro e assinaturas</p></div></aside>}
       </>}
 
-      {area && folder && <>
+      {isVolt && <VoltDocumentsWorkspace />}
+
+      {area && folder && !isVolt && <>
         <section className="hrx-documents-storage-bar"><div><span>{documents.length} documento(s)</span><small>Limite de 25 MB por arquivo · URL temporária de 60 segundos</small></div><label className={uploading ? 'is-disabled' : ''}>{uploading ? 'Enviando…' : '+ Adicionar documento'}<input type="file" accept={acceptedTypes} disabled={uploading} onChange={(event) => void uploadDocument(event)} /></label></section>
         {message && <div className="hrx-documents-page-message" role="status">{message}</div>}
         <section className="hrx-documents-file-list">
