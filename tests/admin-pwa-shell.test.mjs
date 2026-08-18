@@ -17,13 +17,11 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
 
   assert.equal(manifest.display, 'standalone')
   assert.equal(manifest.orientation, 'portrait-primary')
-
   assert.match(shell, /maximum-scale=1/)
   assert.match(shell, /user-scalable=no/)
   assert.match(shell, /viewport-fit=cover/)
   assert.match(shell, /gesturestart/)
   assert.match(shell, /event\.ctrlKey/)
-
   assert.match(css, /html\.hrx-admin-pwa body[\s\S]*position:\s*fixed/)
   assert.match(css, /\.admin-live-shell[\s\S]*height:\s*100dvh/)
   assert.match(css, /\.admin-workspace[\s\S]*overflow:\s*hidden/)
@@ -31,7 +29,6 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
   assert.match(css, /touch-action:\s*pan-y/)
   assert.match(css, /font-size:\s*16px\s*!important/)
   assert.match(css, /resize:\s*none/)
-
   assert.match(sw, /hrx-admin-v4/)
   assert.match(deploy, /user-scalable=no/)
   assert.match(deploy, /maximum-scale=1/)
@@ -48,9 +45,11 @@ test('admin bootstrap recognizes project panel destinations', async () => {
 })
 
 test('authenticated admin changes password through hardened security helper', async () => {
-  const [experience, security, main] = await Promise.all([
+  const [experience, security, adminApp, authRouter, main] = await Promise.all([
     read('src/quotes/AdminExperienceLayer.tsx'),
     read('src/quotes/passwordSecurity.ts'),
+    read('src/quotes/AdminApp.tsx'),
+    read('src/quotes/AdminAuthRouter.tsx'),
     read('src/main.tsx'),
   ])
 
@@ -58,8 +57,9 @@ test('authenticated admin changes password through hardened security helper', as
   assert.match(experience, /Alterar senha/)
   assert.match(experience, /minLength=\{12\}/)
   assert.match(security, /admin-password/)
-  assert.match(main, /<AdminExperienceLayer \/>/)
-  assert.doesNotMatch(main, /<AdminPasswordControl \/>/)
+  assert.match(adminApp, /<AdminExperienceLayer \/>/)
+  assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
+  assert.doesNotMatch(main, /<AdminExperienceLayer \/>|<AdminPasswordControl \/>/)
 })
 
 test('first access is integrated into the login screen without email delivery', async () => {
