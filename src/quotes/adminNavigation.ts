@@ -3,6 +3,8 @@ export type AdminDestination = 'quotes' | 'clients' | 'suspensions' | 'documents
 export const ADMIN_NAVIGATE_EVENT = 'hrx:admin-navigate'
 
 export function navigateAdmin(destination: AdminDestination) {
+  window.dispatchEvent(new CustomEvent<AdminDestination>(ADMIN_NAVIGATE_EVENT, { detail: destination }))
+
   if (destination === 'panels') {
     window.location.hash = '#admin/painels'
     return
@@ -10,10 +12,7 @@ export function navigateAdmin(destination: AdminDestination) {
 
   if (destination === 'documents') {
     window.dispatchEvent(new CustomEvent('hrx:open-documents'))
-    return
   }
-
-  window.dispatchEvent(new CustomEvent<AdminDestination>(ADMIN_NAVIGATE_EVENT, { detail: destination }))
 }
 
 export function onAdminNavigate(handler: (destination: AdminDestination) => void) {
