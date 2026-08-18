@@ -5,16 +5,16 @@ import { readFile } from 'node:fs/promises'
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('admin application is centralized behind MFA and shell-native pages avoid DOM bridges', async () => {
-  const [navigation, executive, documents, clients, suspensions, experience, fiscal, panels, desktopNavigation, adminApp, authRouter, main] = await Promise.all([
+  const [navigation, executive, documents, clients, suspensions, experience, shellCss, fiscal, panels, adminApp, authRouter, main] = await Promise.all([
     read('src/quotes/adminNavigation.ts'),
     read('src/quotes/AdminExecutiveDashboard.tsx'),
     read('src/quotes/AdminDocumentsPage.tsx'),
     read('src/quotes/AdminClientsPage.tsx'),
     read('src/quotes/AdminSuspensionsPage.tsx'),
     read('src/quotes/AdminExperienceLayer.tsx'),
+    read('src/quotes/admin-shell-navigation.css'),
     read('src/quotes/AdminFiscalPage.tsx'),
     read('src/quotes/AdminProjectPanelsPage.tsx'),
-    read('src/quotes/AdminDesktopNavigation.tsx'),
     read('src/quotes/AdminApp.tsx'),
     read('src/quotes/AdminAuthRouter.tsx'),
     read('src/main.tsx'),
@@ -39,13 +39,21 @@ test('admin application is centralized behind MFA and shell-native pages avoid D
   assert.doesNotMatch(fiscal, /createPortal|MutationObserver/)
   assert.match(panels, /destination === 'panels'/)
   assert.doesNotMatch(panels, /createPortal|MutationObserver/)
-  assert.match(desktopNavigation, /destination: 'executive'/)
 
-  for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminDesktopNavigation', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
+  assert.match(experience, /className="hrx-admin-shell-sidebar"/)
+  assert.match(experience, /className="hrx-admin-shell-mobile-nav"/)
+  assert.match(experience, /onAdminNavigate/)
+  assert.doesNotMatch(experience, /createPortal|MutationObserver|document\.querySelector/)
+  for (const label of ['Visão executiva', 'Orçamentos', 'Clientes', 'Suspensões', 'Central de documentos', 'Painéis', 'Fiscal']) assert.match(experience, new RegExp(label))
+  assert.match(shellCss, /\.hrx-admin-shell-sidebar/)
+  assert.match(shellCss, /\.hrx-admin-shell-mobile-nav/)
+  assert.match(shellCss, /\.admin-live-shell>\.admin-exec-sidebar\{visibility:hidden/)
+
+  for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
+  assert.doesNotMatch(adminApp, /AdminDesktopNavigation|AdminOperationsHub|AdminDocumentsHub/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.match(main, /<AdminAuthRouter \/>/)
   assert.doesNotMatch(main, /AdminClientsPage|AdminDocumentsPage|AdminExecutiveDashboard|AdminOperationsHub|AdminDocumentsHub/)
-  assert.doesNotMatch(experience, /\.admin-ops-nav|\.admin-fiscal-nav/)
 })
 
 test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', async () => {
@@ -62,23 +70,16 @@ test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', a
   assert.match(css, /hrx-cnpj-inline/)
 })
 
-test('desktop modules share one visible navigation group', async () => {
-  const [desktopNavigation, css] = await Promise.all([
-    read('src/quotes/AdminDesktopNavigation.tsx'),
-    read('src/quotes/admin-desktop-navigation.css'),
-  ])
-  for (const label of ['Visão executiva', 'Orçamentos', 'Clientes', 'Central de documentos', 'Painéis', 'Fiscal']) assert.match(desktopNavigation, new RegExp(label))
-  assert.match(css, /\.hrx-admin-desktop-nav>button\.is-active/)
-})
-
-test('mobile navigation keeps three destinations and exposes executive cockpit through Menu', async () => {
-  const [quotes, experience, experienceCss] = await Promise.all([
-    read('src/quotes/AdminQuotes.tsx'),
+test('desktop and mobile navigation belong to the HRX shell instead of the quote DOM', async () => {
+  const [experience, shellCss, quotes] = await Promise.all([
     read('src/quotes/AdminExperienceLayer.tsx'),
-    read('src/quotes/admin-experience.css'),
+    read('src/quotes/admin-shell-navigation.css'),
+    read('src/quotes/AdminQuotes.tsx'),
   ])
+  assert.match(experience, /Navegação principal do HRX Admin/)
+  assert.match(experience, /Navegação mobile do HRX Admin/)
+  assert.match(shellCss, /@media\(max-width:760px\)/)
+  assert.match(shellCss, /\.admin-mobile-nav\{display:none!important\}/)
   assert.match(quotes, /className="admin-mobile-nav"/)
-  assert.match(experience, /Visão executiva/)
-  assert.match(experienceCss, /grid-template-columns:1fr 1fr 1fr!important/)
-  assert.match(experienceCss, /\.hrx-mobile-menu-launcher/)
+  assert.doesNotMatch(experience, /\.admin-exec-sidebar|\.admin-mobile-nav/)
 })
