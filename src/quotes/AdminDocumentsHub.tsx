@@ -30,6 +30,7 @@ export default function AdminDocumentsHub() {
   const [query, setQuery] = useState('')
   const [selectedArea, setSelectedArea] = useState<DocumentArea | null>(null)
   const [clientOpen, setClientOpen] = useState(false)
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
 
   useEffect(() => {
     const syncTarget = () => setSidebarTarget(document.querySelector('.admin-exec-sidebar nav'))
@@ -56,31 +57,49 @@ export default function AdminDocumentsHub() {
     return areas.filter((area) => [area.title, area.description, area.meta, area.governance, ...area.folders].some((value) => value.toLocaleLowerCase('pt-BR').includes(normalized)))
   }, [query])
 
-  const closeCenter = () => { setOpen(false); setSelectedArea(null); setClientOpen(false) }
-  const back = () => { if (clientOpen) setClientOpen(false); else setSelectedArea(null) }
+  const closeCenter = () => { setOpen(false); setSelectedArea(null); setClientOpen(false); setSelectedFolder(null) }
+  const back = () => {
+    if (selectedFolder) setSelectedFolder(null)
+    else if (clientOpen) setClientOpen(false)
+    else setSelectedArea(null)
+  }
 
   const sidebarPortal = sidebarTarget ? createPortal(<button type="button" className={`hrx-documents-nav${open ? ' is-active' : ''}`} onClick={() => setOpen(true)}><span aria-hidden="true">▤</span>Central de documentos</button>, sidebarTarget) : null
 
-  const detail = clientOpen ? { title: 'Hortifruti Revolução', eyebrow: 'DOSSIÊ DO CLIENTE', description: 'Documentação organizada pelo ciclo do projeto.', folders: hortifrutiFolders, governance: 'Cliente ativo · controle por projeto' } : selectedArea ? { title: selectedArea.title, eyebrow: 'ÁREA DOCUMENTAL', description: selectedArea.description, folders: selectedArea.folders, governance: selectedArea.governance } : null
+  const parentDetail = clientOpen
+    ? { title: 'Hortifruti Revolução', eyebrow: 'DOSSIÊ DO CLIENTE', description: 'Documentação organizada pelo ciclo do projeto.', folders: hortifrutiFolders, governance: 'Cliente ativo · controle por projeto' }
+    : selectedArea
+      ? { title: selectedArea.title, eyebrow: 'ÁREA DOCUMENTAL', description: selectedArea.description, folders: selectedArea.folders, governance: selectedArea.governance }
+      : null
+
+  const headerTitle = selectedFolder ?? parentDetail?.title ?? 'Central de Documentos'
+  const headerDescription = selectedFolder
+    ? `${parentDetail?.title ?? 'Central HRX'} · categoria documental`
+    : parentDetail?.description ?? 'Documentos internos organizados por função, projeto, vigência e responsabilidade.'
+  const showBack = Boolean(parentDetail || selectedFolder)
 
   return <>{sidebarPortal}{open && <section className="hrx-documents-shell" role="dialog" aria-modal="true" aria-label="Central de Documentos HRX">
     <header className="hrx-documents-header">
-      <div className="hrx-documents-heading">{detail && <button type="button" className="hrx-documents-back" onClick={back} aria-label="Voltar">←</button>}<div><span>HRX · GOVERNANÇA DOCUMENTAL</span><h2>{detail ? detail.title : 'Central de Documentos'}</h2><p>{detail ? detail.description : 'Documentos internos organizados por função, projeto, vigência e responsabilidade.'}</p></div></div>
+      <div className="hrx-documents-heading">{showBack && <button type="button" className="hrx-documents-back" onClick={back} aria-label="Voltar">←</button>}<div><span>HRX · GOVERNANÇA DOCUMENTAL</span><h2>{headerTitle}</h2><p>{headerDescription}</p></div></div>
       <div className="hrx-documents-header-actions"><button type="button" onClick={closeCenter} aria-label="Fechar Central de Documentos">×</button></div>
     </header>
 
     <main className="hrx-documents-content">
-      {detail ? <section className="hrx-document-workspace">
-        <div className="hrx-document-workspace-meta"><span>{detail.eyebrow}</span><strong>{detail.governance}</strong><p>Abra uma categoria para continuar a navegação dentro do aplicativo. A Central não redireciona para o repositório de código.</p></div>
-        <div className="hrx-document-folder-list">{detail.folders.map((folder, index) => <button type="button" key={folder}><span aria-hidden="true">▱</span><div><strong>{folder}</strong><small>Categoria documental · {String(index + 1).padStart(2, '0')}</small></div><b>›</b></button>)}</div>
+      {selectedFolder ? <section className="hrx-document-workspace">
+        <div className="hrx-document-workspace-meta"><span>PASTA DOCUMENTAL</span><strong>{parentDetail?.governance ?? 'Governança HRX'}</strong><p>Esta categoria está pronta para receber documentos com identificação, versão, vigência e responsável.</p></div>
+        <div className="hrx-documents-note"><div><span>DOCUMENTOS ARQUIVADOS</span><strong>Nenhum documento cadastrado nesta categoria</strong></div><p>Quando o armazenamento persistente for conectado, os arquivos desta pasta aparecerão aqui com metadados e histórico de versão.</p></div>
+        <aside className="hrx-documents-note"><div><span>PADRÃO DE INDEXAÇÃO</span><strong>AAAA-MM-DD_CLIENTE_TIPO_DESCRICAO_V01.ext</strong></div><p>Campos mínimos: cliente ou área, tipo documental, data, versão, responsável, vigência e classificação de acesso.</p></aside>
+      </section> : parentDetail ? <section className="hrx-document-workspace">
+        <div className="hrx-document-workspace-meta"><span>{parentDetail.eyebrow}</span><strong>{parentDetail.governance}</strong><p>Selecione uma categoria para continuar a navegação dentro da Central de Documentos.</p></div>
+        <div className="hrx-document-folder-list">{parentDetail.folders.map((folder, index) => <button type="button" key={folder} onClick={() => setSelectedFolder(folder)}><span aria-hidden="true">▱</span><div><strong>{folder}</strong><small>Categoria documental · {String(index + 1).padStart(2, '0')}</small></div><b>›</b></button>)}</div>
         {selectedArea?.key === 'legal' && <aside className="hrx-contract-review"><span>LEITURA CONTRATUAL</span><h3>Checklist de análise</h3><div><p>Partes e representação</p><p>Objeto e escopo</p><p>Valores e reajustes</p><p>Prazo e vigência</p><p>Obrigações e SLAs</p><p>Multas e rescisão</p><p>Confidencialidade e LGPD</p><p>Foro e assinaturas</p></div><small>Esta estrutura organiza a revisão; não substitui parecer jurídico profissional quando necessário.</small></aside>}
       </section> : <>
         <section className="hrx-documents-summary"><article><span>CLASSIFICAÇÃO</span><strong>8 áreas</strong><small>Taxonomia funcional</small></article><article><span>INDEXAÇÃO</span><strong>Padronizada</strong><small>Cliente · tipo · data · versão</small></article><article><span>CONTRATOS</span><strong>Controlados</strong><small>Vigência, risco e obrigações</small></article></section>
         <section className="hrx-documents-section"><div className="hrx-documents-section-head"><div><span>CENTRAL HRX</span><h3>Áreas documentais</h3></div><label className="hrx-documents-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar área, documento ou categoria" /></label></div>
-          <div className="hrx-documents-grid">{filteredAreas.map((area) => <button key={area.key} type="button" className="hrx-document-card" onClick={() => setSelectedArea(area)}><div className="hrx-document-card-icon" aria-hidden="true">▱</div><div><span>{area.meta}</span><strong>{area.title}</strong><p>{area.description}</p></div><b aria-hidden="true">›</b></button>)}</div>
+          <div className="hrx-documents-grid">{filteredAreas.map((area) => <button key={area.key} type="button" className="hrx-document-card" onClick={() => { setSelectedArea(area); setSelectedFolder(null) }}><div className="hrx-document-card-icon" aria-hidden="true">▱</div><div><span>{area.meta}</span><strong>{area.title}</strong><p>{area.description}</p></div><b aria-hidden="true">›</b></button>)}</div>
         </section>
-        <section className="hrx-documents-client"><div className="hrx-documents-client-head"><div className="hrx-documents-client-mark">HR</div><div><span>CLIENTE EM DESTAQUE</span><h3>Hortifruti Revolução</h3><p>Dossiê organizado do recebimento ao aceite e arquivo.</p></div><button type="button" onClick={() => setClientOpen(true)}>Abrir dossiê ›</button></div></section>
-        <aside className="hrx-documents-note"><div><span>PADRÃO DE INDEXAÇÃO</span><strong>AAAA-MM-DD_CLIENTE_TIPO_DESCRICAO_V01.ext</strong></div><p>A interface passa a tratar documentos como informação de negócio. GitHub é infraestrutura técnica e não aparece como destino da navegação documental.</p></aside>
+        <section className="hrx-documents-client"><div className="hrx-documents-client-head"><div className="hrx-documents-client-mark">HR</div><div><span>CLIENTE EM DESTAQUE</span><h3>Hortifruti Revolução</h3><p>Dossiê organizado do recebimento ao aceite e arquivo.</p></div><button type="button" onClick={() => { setClientOpen(true); setSelectedFolder(null) }}>Abrir dossiê ›</button></div></section>
+        <aside className="hrx-documents-note"><div><span>PADRÃO DE INDEXAÇÃO</span><strong>AAAA-MM-DD_CLIENTE_TIPO_DESCRICAO_V01.ext</strong></div><p>A Central trata documentos como informação de negócio, com organização por área, cliente, tipo, data e versão.</p></aside>
       </>}
     </main>
   </section>}</>
