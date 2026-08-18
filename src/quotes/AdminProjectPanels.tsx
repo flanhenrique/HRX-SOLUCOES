@@ -92,10 +92,12 @@ const projects: ProjectPanel[] = [
   },
 ]
 
+const PANELS_HASH = '#admin/painels'
+
 export default function AdminProjectPanels() {
   const [sidebarTarget, setSidebarTarget] = useState<Element | null>(null)
   const [mobileTarget, setMobileTarget] = useState<Element | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(() => window.location.hash === PANELS_HASH)
   const [selectedId, setSelectedId] = useState<ProjectId>('hortifruti')
 
   useEffect(() => {
@@ -110,13 +112,25 @@ export default function AdminProjectPanels() {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    const syncHash = () => setOpen(window.location.hash === PANELS_HASH)
+    window.addEventListener('hashchange', syncHash)
+    return () => window.removeEventListener('hashchange', syncHash)
+  }, [])
+
   const selected = useMemo(() => projects.find((project) => project.id === selectedId) ?? projects[0], [selectedId])
   const overallProgress = Math.round(projects.reduce((total, project) => total + project.progress, 0) / projects.length)
   const pendingTotal = projects.reduce((total, project) => total + project.pending.length, 0)
 
   const openPanel = (projectId?: ProjectId) => {
     if (projectId) setSelectedId(projectId)
-    setOpen(true)
+    if (window.location.hash !== PANELS_HASH) window.location.hash = PANELS_HASH
+    else setOpen(true)
+  }
+
+  const closePanel = () => {
+    setOpen(false)
+    if (window.location.hash === PANELS_HASH) history.replaceState(null, '', window.location.pathname)
   }
 
   const sidebarPortal = sidebarTarget ? createPortal(
@@ -144,7 +158,7 @@ export default function AdminProjectPanels() {
           <h2>Painéis</h2>
           <p>Visão central de status, prioridades e próximos passos.</p>
         </div>
-        <button type="button" className="admin-projects-close" aria-label="Fechar painéis" onClick={() => setOpen(false)}>×</button>
+        <button type="button" className="admin-projects-close" aria-label="Fechar painéis" onClick={closePanel}>×</button>
       </header>
 
       <div className="admin-projects-overview">
