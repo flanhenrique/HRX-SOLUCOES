@@ -2,7 +2,7 @@
   "id": "/admin/orcamentos",
   "name": "HRX Admin",
   "short_name": "HRX Admin",
-  "description": "Ambiente administrativo da HRX Solutions para solicitações, orçamentos e operações internas.",
+  "description": "Ambiente administrativo da HRX Solutions para orçamentos, documentos, operações e acompanhamento de projetos.",
   "start_url": "/admin/orcamentos",
   "scope": "/admin/",
   "display": "standalone",
@@ -23,6 +23,11 @@
       "name": "Orçamentos",
       "short_name": "Orçamentos",
       "url": "/admin/orcamentos"
+    },
+    {
+      "name": "Painéis HRX",
+      "short_name": "Painéis",
+      "url": "/admin/orcamentos#admin/painels"
     }
   ]
 }
