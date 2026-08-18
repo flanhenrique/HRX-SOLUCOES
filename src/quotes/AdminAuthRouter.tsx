@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import AdminQuotes from './AdminQuotes'
+import AdminApp from './AdminApp'
 import AdminMfaGate from './AdminMfaGate'
 import { adminBootstrapEndpoint, hrxPublishableKey, hrxSupabase } from './supabaseClient'
 import { passwordMeetsPolicy, passwordRequirementText, secureUpdateAdminPassword } from './passwordSecurity'
@@ -155,5 +155,5 @@ export default function AdminAuthRouter() {
   if (checking) return <main className="admin-login-shell"><div className="admin-login-card"><p>Validando acesso seguro…</p></div></main>
   if (recovery && session) return <AdminMfaGate session={session} allowEnrollment={false}><PasswordRecoveryScreen session={session} onDone={() => setRecovery(false)} /></AdminMfaGate>
   if (!session) return <LoginScreen />
-  return <AdminMfaGate session={session}><AdminQuotes /></AdminMfaGate>
+  return <AdminMfaGate session={session}><AdminApp /></AdminMfaGate>
 }
