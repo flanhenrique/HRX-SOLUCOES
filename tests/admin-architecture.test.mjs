@@ -16,7 +16,9 @@ test('admin navigation is centralized and fiscal/panels no longer depend on DOM 
   ])
 
   assert.match(navigation, /ADMIN_NAVIGATE_EVENT/)
-  assert.match(navigation, /navigateAdmin/)
+  assert.match(navigation, /window\.dispatchEvent\(new CustomEvent<AdminDestination>\(ADMIN_NAVIGATE_EVENT/)
+  assert.match(navigation, /destination === 'documents'/)
+  assert.match(navigation, /destination === 'panels'/)
   assert.match(experience, /navigateAdmin\(destination\)/)
   assert.doesNotMatch(experience, /\.admin-ops-nav/)
   assert.doesNotMatch(experience, /\.admin-fiscal-nav/)
@@ -32,6 +34,8 @@ test('admin navigation is centralized and fiscal/panels no longer depend on DOM 
   assert.doesNotMatch(panels, /createPortal/)
   assert.doesNotMatch(panels, /MutationObserver/)
   assert.match(desktopNavigation, /navigateAdmin\(item\.destination\)/)
+  assert.match(desktopNavigation, /destination: 'quotes'/)
+  assert.match(desktopNavigation, /className=\{active === item\.destination \? 'is-active'/)
   assert.match(main, /<AdminFiscalPage \/>/)
   assert.match(main, /<AdminProjectPanelsPage \/>/)
   assert.match(main, /<AdminDesktopNavigation \/>/)
@@ -64,6 +68,7 @@ test('desktop modules share one visible navigation group', async () => {
     read('src/quotes/admin-desktop-navigation.css'),
   ])
 
+  assert.match(desktopNavigation, /Orçamentos/)
   assert.match(desktopNavigation, /Clientes/)
   assert.match(desktopNavigation, /Suspensões/)
   assert.match(desktopNavigation, /Central de documentos/)
@@ -71,8 +76,9 @@ test('desktop modules share one visible navigation group', async () => {
   assert.match(desktopNavigation, /Fiscal/)
   assert.match(css, /\.admin-ops-nav/)
   assert.match(css, /\.hrx-documents-nav/)
-  assert.match(css, /\.admin-projects-nav/)
-  assert.match(css, /\.admin-fiscal-nav/)
+  assert.doesNotMatch(css, /\.admin-projects-nav/)
+  assert.doesNotMatch(css, /\.admin-fiscal-nav/)
+  assert.match(css, /\.hrx-admin-desktop-nav>button\.is-active/)
 })
 
 test('mobile navigation has exactly two native destinations plus the central menu', async () => {
