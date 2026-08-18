@@ -59,6 +59,11 @@ export default function AdminExperienceLayer() {
   }
   const openSettings = () => { setMobileMenuOpen(false); setSettingsView('home'); setSettingsOpen(true) }
   const openDestination = (destination: Exclude<AdminDestination, 'settings'>) => { setMobileMenuOpen(false); navigateAdmin(destination) }
+  const signOut = async () => {
+    setMobileMenuOpen(false)
+    setSettingsOpen(false)
+    await hrxSupabase.auth.signOut()
+  }
 
   const changePassword = async (event: FormEvent) => {
     event.preventDefault()
@@ -74,7 +79,7 @@ export default function AdminExperienceLayer() {
     <aside className="hrx-admin-shell-sidebar" aria-label="Navegação principal do HRX Admin">
       <div className="hrx-admin-shell-brand"><strong>HRX</strong><span>SOLUTIONS</span><small>ADMIN</small></div>
       <nav><span className="hrx-admin-shell-section">GESTÃO</span>{navigationItems.map((item) => <button key={item.destination} type="button" className={active === item.destination ? 'is-active' : ''} onClick={() => openDestination(item.destination)}><span aria-hidden="true">{item.icon}</span><div><strong>{item.label}</strong><small>{item.description}</small></div></button>)}</nav>
-      <footer><button type="button" className={settingsOpen ? 'is-active' : ''} onClick={openSettings}><span aria-hidden="true">⚙</span><div><strong>Configurações</strong><small>Conta e segurança</small></div></button><div className="hrx-admin-shell-account"><span>{initials}</span><div><strong>Administrador</strong><small>{email || 'Sessão protegida'}</small></div></div></footer>
+      <footer><button type="button" className={settingsOpen ? 'is-active' : ''} onClick={openSettings}><span aria-hidden="true">⚙</span><div><strong>Configurações</strong><small>Conta e segurança</small></div></button><button type="button" className="hrx-admin-shell-signout" onClick={() => void signOut()}><span aria-hidden="true">↪</span><div><strong>Sair</strong><small>Encerrar sessão segura</small></div></button><div className="hrx-admin-shell-account"><span>{initials}</span><div><strong>Administrador</strong><small>{email || 'Sessão protegida'}</small></div></div></footer>
     </aside>
 
     <nav className="hrx-admin-shell-mobile-nav" aria-label="Navegação mobile do HRX Admin">
@@ -86,6 +91,7 @@ export default function AdminExperienceLayer() {
     {mobileMenuOpen && <div className="hrx-mobile-menu-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setMobileMenuOpen(false) }}><section className="hrx-mobile-menu" role="dialog" aria-modal="true" aria-label="Menu do HRX Admin"><header><div><span>HRX ADMIN</span><h2>Navegação</h2></div><button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Fechar">×</button></header><div className="hrx-mobile-menu-grid">
       {navigationItems.map((item) => <button type="button" key={item.destination} className={active === item.destination ? 'is-active' : ''} onClick={() => openDestination(item.destination)}><span>{item.icon}</span><strong>{item.label}</strong><small>{item.description}</small></button>)}
       <button type="button" onClick={openSettings}><span>⚙</span><strong>Configurações</strong><small>Conta e segurança</small></button>
+      <button type="button" className="hrx-mobile-signout" onClick={() => void signOut()}><span>↪</span><strong>Sair</strong><small>Encerrar sessão segura</small></button>
     </div><button type="button" className="hrx-mobile-refresh" onClick={() => window.location.reload()}>↻ Atualizar dados</button></section></div>}
 
     {settingsOpen && <section className="hrx-settings-shell" role="dialog" aria-modal="true" aria-label="Configurações do HRX Admin"><header className="hrx-settings-header"><div><span>HRX · SISTEMA</span><h2>Configurações</h2></div><button type="button" onClick={closeSettings} aria-label="Fechar">×</button></header><div className="hrx-settings-body"><aside className="hrx-settings-menu"><button type="button" className={settingsView === 'home' ? 'is-active' : ''} onClick={() => setSettingsView('home')}><span>⌂</span><div><strong>Conta</strong><small>Perfil e sessão</small></div></button><button type="button" className={settingsView === 'password' ? 'is-active' : ''} onClick={() => setSettingsView('password')}><span>⌁</span><div><strong>Segurança</strong><small>Alterar senha</small></div></button></aside><main className="hrx-settings-content">
