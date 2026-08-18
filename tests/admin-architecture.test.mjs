@@ -47,7 +47,6 @@ test('admin application is centralized behind MFA and shell-native pages avoid D
   for (const label of ['Visão executiva', 'Orçamentos', 'Clientes', 'Suspensões', 'Central de documentos', 'Painéis', 'Fiscal']) assert.match(experience, new RegExp(label))
   assert.match(shellCss, /\.hrx-admin-shell-sidebar/)
   assert.match(shellCss, /\.hrx-admin-shell-mobile-nav/)
-  assert.match(shellCss, /\.admin-live-shell>\.admin-exec-sidebar\{visibility:hidden/)
 
   for (const component of ['AdminQuotes', 'AdminClientsPage', 'AdminSuspensionsPage', 'AdminDocumentsPage', 'AdminFiscalPage', 'AdminProjectPanelsPage', 'AdminExecutiveDashboard', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \\/>`))
   assert.match(adminApp, /admin-page-system\.css/)
@@ -91,6 +90,9 @@ test('executive, operational and document pages share one visual system', async 
   assert.match(css, /--hrx-admin-sidebar-width:244px/)
   assert.match(css, /--hrx-page-bg:#f4f6f8/)
   assert.match(css, /--hrx-page-surface:#fff/)
+  assert.match(css, /\.admin-live-shell\{grid-template-columns:minmax\(0,1fr\)!important;padding-left:var\(--hrx-admin-sidebar-width\)!important\}/)
+  assert.match(css, /\.admin-live-shell>\.admin-exec-sidebar\{display:none!important\}/)
+  assert.match(css, /\.admin-exec-topbar\{height:88px!important/)
   assert.match(css, /admin-projects-close\{display:none!important\}/)
   assert.match(css, /hrx-fiscal-header button\[aria-label="Fechar"\]\{display:none!important\}/)
   assert.match(css, /@media\(max-width:760px\)/)
