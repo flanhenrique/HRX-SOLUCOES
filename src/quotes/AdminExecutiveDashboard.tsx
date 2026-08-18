@@ -21,20 +21,19 @@ async function loadRequests(session: Session) {
 
 export default function AdminExecutiveDashboard() {
   const [open, setOpen] = useState(() => window.location.hash !== '#admin/painels')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [state, setState] = useState<DashboardState>({ requests: [], activeClients: 0, documents: 0 })
 
   useEffect(() => onAdminNavigate((destination) => setOpen(destination === 'executive')), [])
 
-  const load = async () => {
+  const load = async (session?: Session | null) => {
+    const currentSession = session ?? (await hrxSupabase.auth.getSession()).data.session
+    if (!currentSession) { setLoading(false); return }
     setLoading(true); setError('')
     try {
-      const { data: sessionData } = await hrxSupabase.auth.getSession()
-      const session = sessionData.session
-      if (!session) throw new Error('session_missing')
       const [requests, clientsResult, documentsResult] = await Promise.all([
-        loadRequests(session),
+        loadRequests(currentSession),
         hrxSupabase.from('clients').select('id', { count: 'exact', head: true }).eq('active', true),
         hrxSupabase.from('hrx_documents').select('id', { count: 'exact', head: true }).neq('status', 'archived'),
       ])
@@ -43,7 +42,11 @@ export default function AdminExecutiveDashboard() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => {
+    void load()
+    const { data } = hrxSupabase.auth.onAuthStateChange((_event, session) => { if (session) void load(session) })
+    return () => data.subscription.unsubscribe()
+  }, [])
 
   const metrics = useMemo(() => {
     const active = state.requests.filter((item) => !['rejected', 'suspended'].includes(item.draft?.status ?? item.status))
@@ -66,10 +69,7 @@ export default function AdminExecutiveDashboard() {
     <main className="hrx-executive-content">
       <section className="hrx-executive-hero"><div><span>CARTEIRA EM ANÁLISE</span><strong>{currency.format(metrics.pipeline)}</strong><p>Valor potencial dos orçamentos ativos no pipeline.</p></div><aside><span>ATENÇÃO NECESSÁRIA</span><strong>{attention}</strong><p>Itens aguardando revisão, escopo ou retomada.</p></aside></section>
       <section className="hrx-executive-kpis" aria-label="Indicadores principais"><article><span>Clientes ativos</span><strong>{number.format(state.activeClients)}</strong><small>Carteira cadastrada</small></article><article><span>Aguardando revisão</span><strong>{number.format(metrics.awaiting)}</strong><small>Decisão administrativa</small></article><article><span>Aprovados</span><strong>{number.format(metrics.approved)}</strong><small>Prontos para avanço</small></article><article><span>Documentos ativos</span><strong>{number.format(state.documents)}</strong><small>Central HRX</small></article></section>
-      <section className="hrx-executive-grid">
-        <article className="hrx-executive-panel"><header><div><span>COMERCIAL</span><h2>Pipeline e decisões</h2></div><button type="button" onClick={() => navigateAdmin('quotes')}>Abrir orçamentos →</button></header><div className="hrx-executive-status-grid"><div><span>Revisão</span><strong>{metrics.awaiting}</strong></div><div><span>Escopo</span><strong>{metrics.scope}</strong></div><div><span>Suspensos</span><strong>{metrics.suspended}</strong></div></div><div className="hrx-executive-recent">{metrics.recent.map((request) => <button key={request.id} type="button" onClick={() => navigateAdmin('quotes')}><div><strong>{request.company || request.name}</strong><small>{new Date(request.created_at).toLocaleDateString('pt-BR')}</small></div><span>{currency.format(Number(request.draft?.final_amount ?? 0))}</span></button>)}{!metrics.recent.length && <p>Nenhuma solicitação recente.</p>}</div></article>
-        <article className="hrx-executive-panel is-attention"><header><div><span>GESTÃO</span><h2>Atenção necessária</h2></div></header><button type="button" className={metrics.awaiting ? 'is-warning' : ''} onClick={() => navigateAdmin('quotes')}><div><strong>Orçamentos aguardando revisão</strong><small>Validar escopo, preço e condições</small></div><b>{metrics.awaiting}</b></button><button type="button" className={metrics.scope ? 'is-warning' : ''} onClick={() => navigateAdmin('quotes')}><div><strong>Escopos incompletos</strong><small>Solicitam complementação antes da proposta</small></div><b>{metrics.scope}</b></button><button type="button" className={metrics.suspended ? 'is-warning' : ''} onClick={() => navigateAdmin('suspensions')}><div><strong>Itens suspensos</strong><small>Decidir retomada ou encerramento</small></div><b>{metrics.suspended}</b></button><button type="button" onClick={() => navigateAdmin('documents')}><div><strong>Governança documental</strong><small>{state.documents} documentos ativos na Central HRX</small></div><b>→</b></button></article>
-      </section>
+      <section className="hrx-executive-grid"><article className="hrx-executive-panel"><header><div><span>COMERCIAL</span><h2>Pipeline e decisões</h2></div><button type="button" onClick={() => navigateAdmin('quotes')}>Abrir orçamentos →</button></header><div className="hrx-executive-status-grid"><div><span>Revisão</span><strong>{metrics.awaiting}</strong></div><div><span>Escopo</span><strong>{metrics.scope}</strong></div><div><span>Suspensos</span><strong>{metrics.suspended}</strong></div></div><div className="hrx-executive-recent">{metrics.recent.map((request) => <button key={request.id} type="button" onClick={() => navigateAdmin('quotes')}><div><strong>{request.company || request.name}</strong><small>{new Date(request.created_at).toLocaleDateString('pt-BR')}</small></div><span>{currency.format(Number(request.draft?.final_amount ?? 0))}</span></button>)}{!metrics.recent.length && <p>Nenhuma solicitação recente.</p>}</div></article><article className="hrx-executive-panel is-attention"><header><div><span>GESTÃO</span><h2>Atenção necessária</h2></div></header><button type="button" className={metrics.awaiting ? 'is-warning' : ''} onClick={() => navigateAdmin('quotes')}><div><strong>Orçamentos aguardando revisão</strong><small>Validar escopo, preço e condições</small></div><b>{metrics.awaiting}</b></button><button type="button" className={metrics.scope ? 'is-warning' : ''} onClick={() => navigateAdmin('quotes')}><div><strong>Escopos incompletos</strong><small>Solicitam complementação antes da proposta</small></div><b>{metrics.scope}</b></button><button type="button" className={metrics.suspended ? 'is-warning' : ''} onClick={() => navigateAdmin('suspensions')}><div><strong>Itens suspensos</strong><small>Decidir retomada ou encerramento</small></div><b>{metrics.suspended}</b></button><button type="button" onClick={() => navigateAdmin('documents')}><div><strong>Governança documental</strong><small>{state.documents} documentos ativos na Central HRX</small></div><b>→</b></button></article></section>
       <section className="hrx-executive-quick-actions" aria-label="Áreas de gestão"><button type="button" onClick={() => navigateAdmin('clients')}><span>♙</span><div><strong>Clientes</strong><small>Carteira e histórico</small></div></button><button type="button" onClick={() => navigateAdmin('panels')}><span>▦</span><div><strong>Projetos</strong><small>Status e prioridades</small></div></button><button type="button" onClick={() => navigateAdmin('fiscal')}><span>◇</span><div><strong>Fiscal</strong><small>Cadastro tributário</small></div></button><button type="button" onClick={() => navigateAdmin('documents')}><span>▤</span><div><strong>Documentos</strong><small>Contratos e governança</small></div></button></section>
     </main>
   </section>
