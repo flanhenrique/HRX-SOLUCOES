@@ -123,13 +123,18 @@ export default function AdminClientsPage() {
   return <section className={`hrx-clients-page${mobileDetailOpen ? ' is-mobile-detail-open' : ''}`} aria-label="Clientes HRX">
     <header className="hrx-clients-header">
       <div><span>HRX SOLUTIONS · RELACIONAMENTO</span><h1>Clientes</h1><p>Carteira, histórico comercial e criação de novas oportunidades.</p></div>
-      <div><button type="button" onClick={() => setClientFormOpen(true)}>+ Cliente</button><button type="button" className="is-primary" onClick={() => openManualQuote()}>+ Orçamento</button></div>
+      <div><button type="button" onClick={() => setClientFormOpen(true)}>+ Cliente</button><button type="button" className="is-primary" onClick={() => openManualQuote()} disabled={!clients.length}>+ Orçamento</button></div>
     </header>
-    {error && <div className="hrx-clients-error">{error}</div>}
+    {error && <div className="hrx-clients-error" role="alert">{error}</div>}
     <main className="hrx-clients-content">
       <aside className="hrx-clients-list">
         <div className="hrx-clients-list-head"><div><strong>Carteira</strong><span>{clients.length}</span></div><label><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar cliente" /></label></div>
-        <div className="hrx-clients-scroll">{loading && <p className="hrx-clients-empty">Carregando clientes…</p>}{!loading && filtered.map((client) => <button key={client.id} type="button" className={selectedId === client.id ? 'is-active' : ''} onClick={() => selectClient(client.id)}><div><strong>{client.name}</strong>{!client.active && <span>Inativo</span>}</div><small>{client.company || client.email || client.phone || 'Sem contato'}</small><time>{client.last_quote_at ? new Date(client.last_quote_at).toLocaleDateString('pt-BR') : 'Sem orçamento'}</time></button>)}</div>
+        <div className="hrx-clients-scroll">
+          {loading && <div className="hrx-clients-empty"><strong>Carregando clientes…</strong><span>Atualizando carteira e histórico comercial.</span></div>}
+          {!loading && !clients.length && <div className="hrx-clients-empty"><strong>Nenhum cliente cadastrado.</strong><span>Cadastre o primeiro cliente para iniciar a carteira comercial.</span><button type="button" onClick={() => setClientFormOpen(true)}>Cadastrar cliente</button></div>}
+          {!loading && clients.length > 0 && !filtered.length && <div className="hrx-clients-empty"><strong>Nenhum cliente encontrado.</strong><span>Revise o termo informado ou limpe a busca.</span><button type="button" onClick={() => setQuery('')}>Limpar busca</button></div>}
+          {!loading && filtered.map((client) => <button key={client.id} type="button" className={selectedId === client.id ? 'is-active' : ''} onClick={() => selectClient(client.id)}><div><strong>{client.name}</strong>{!client.active && <span>Inativo</span>}</div><small>{client.company || client.email || client.phone || 'Sem contato'}</small><time>{client.last_quote_at ? new Date(client.last_quote_at).toLocaleDateString('pt-BR') : 'Sem orçamento'}</time></button>)}
+        </div>
       </aside>
       <section className="hrx-client-detail">{selected ? <>
         <button type="button" className="hrx-client-mobile-back" onClick={() => setMobileDetailOpen(false)}>← Clientes</button>
@@ -138,7 +143,7 @@ export default function AdminClientsPage() {
         <div className="hrx-client-info"><article><span>E-mail</span><strong>{selected.email || 'Não informado'}</strong></article><article><span>Telefone</span><strong>{selected.phone || 'Não informado'}</strong></article><article><span>Documento</span><strong>{selected.document || 'Não informado'}</strong></article><article><span>Origem</span><strong>{selected.source.replaceAll('_', ' ')}</strong></article></div>
         {selected.notes && <div className="hrx-client-notes"><span>OBSERVAÇÕES</span><p>{selected.notes}</p></div>}
         <div className="hrx-client-history"><header><div><span>HISTÓRICO COMERCIAL</span><h3>Orçamentos vinculados</h3></div><strong>{selectedQuotes.length}</strong></header>{!selectedQuotes.length ? <p className="hrx-clients-empty">Nenhum orçamento vinculado a este cliente.</p> : selectedQuotes.map((quote) => <article key={quote.id}><div><strong>{quote.protocol}</strong><small>{quote.source === 'admin_manual' ? 'Manual' : 'Site'}</small></div><span>{new Date(quote.created_at).toLocaleDateString('pt-BR')}</span><b>{currency.format(Number(quote.draft?.final_amount ?? 0))}</b></article>)}</div>
-      </> : <div className="hrx-clients-empty-state"><h2>Selecione um cliente</h2><p>Escolha um cadastro para ver contatos e histórico.</p></div>}</section>
+      </> : <div className="hrx-clients-empty-state"><h2>{clients.length ? 'Selecione um cliente' : 'Carteira ainda vazia'}</h2><p>{clients.length ? 'Escolha um cadastro para ver contatos e histórico.' : 'Cadastre o primeiro cliente para começar a organizar relacionamento e oportunidades.'}</p>{!clients.length && <button type="button" onClick={() => setClientFormOpen(true)}>Cadastrar cliente</button>}</div>}</section>
     </main>
 
     {clientFormOpen && <AdminClientForm onClose={() => setClientFormOpen(false)} onCreated={async (id) => { await load(); if (id) { setSelectedId(id); setMobileDetailOpen(true) } }} />}
