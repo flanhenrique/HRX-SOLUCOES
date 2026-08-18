@@ -4,6 +4,7 @@ import App from './App'
 import AdminAuthRouter from './quotes/AdminAuthRouter'
 import AdminOperationsHub from './quotes/AdminOperationsHub'
 import AdminDocumentsHub from './quotes/AdminDocumentsHub'
+import VoltZipImporter from './quotes/VoltZipImporter'
 import AdminFiscalHub from './quotes/AdminFiscalHub'
 import AdminProjectPanels from './quotes/AdminProjectPanels'
 import AdminExperienceLayer from './quotes/AdminExperienceLayer'
@@ -33,7 +34,7 @@ if (isAdminRoute) configureAdminAppShell()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isAdminRoute ? (
-      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><AdminFiscalHub /><AdminProjectPanels /><AdminLegacyNavigationBridge /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
+      <><AdminPwaBridge /><AdminPwaUpdater /><AdminOperationsHub /><AdminDocumentsHub /><VoltZipImporter /><AdminFiscalHub /><AdminProjectPanels /><AdminLegacyNavigationBridge /><AdminExperienceLayer /><SuspendedQuoteGuard /><AdminAuthRouter /></>
     ) : (
       <><App /><PublicPortfolioEnhancements /></>
     )}
