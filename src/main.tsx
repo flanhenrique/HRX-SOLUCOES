@@ -20,7 +20,6 @@ import './brand-fix.css'
 import './quotes/rules.css'
 import './quotes/app-shell.css'
 import './quotes/admin-refresh.css'
-import './quotes/mobile-create-quote.css'
 import './nexus-screen.css'
 import './portfolio-corrections.css'
 
