@@ -35,7 +35,7 @@ const areas: Area[] = [
   { key: 'clients', title: 'Clientes', description: 'Dossiês de clientes, propostas, contratos, entregas e aceites.', governance: 'Controle por cliente e projeto', folders: ['Hortifruti Revolução', 'Novos clientes', 'Encerrados'] },
   { key: 'templates', title: 'Modelos', description: 'Modelos controlados de propostas, contratos, atas, checklists e relatórios.', governance: 'Controle de versão', folders: ['Propostas', 'Contratos e termos', 'Atas', 'Checklists', 'Relatórios'] },
   { key: 'internal', title: 'Projetos internos', description: 'Documentação funcional, técnica e operacional dos produtos HRX.', governance: 'Gestão de produto', folders: ['VOLT', 'NEXUS', 'HRX Admin'] },
-  { key: 'commercial', title: 'Comercial', description: 'Prospecção, propostas comerciais, negociações e referências.', governance: 'Acesso interno', folders: ['Apresentações', 'Propostas enviadas', 'Negociações', 'Referências'] },
+  { key: 'commercial', title: 'Comercial', description: 'Prospecção, materiais comerciais, propostas, negociações e referências.', governance: 'Acesso interno', folders: ['Materiais comerciais', 'Apresentações', 'Propostas enviadas', 'Negociações', 'Referências'] },
   { key: 'finance', title: 'Financeiro', description: 'Documentos fiscais, comprovantes, controles e conciliações.', governance: 'Retenção fiscal', folders: ['Notas fiscais', 'Comprovantes', 'Controles', 'Conciliação documental'] },
   { key: 'legal', title: 'Jurídico e contratos', description: 'Contratos, termos, aditivos, vigências, obrigações e riscos.', governance: 'Revisão contratual', folders: ['Contratos vigentes', 'Em revisão', 'Aditivos e termos', 'Encerrados'] },
   { key: 'archive', title: 'Arquivo histórico', description: 'Material encerrado, substituído ou obsoleto mantido para rastreabilidade.', governance: 'Somente leitura', folders: ['Substituídos', 'Encerrados', 'Legado'] },
@@ -161,6 +161,18 @@ export default function AdminDocumentsPage() {
 
   const openDocument = async (document: DocumentRow) => {
     clearMessage()
+    if (document.object_path.startsWith('external:')) {
+      const target = document.object_path.slice('external:'.length).trim()
+      try {
+        const url = new URL(target, window.location.origin)
+        if (url.protocol !== 'https:' && url.origin !== window.location.origin) throw new Error('invalid_protocol')
+        window.open(url.toString(), '_blank', 'noopener,noreferrer')
+      } catch {
+        showMessage('error', 'A referência externa deste documento é inválida.')
+      }
+      return
+    }
+
     const { data, error } = await hrxSupabase.storage.from('hrx-documents').createSignedUrl(document.object_path, 60)
     if (error || !data?.signedUrl) {
       showMessage('error', 'Não foi possível gerar o acesso temporário ao documento.')
@@ -202,7 +214,7 @@ export default function AdminDocumentsPage() {
       {isVolt && <VoltDocumentsWorkspace />}
 
       {area && folder && !isVolt && <>
-        <section className="hrx-documents-storage-bar"><div><span>{documents.length} documento(s)</span><small>Limite de 25 MB por arquivo · URL temporária de 60 segundos</small></div><label className={uploading ? 'is-disabled' : ''}>{uploading ? 'Enviando…' : '+ Adicionar documento'}<input type="file" accept={acceptedTypes} disabled={uploading} onChange={(event) => void uploadDocument(event)} /></label></section>
+        <section className="hrx-documents-storage-bar"><div><span>{documents.length} documento(s)</span><small>Arquivos privados e referências controladas · limite de 25 MB por upload</small></div><label className={uploading ? 'is-disabled' : ''}>{uploading ? 'Enviando…' : '+ Adicionar documento'}<input type="file" accept={acceptedTypes} disabled={uploading} onChange={(event) => void uploadDocument(event)} /></label></section>
         {message && <div className={`hrx-documents-page-message is-${messageTone}`} role={messageTone === 'error' ? 'alert' : 'status'}>{message}</div>}
         <section className="hrx-documents-file-list">
           {loading && <div className="hrx-documents-empty"><strong>Carregando documentos…</strong><span>Atualizando o conteúdo protegido desta categoria.</span></div>}
