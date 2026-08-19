@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#09243e" />
+  <meta name="description" content="Catálogo de serviços da HRX Solutions: sistemas, sites, automação, integrações, dados, inteligência artificial e digitalização." />
+  <title>Serviços | HRX Solutions</title>
+  <style>
+    :root{--navy:#09243e;--navy2:#0b2a49;--navy3:#103456;--green:#42cf79;--green2:#79e65d;--ink:#10283f;--muted:#607487;--line:#dce5eb;--paper:#f6f9fb;--white:#fff;--shadow:0 26px 70px rgba(4,28,49,.12)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper);line-height:1.55}a{color:inherit}.wrap{width:min(1160px,calc(100% - 40px));margin:0 auto}
+    .hero{color:#fff;background:radial-gradient(circle at 82% 10%,rgba(66,207,121,.2),transparent 28rem),radial-gradient(circle at 60% 25%,rgba(39,149,218,.26),transparent 32rem),linear-gradient(160deg,var(--navy3),var(--navy2) 48%,var(--navy));padding:28px 0 78px;overflow:hidden}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:24px}.logo{width:172px;height:auto;display:block}.back{font-size:.87rem;text-decoration:none;color:#dbe7ef;border:1px solid rgba(255,255,255,.18);padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.05)}
+    .hero-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:64px;align-items:end;padding-top:76px}.eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:#8fe7ac}.hero h1{font-size:clamp(3rem,7vw,5.6rem);line-height:.96;letter-spacing:-.055em;margin:14px 0 24px;max-width:780px}.hero h1 em{font-style:normal;color:#78e76e}.hero p{max-width:680px;color:#cfdae4;font-size:1.08rem}.hero-note{border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:24px;background:rgba(255,255,255,.055);backdrop-filter:blur(14px)}.hero-note strong{display:block;font-size:1.15rem;margin-bottom:8px}.hero-note span{display:block;color:#c6d4df;font-size:.92rem}
+    main{padding:72px 0 84px}.intro{display:grid;grid-template-columns:.8fr 1.2fr;gap:52px;margin-bottom:42px}.intro h2{margin:0;font-size:clamp(2rem,4vw,3.25rem);line-height:1.02;letter-spacing:-.045em}.intro p{margin:0;color:var(--muted);font-size:1.02rem;max-width:650px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 8px 34px rgba(18,45,68,.045)}.num{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:12px;background:#e9f9ee;color:#16814b;font-weight:900;font-size:.83rem}.card h3{font-size:1.35rem;letter-spacing:-.025em;margin:18px 0 8px}.card>p{color:var(--muted);margin:0 0 18px}.card ul{margin:0;padding:0;list-style:none;columns:2;column-gap:22px}.card li{break-inside:avoid;margin:0 0 8px;padding-left:16px;position:relative;font-size:.9rem;color:#344e64}.card li:before{content:"";position:absolute;left:0;top:.66em;width:6px;height:6px;border-radius:50%;background:var(--green)}
+    .secondary{margin-top:60px}.secondary-title{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:20px}.secondary-title h2{font-size:2rem;letter-spacing:-.035em;margin:0}.secondary-title p{margin:0;color:var(--muted);max-width:560px}.mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.mini{background:linear-gradient(180deg,#fff,#f8fbfc);border:1px solid var(--line);border-radius:20px;padding:22px}.mini h3{font-size:1.02rem;margin:0 0 8px}.mini p{font-size:.88rem;color:var(--muted);margin:0}
+    .process{margin-top:68px;background:linear-gradient(145deg,#0f3556,#082640);color:#fff;border-radius:30px;padding:38px;box-shadow:var(--shadow)}.process-head{display:flex;justify-content:space-between;gap:32px;margin-bottom:30px}.process h2{font-size:2.2rem;letter-spacing:-.04em;margin:0}.process-head p{color:#cbd9e3;max-width:520px;margin:0}.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.step{padding:18px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}.step b{display:block;color:#7ce785;font-size:.75rem;letter-spacing:.12em;margin-bottom:9px}.step strong{display:block;margin-bottom:6px}.step span{color:#bfd0dc;font-size:.85rem}
+    .cta{margin-top:64px;display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;padding:34px 38px;background:#fff;border:1px solid var(--line);border-radius:26px}.cta h2{margin:0 0 8px;font-size:1.9rem;letter-spacing:-.035em}.cta p{margin:0;color:var(--muted)}.button{display:inline-flex;text-decoration:none;background:linear-gradient(135deg,#70e968,#34c77b);color:#082e25;font-weight:900;padding:14px 20px;border-radius:14px;white-space:nowrap}
+    footer{border-top:1px solid var(--line);padding:26px 0 36px;color:#718394;font-size:.84rem}.footer{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}.footer a{text-decoration:none}
+    @media(max-width:850px){.hero-grid,.intro{grid-template-columns:1fr}.hero-grid{gap:30px;padding-top:52px}.hero h1{font-size:clamp(3rem,14vw,4.6rem)}.grid{grid-template-columns:1fr}.mini-grid,.steps{grid-template-columns:repeat(2,1fr)}.secondary-title,.process-head{display:block}.secondary-title p,.process-head p{margin-top:12px}.cta{grid-template-columns:1fr}.button{justify-content:center}}
+    @media(max-width:540px){.wrap{width:min(100% - 28px,1160px)}.hero{padding-bottom:54px}.logo{width:145px}.back{padding:8px 11px;font-size:.78rem}.hero-grid{padding-top:44px}.hero-note{padding:20px}.card{padding:22px}.card ul{columns:1}.mini-grid,.steps{grid-template-columns:1fr}.process{padding:26px 20px;border-radius:24px}.cta{padding:26px 22px}.intro{gap:18px}}
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="top"><a href="/#inicio" aria-label="HRX Solutions"><img class="logo" src="/hrx-logo.svg" alt="HRX Solutions" /></a><a class="back" href="/#inicio">← Voltar ao site</a></div>
+      <div class="hero-grid">
+        <div><div class="eyebrow">CATÁLOGO DE SERVIÇOS · 2026</div><h1>Tecnologia para <em>operações reais.</em></h1><p>Sistemas, automação, integrações, dados e experiências digitais desenvolvidos a partir do que a sua operação precisa resolver — sem pacotes genéricos.</p></div>
+        <aside class="hero-note"><strong>Projetos sob medida</strong><span>Este catálogo não apresenta preços fixos. Escopo, prazo e investimento são definidos após análise da necessidade e formalizados em proposta comercial.</span></aside>
+      </div>
+    </div>
+  </header>
+
+  <main><div class="wrap">
+    <section class="intro"><div><div class="eyebrow" style="color:#1a8c54">NOSSAS FRENTES</div><h2>Da necessidade à solução implantada.</h2></div><p>A HRX combina desenvolvimento, organização de processos e tecnologia aplicada. Um projeto pode envolver uma única frente ou integrar várias delas em uma solução completa.</p></section>
+
+    <section class="grid">
+      <article class="card"><span class="num">01</span><h3>Sistemas & Aplicações</h3><p>Soluções web e PWA para rotinas internas, clientes e operações.</p><ul><li>Sistemas administrativos</li><li>Portais e áreas restritas</li><li>Sistemas de pedidos</li><li>Gestão de cadastros</li><li>Regras de negócio</li><li>Perfis e permissões</li><li>Painéis administrativos</li><li>Aplicações PWA instaláveis</li></ul></article>
+      <article class="card"><span class="num">02</span><h3>Sites & Portais</h3><p>Presença digital profissional conectada à operação da empresa.</p><ul><li>Sites institucionais</li><li>Landing pages</li><li>Portais empresariais</li><li>Área do cliente</li><li>Catálogos digitais</li><li>Formulários e atendimento</li><li>Integração com WhatsApp</li><li>Domínio, DNS e HTTPS</li></ul></article>
+      <article class="card"><span class="num">03</span><h3>Automação de Processos</h3><p>Redução de tarefas manuais e repetitivas com fluxos estruturados.</p><ul><li>Automação de cadastros</li><li>Atualização de registros</li><li>Geração de documentos</li><li>Alertas e notificações</li><li>Fluxos de aprovação</li><li>Validações e conferências</li><li>Processamento de dados</li><li>Rotinas administrativas</li></ul></article>
+      <article class="card"><span class="num">04</span><h3>Integração de Sistemas</h3><p>Conexão entre ferramentas para reduzir retrabalho e fragmentação.</p><ul><li>APIs REST</li><li>Webhooks</li><li>ERP</li><li>CRM</li><li>Bancos de dados</li><li>Planilhas</li><li>Plataformas de atendimento</li><li>Serviços externos</li></ul></article>
+      <article class="card"><span class="num">05</span><h3>Dados & Dashboards</h3><p>Informação operacional transformada em acompanhamento e decisão.</p><ul><li>Indicadores de desempenho</li><li>KPIs</li><li>Dashboards executivos</li><li>Painéis operacionais</li><li>Metas e tendências</li><li>Relatórios gerenciais</li><li>Consolidação de dados</li><li>Exportações e rastreabilidade</li></ul></article>
+      <article class="card"><span class="num">06</span><h3>IA & Digitalização</h3><p>Inteligência artificial aplicada e transformação de processos manuais.</p><ul><li>Assistentes internos</li><li>Consulta de documentos</li><li>Busca semântica</li><li>Apoio a relatórios</li><li>Classificação de informações</li><li>Análise de dados</li><li>Agentes operacionais</li><li>Digitalização de processos</li></ul></article>
+    </section>
+
+    <section class="secondary"><div class="secondary-title"><h2>Outras frentes</h2><p>Capacidades complementares que sustentam a implantação, a governança e a evolução das soluções.</p></div><div class="mini-grid">
+      <article class="mini"><h3>Central de Documentos</h3><p>Organização, indexação, versionamento, pesquisa e controle de acesso a documentos empresariais.</p></article>
+      <article class="mini"><h3>Infraestrutura & Deploy</h3><p>Domínio, DNS, HTTPS, hospedagem, banco de dados e ambientes de produção.</p></article>
+      <article class="mini"><h3>Suporte & Evolução</h3><p>Manutenção corretiva, evolutiva, otimização e novas funcionalidades.</p></article>
+      <article class="mini"><h3>Projetos Personalizados</h3><p>Soluções que combinam diferentes frentes para atender uma necessidade específica.</p></article>
+    </div></section>
+
+    <section class="process"><div class="process-head"><h2>Como trabalhamos</h2><p>O projeto começa pelo problema, não pela tecnologia. A ferramenta é escolhida depois de compreender a operação e o resultado esperado.</p></div><div class="steps">
+      <div class="step"><b>ETAPA 01</b><strong>Entender</strong><span>Contexto, problema, usuários, ferramentas atuais e objetivo.</span></div>
+      <div class="step"><b>ETAPA 02</b><strong>Estruturar</strong><span>Escopo, prioridades, regras, integrações, riscos e critérios de aceite.</span></div>
+      <div class="step"><b>ETAPA 03</b><strong>Construir</strong><span>Desenvolvimento, validação, testes e ajustes sobre a operação real.</span></div>
+      <div class="step"><b>ETAPA 04</b><strong>Entregar & evoluir</strong><span>Publicação, documentação, acompanhamento e evolução contratada.</span></div>
+    </div></section>
+
+    <section class="cta"><div><h2>Tem uma operação que precisa funcionar melhor?</h2><p>Apresente o cenário. A HRX analisa a necessidade antes de definir escopo e proposta.</p></div><a class="button" href="mailto:comercial@hrxsolutions.com.br?subject=Solicita%C3%A7%C3%A3o%20de%20an%C3%A1lise%20de%20projeto">Solicitar análise →</a></section>
+  </div></main>
+
+  <footer><div class="wrap footer"><span>© 2026 HRX Solutions · Manaus, Amazonas · Brasil</span><span><a href="mailto:contato@hrxsolutions.com.br">contato@hrxsolutions.com.br</a> · <a href="mailto:comercial@hrxsolutions.com.br">comercial@hrxsolutions.com.br</a></span></div></footer>
+</body>
+</html>
