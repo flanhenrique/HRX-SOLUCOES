@@ -30,7 +30,7 @@ const PAGE_TITLES: Record<PageId, string> = {
 const VOLT_ICON = 'https://raw.githubusercontent.com/flanhenrique/Volt-consumo/main/icon.svg'
 const SOMMA_LOGO = '/somma-logo.svg'
 const SOMMA_HERO = 'https://raw.githubusercontent.com/flanhenrique/somma/main/assets/hotel-hero-reference.jpg'
-const HORTIFRUTI_URL = 'https://hortifruti-revolucao.vercel.app'
+const HORTIFRUTI_URL = 'https://hortifruti-revolucao.onrender.com'
 
 const solutions: Solution[] = [
   { icon: '◎', title: 'Gestão', description: 'Organizamos operações, estruturas e rotinas para gerar mais eficiência, controle e clareza.' },
@@ -253,7 +253,7 @@ function HortiSitePreview() {
   return (
     <div className="project-visual real-preview horti-preview" aria-label="Visualização do site institucional do Hortifruti Revolução">
       <div className="horti-browser">
-        <div className="horti-browser-top"><i /><i /><i /><span>hortifruti-revolucao.vercel.app</span></div>
+        <div className="horti-browser-top"><i /><i /><i /><span>hortifruti-revolucao.onrender.com</span></div>
         <div className="horti-site-shot">
           <div className="horti-site-nav">
             <HortiBrandMini />
@@ -276,7 +276,7 @@ function HortiAppPreview() {
   return (
     <div className="project-visual real-preview horti-preview" aria-label="Visualização do aplicativo do Hortifruti Revolução">
       <div className="horti-browser horti-app-browser">
-        <div className="horti-browser-top"><i /><i /><i /><span>hortifruti-revolucao.vercel.app/cliente</span></div>
+        <div className="horti-browser-top"><i /><i /><i /><span>hortifruti-revolucao.onrender.com/cliente</span></div>
         <div className="horti-app-shot">
           <aside className="horti-app-sidebar">
             <HortiBrandMini />
