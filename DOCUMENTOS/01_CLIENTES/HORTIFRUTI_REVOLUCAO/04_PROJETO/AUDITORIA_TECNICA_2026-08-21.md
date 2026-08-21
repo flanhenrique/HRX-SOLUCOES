@@ -433,3 +433,18 @@ Esta evidência ainda não homologa o ciclo ponta a ponta: a branch possui um ad
 - Validação acumulada: **112 testes aprovados** e build de produção aprovado. O lint apontou uma variável não utilizada, removida antes do commit final.
 
 O próximo passo operacional é autenticar novamente como administrador, aprovar o pedido `#00008` pelas transições permitidas e prosseguir até compras. Fornecedores continuam sendo bloqueio para a etapa seguinte.
+
+## Aprovação administrativa e publicação das branches — 21/08/2026
+
+- Login administrativo de teste confirmado no Auth isolado.
+- O dashboard reconheceu o pedido `#00008`, a notificação e a fila de validação.
+- A primeira tentativa de transição revelou parâmetros nulos sem cast explícito no endpoint de status; o PostgreSQL recusou a consulta e o pedido permaneceu inalterado.
+- Os parâmetros opcionais passaram a ter tipos SQL explícitos e receberam regressão automatizada.
+- O pedido `#00008` percorreu `received → validating → approved` por chamadas reais ao endpoint, sem atualização direta de status no banco.
+- Histórico e interface permaneceram sincronizados.
+- Validação final: **112 testes aprovados**, ESLint aprovado e build de produção aprovado.
+- Branch da aplicação publicada no GitHub: `agent/auditoria-homologacao-final-20260821`, último commit `1d5ec2b`.
+- Branch documental publicada no GitHub: `agent/auditoria-hortifruti-20260821`.
+- Não houve merge, migration no banco principal ou deploy no Render.
+
+Antes de merge/deploy, devem ser aplicadas de forma controlada no `main` Neon as migrations `20260821_fiscal_snapshot_v2.sql` e `20260821_client_order_atomic.sql`, seguidas de smoke test. A continuidade da compra permanece bloqueada por ausência de fornecedor QA controlado.
