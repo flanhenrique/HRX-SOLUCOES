@@ -310,3 +310,79 @@ Commit: `1f047e0` — `feat: amplia espelho fiscal versionado`.
 Commit corretivo: `5a91ea8` — `fix: alinha permissão fiscal ao papel RLS`.
 
 Validação final desta rodada: **110 testes aprovados**, ESLint aprovado e build de produção aprovado.
+
+## Atualização de governança e homologação — 21/08/2026
+
+Esta atualização substitui qualquer interpretação anterior de que a validação técnica ou responsiva equivaleria à homologação do produto.
+
+**Decisão oficial:** a auditoria técnica foi concluída, porém o projeto **não está homologado**. A homologação permanece condicionada à evolução da experiência administrativa desktop, à regularização dos assets PWA, à disponibilização de dados reais e às validações operacionais, fiscais e de infraestrutura descritas abaixo.
+
+### Matriz atualizada
+
+| Área | Estado | Evidência e critério atual |
+|---|---|---|
+| Auditoria técnica de código | **CONCLUÍDO** | Lint aprovado, 110/110 testes aprovados e build de produção concluído. Isso comprova consistência técnica, não homologação operacional. |
+| Segurança estrutural | **PARCIAL** | Guards, RLS, isolamento e headers possuem cobertura; testes autenticados de homologação e CSP permanecem pendentes. |
+| Desktop administrativo | **PENDENTE** | A interface continua excessivamente semelhante ao PWA. Responsividade e ausência de overflow não atendem ao critério de central administrativa desktop completa. |
+| Mobile | **PARCIAL** | Contratos responsivos e alvos de toque foram validados. A rodada final deve ocorrer após a estabilização do produto. |
+| PWA | **PENDENTE** | Manifest e service worker existem, mas faltam assets oficiais íntegros 192×192 e 512×512 e homologação efetiva de instalação/atualização. |
+| Dados QA-E2E | **PENDENTE** | Há dados identificados como QA no banco padrão. A limpeza deve ser preparada e revisada, sem execução até autorização expressa. |
+| Fornecedores e vínculos | **PENDENTE** | Estrutura técnica existe; faltam fornecedores reais e vínculos produto × fornecedor. Nenhum dado deve ser inventado. |
+| Fiscal | **BLOQUEADO** | Depende de dados reais do emitente, classificação fiscal dos produtos, orientação contábil/fiscal, definição entre NF-e/NFS-e e emissor/provedor. |
+| Pedido piloto ponta a ponta | **BLOQUEADO** | Depende de dados operacionais e fiscais reais, fornecedor controlado e usuários de homologação. Não será simulado por atalhos de banco ou status. |
+| Web Push | **BLOQUEADO** | A infraestrutura tem cobertura técnica, mas a homologação exige dispositivo real, conta cliente e evento operacional controlado. |
+| Render | **PENDENTE** | Logs, métricas, configuração e deploy precisam de validação autorizada. Nenhum deploy foi executado nesta rodada. |
+| Manual de uso | **PARCIAL** | A versão inicial foi produzida e arquivada; deverá ser atualizada somente com o comportamento efetivamente homologado. |
+| Homologação final do projeto | **PENDENTE** | Depende da conclusão ou aceite formal dos itens P1 a P10. |
+
+### Critério obrigatório para o desktop administrativo
+
+O desktop não será considerado homologado enquanto funcionar essencialmente como o PWA redimensionado. Ele deve entregar ganho real de produtividade e capacidade analítica em telas grandes, incluindo:
+
+- sidebar e navegação administrativa desktop persistentes;
+- dashboard operacional completo e KPIs;
+- tabelas densas e maior quantidade de informação simultânea;
+- filtros avançados, pesquisa, ordenação e paginação quando aplicável;
+- ações em lote e painéis de detalhes;
+- histórico, alertas e pendências operacionais e fiscais;
+- aproveitamento efetivo de telas grandes sem prejudicar a experiência móvel.
+
+Mobile/PWA e desktop podem compartilhar componentes, APIs, regras de negócio e identidade visual. Eles não devem, porém, oferecer a mesma experiência apenas redimensionada.
+
+### Backlog restante oficial
+
+| Prioridade | Entrega | Estado | Condição de conclusão |
+|---|---|---|---|
+| P1 | Desktop administrativo completo | **PENDENTE** | Atender integralmente aos critérios de produtividade, densidade, navegação, tabelas, filtros, detalhes, histórico e alertas definidos acima. |
+| P2 | Corrigir assets PWA oficiais 192×192 e 512×512 | **PENDENTE** | Receber/exportar assets oficiais íntegros, incluir variantes adequadas e validar instalação. |
+| P3 | Preparar limpeza controlada dos dados QA-E2E | **PENDENTE** | Produzir inventário, dependências, backup e script revisável; não executar sem autorização. |
+| P4 | Preparar fornecedores e vínculos produto × fornecedor | **PENDENTE** | Receber dados reais, validar cadastro e vínculos sem registros inventados. |
+| P5 | Pendências fiscais e definição NF-e/NFS-e | **BLOQUEADO** | Obter emitente, classificação dos produtos, orientação contábil/fiscal, definição documental e emissor/provedor. |
+| P6 | Executar pedido piloto ponta a ponta | **BLOQUEADO** | Dispor de dados reais/controlados e percorrer todas as transições server-side sem atalhos. |
+| P7 | Homologar Web Push em dispositivo real | **BLOQUEADO** | Usar conta cliente, dispositivo inscrito e evento operacional controlado em foreground/background. |
+| P8 | Validar logs, métricas e deploy no Render | **PENDENTE** | Confirmar workspace, revisar ambiente e executar validação autorizada sem deploy automático. |
+| P9 | Reexecutar QA final desktop/mobile/PWA | **PENDENTE** | Executar após P1–P8 aplicáveis e registrar evidências nas resoluções e dispositivos definidos. |
+| P10 | Atualizar manual com comportamento homologado | **PARCIAL** | Revisar a versão arquivada somente depois do QA e da homologação efetiva. |
+
+### Bloqueios fiscais externos
+
+Permanecem formalmente externos e não podem ser solucionados com dados fictícios:
+
+- dados reais e completos do emitente;
+- NCM, CEST, CFOP, CST/CSOSN e demais classificações aplicáveis aos produtos;
+- orientação do responsável contábil/fiscal;
+- definição do documento fiscal aplicável à operação, incluindo decisão entre NF-e e NFS-e;
+- definição, credenciamento e configuração do emissor/provedor.
+
+Até a resolução desses pontos, qualquer artefato gerado pelo sistema deve ser tratado como espelho ou pré-faturamento, nunca como documento fiscal oficialmente autorizado.
+
+### Controle documental
+
+Os entregáveis desta auditoria foram classificados no arquivo oficial do cliente:
+
+- `04_PROJETO/AUDITORIAS/Auditoria_Tecnica_Hortifruti_Revolucao_2026-08-21.docx`;
+- `04_PROJETO/AUDITORIAS/Auditoria_Tecnica_Hortifruti_Revolucao_2026-08-21.pdf`;
+- `05_ENTREGAS/MANUAIS/Manual_de_Uso_Hortifruti_Revolucao_2026-08-21.docx`;
+- `05_ENTREGAS/MANUAIS/Manual_de_Uso_Hortifruti_Revolucao_2026-08-21.pdf`.
+
+Nenhum código da aplicação HRX Solutions foi alterado ou reutilizado. Nenhum dado QA-E2E foi removido, nenhum dado fiscal ou de fornecedor foi criado, e nenhum push, merge ou deploy foi realizado.
