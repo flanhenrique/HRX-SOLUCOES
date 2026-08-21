@@ -403,3 +403,19 @@ Foi executada uma verificação não autenticada no ambiente oficial do Render, 
 ### Limite desta evidência
 
 O checkout local não possui `.env` nem credenciais de homologação. Por segurança, ele não foi conectado ao banco principal. Assim, esta rodada não valida login, isolamento autenticado, painel administrativo, área do cliente nem pedido piloto. Esses itens continuam condicionados a um ambiente isolado com usuários de cliente e administrador, fornecedor controlado e dados fiscais reais.
+
+## QA administrativo autenticado em branch isolada — 21/08/2026
+
+Após disponibilização de login de teste, a aplicação local foi conectada exclusivamente à branch Neon `qa-fiscal-snapshot-v2-20260821` (`br-steep-mouse-avehupuj`), incluindo a URL Auth própria da branch. Nenhuma conexão local foi feita com o banco principal.
+
+- O login de teste foi reconhecido com perfil administrativo e redirecionou corretamente para `/admin`.
+- O dashboard administrativo foi validado em 1440 × 900, com sidebar persistente, indicadores, filas, alertas e ausência de overflow horizontal.
+- A gestão de pedidos apresentou pesquisa, período, cliente, status, produto e tabela com cinco pedidos QA.
+- A API carregou sem erros de console.
+- Foi identificada e corrigida a exibição `Invalid Date` na coluna de entrega; valores ISO, timestamps e valores inválidos agora recebem tratamento seguro.
+- Em 390 × 844, a gestão de pedidos permaneceu sem overflow e preservou navegação móvel e filtros.
+- Os botões `Abrir`, inicialmente medidos em 39 × 44 px, passaram a medir 44 × 44 px.
+- O fluxo de atualização do PWA detectou nova versão, apresentou a ação `Atualizar agora` e recarregou os assets sem reinstalação.
+- Validação final acumulada: **111 testes aprovados**, ESLint aprovado e build de produção aprovado.
+
+Esta evidência ainda não homologa o ciclo ponta a ponta: a branch possui um administrador e um cliente ativo, porém não possui conta cliente nem vínculo cliente–usuário. Fornecedor controlado e dados fiscais reais também continuam ausentes.
