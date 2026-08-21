@@ -249,3 +249,40 @@ O critério de aceite da visão desktop não será apenas “sem overflow”. El
 
 - **Merge:** ainda não recomendado sem QA visual autenticado em 1440 px e 390×844 e revisão final do diff.
 - **Deploy:** não recomendado. Permanecem bloqueios de dados fiscais, fornecedores reais, ciclo ponta a ponta, dispositivo PWA e Web Push controlado.
+
+## Continuação — Web Push, ciclo de QA e espelho fiscal
+
+### Ciclo operacional em branch Neon isolada
+
+- Branch inspecionada: `qa-simulated-order-20260820` (`br-red-haze-av3a54a0`).
+- Estado encontrado: 1 pedido em `received`, 3 produtos, 0 fornecedores, 0 vínculos, 0 lotes e nenhum pedido piloto selecionado.
+- Nenhuma escrita foi executada nessa branch.
+- O ciclo não foi forçado por SQL porque isso contornaria as transições server-side. Para prosseguir são necessários fornecedor controlado e credenciais de cliente/administrador de homologação.
+
+### Web Push
+
+- endpoints agora exigem HTTPS, não aceitam credenciais embutidas, portas não padrão, localhost nem endereços privados IPv4 comuns;
+- tamanhos de endpoint e chaves passam a ser limitados;
+- subscriptions expiradas continuam sendo inativadas somente em respostas `404/410`;
+- falhas `429` e `5xx` recebem exatamente uma tentativa adicional curta;
+- falhas finais são contabilizadas sem registrar o endpoint secreto;
+- nenhum push real foi enviado.
+
+Commit: `6e44b97` — `fix: endurece entrega e cadastro Web Push`.
+
+### Espelho fiscal v2
+
+- criada a migration `20260821_fiscal_snapshot_v2.sql`, ainda não aplicada ao Neon;
+- snapshots futuros passam a registrar versão, endereço estruturado completo do emitente e destinatário, contatos, dados operacionais do pedido, informações adicionais e rastreabilidade;
+- itens continuam preservando quantidade, unidade, valores e classificação fiscal;
+- exportação detecta v1/v2 e mantém compatibilidade com relatórios antigos;
+- a migration revoga execução pública e mantém a função restrita ao papel administrativo.
+
+Commit: `1f047e0` — `feat: amplia espelho fiscal versionado`.
+
+### Validação acumulada
+
+- Testes automatizados: **108 aprovados, 0 falhas**.
+- ESLint: **aprovado**.
+- Build de produção e TypeScript: **aprovados**.
+- A migration fiscal nova precisa ser validada em branch temporária Neon e aprovada antes de aplicação no banco principal.
