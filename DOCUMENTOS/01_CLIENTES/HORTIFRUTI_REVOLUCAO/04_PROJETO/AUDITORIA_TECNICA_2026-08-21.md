@@ -286,3 +286,27 @@ Commit: `1f047e0` — `feat: amplia espelho fiscal versionado`.
 - ESLint: **aprovado**.
 - Build de produção e TypeScript: **aprovados**.
 - A migration fiscal nova precisa ser validada em branch temporária Neon e aprovada antes de aplicação no banco principal.
+
+### Validação da migration fiscal em branch Neon temporária
+
+- Branch: `qa-fiscal-snapshot-v2-20260821`.
+- Branch ID: `br-steep-mouse-avehupuj`.
+- Parent: `br-silent-glitter-avegm7p3` (`main`).
+- A função fiscal v2 compilou e foi instalada com sucesso somente na branch temporária.
+- A primeira validação revelou referência incorreta ao papel inexistente `app_admin`.
+- A migration foi corrigida para o papel RLS real `hortifruti_app`.
+- Verificações aprovadas:
+  - função presente;
+  - snapshot v2 presente;
+  - endereço completo presente;
+  - informações adicionais presentes;
+  - rastreabilidade presente;
+  - execução por `PUBLIC` revogada;
+  - execução por `hortifruti_app` concedida;
+  - chamada controlada executada sob `hortifruti_app` e rejeição correta de pedido inexistente.
+- A branch principal Neon não foi alterada.
+- A branch temporária foi mantida como evidência até decisão de aplicação ou descarte.
+
+Commit corretivo: `5a91ea8` — `fix: alinha permissão fiscal ao papel RLS`.
+
+Validação final desta rodada: **110 testes aprovados**, ESLint aprovado e build de produção aprovado.
