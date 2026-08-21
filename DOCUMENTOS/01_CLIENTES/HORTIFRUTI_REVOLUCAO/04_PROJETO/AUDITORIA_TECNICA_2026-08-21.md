@@ -199,3 +199,53 @@ O critério de aceite da visão desktop não será apenas “sem overflow”. El
 ---
 
 **Status desta auditoria:** aberta. Os itens de homologação final só devem ser marcados como concluídos após o teste ponta a ponta e a correção dos bloqueios fiscais, documentais e da arquitetura administrativa desktop identificados.
+
+## Execução técnica posterior à matriz
+
+### Correções realizadas
+
+1. **Central administrativa desktop — primeira etapa estrutural**
+   - adicionada barra de ferramentas exclusiva para desktop com pesquisa de pedidos recentes, filtro por status e atalhos administrativos;
+   - adicionada matriz densa com dez filas e exceções operacionais simultâneas;
+   - pedidos recentes passaram a usar tabela administrativa no desktop;
+   - abaixo de 820 px, os controles exclusivos de desktop são removidos e a tabela assume apresentação em cartões com alvos de toque adequados;
+   - backend e regras de negócio foram preservados.
+
+2. **Fornecedores e vínculos produto × fornecedor**
+   - interface passou a permitir tornar fornecedor preferencial por produto;
+   - vínculos podem ser inativados e reativados sem remoção do histórico;
+   - criação e reativação de vínculo exigem produto e fornecedor ativos no servidor;
+   - fornecedor inativo não pode receber novo vínculo pela interface;
+   - dados reais continuam bloqueados: produção permanece com zero fornecedores e zero vínculos.
+
+3. **Cautela de entrega**
+   - integrada a implementação já existente na branch `audit/cautela-documento-final`, sem recriação;
+   - logo oficial e marca-d'água aplicadas;
+   - duas vias na mesma folha com linha e indicador visual de corte;
+   - campos separados para entregador, recebedor, documento, data/hora e carimbo;
+   - CSS possui `@page { size: A4 portrait; }` e grade de impressão para manter as duas vias juntas;
+   - densidade adaptativa aplicada para pedidos médios e extensos;
+   - validação física de PDF com pedidos reais ainda depende de pedido separado disponível em homologação.
+
+### Validação após as correções
+
+- Testes automatizados: **106 aprovados, 0 falhas**.
+- ESLint: **aprovado**.
+- TypeScript/build Next.js 16.3.1: **aprovado**.
+- Migrations: **nenhuma criada**.
+- Banco principal: **nenhuma escrita**.
+- Render: **nenhum deploy disparado**.
+- Web Push: **nenhuma notificação disparada**.
+
+### Commits da aplicação
+
+- `89c6c1b` — `feat: amplia central administrativa desktop`
+- `4938ed0` — `fix: endurece vínculos de fornecedores ativos`
+- `b81ec88` — `feat: finaliza layout da cautela em duas vias`
+- `9b31b98` — `style: ajusta cautela para A4, marca-d'água e carimbo`
+- `50b019b` — `test: protege layout final da cautela`
+
+### Situação para merge e deploy
+
+- **Merge:** ainda não recomendado sem QA visual autenticado em 1440 px e 390×844 e revisão final do diff.
+- **Deploy:** não recomendado. Permanecem bloqueios de dados fiscais, fornecedores reais, ciclo ponta a ponta, dispositivo PWA e Web Push controlado.
