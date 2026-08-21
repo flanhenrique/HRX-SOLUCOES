@@ -12,6 +12,62 @@ A base operacional já contém dados reais mínimos, porém a homologação comp
 
 A auditoria também identificou uma pendência estrutural importante na experiência desktop: a interface administrativa web está excessivamente próxima da arquitetura do PWA/mobile. A visão desktop deve ser tratada como uma superfície administrativa própria, com maior densidade de informação, navegação persistente, visão simultânea de indicadores, filtros, tabelas, atalhos e contexto operacional.
 
+## Revalidação do estado real — 21/08/2026
+
+Esta seção registra a nova leitura direta do código, GitHub, Render e banco Neon realizada antes de qualquer alteração da arquitetura administrativa.
+
+### Matriz consolidada de pendências
+
+| Área | Classificação | Evidência atual | Próxima ação segura |
+|---|---|---|---|
+| Repositório e branch principal | **Concluído** | `main` limpa e sincronizada com `origin/main` no início da auditoria; HEAD `3b608b9`. | Trabalhar somente na branch `agent/auditoria-homologacao-final-20260821`. |
+| Build, lint e testes | **Concluído** | ESLint aprovado, 103/103 testes aprovados e build de produção Next.js 16.3.1 aprovado com TypeScript. | Reexecutar após cada grupo funcional de mudanças. |
+| Deploy Render | **Parcial** | Serviço ativo, `autoDeployTrigger: off`, branch `main`, último deploy `live` no commit `2347d40`. A `main` contém dois commits posteriores ainda não publicados. | Manter deploy manual; revisar diff completo antes de qualquer publicação. |
+| Saúde operacional Render | **Parcial** | Aplicação pública responde HTTP 200; `/admin` e `/cliente` redirecionam usuário anônimo para `/login`. Logs históricos registram falhas de secret de Auth em 18/08 e casts de data vazia em 20/08; este último já possui correção e regressão. | Confirmar ausência de recorrência em janela posterior ao deploy atual e validar autenticação com usuário de homologação. |
+| Arquitetura administrativa desktop | **Pendente** | Sidebar existe, mas páginas e CSS foram evoluídos prioritariamente para hubs/cards e navegação móvel. O critério oficial exige central administrativa com tabelas, filtros, inspeção contextual e maior densidade. | Redesenhar shell e superfícies prioritárias sem alterar regras de negócio do backend. |
+| Mobile administrativo | **Parcial** | Contratos automatizados confirmam cinco destinos, safe-area e alvos de 44 px. | QA visual real em 390×844 após as mudanças desktop. |
+| PWA | **Parcial** | Manifest e `/sw.js` respondem HTTP 200; testes protegem cache apenas de assets estáticos e ignoram tráfego autenticado. | Validar instalação, standalone, atualização e notificações em dispositivo real. |
+| Autenticação e autorização | **Parcial** | Guard administrativo central e proxy estão cobertos por regressões; rotas anônimas protegidas no deploy. | Executar testes autenticados e tentativas IDOR com usuários de homologação. |
+| RLS e isolamento | **Concluído no nível estrutural / teste real pendente** | 37/37 tabelas públicas com RLS; políticas presentes; nenhum `SECURITY DEFINER` público detectado. | Provar isolamento cliente × cliente em sessão real e manter testes automatizados. |
+| Clientes | **Parcial** | 1 cliente ativo; 1 sem `tax_id`; 1 sem ciência versionada do aviso de privacidade; nenhuma PF cadastrada. Schema suporta PF/PJ e unicidade parcial do documento. | Completar dados reais com o cliente; testar cadastro PF/PJ, edição, inativação e duplicidade. |
+| Preços | **Parcial** | 6 preços personalizados; nenhum valor não positivo, vencido ou com período invertido. Pedidos possuem itens com preço persistido. | Auditar sobreposição de vigências e provar snapshot por regressão/runtime. |
+| Produtos | **Bloqueado externamente** | 6 ativos; 6/6 sem NCM, CFOP, CST/CSOSN e validação fiscal. Preços padrão positivos presentes. | Obter classificação do responsável contábil; não inventar códigos fiscais. |
+| Fornecedores | **Pendente** | 0 fornecedores e 0 vínculos produto × fornecedor no banco principal. APIs e telas existem. | Cadastrar dados reais controlados e testar vínculos, filtros, inativação e compras por fornecedor. |
+| Emitente fiscal | **Bloqueado externamente** | 0 perfis de emitente fiscal. Estrutura de homologação/emissão externa existe. | Obter dados fiscais reais e responsável pela validação antes de ativar cobertura obrigatória. |
+| Ciclo operacional | **Parcial** | 5 pedidos, todos em `purchasing`; 1 lote; 0 compras, recebimentos, rateios, separações, eventos de entrega, cautelas e pré-faturamentos. | Executar piloto na branch Neon de QA ou fluxo explicitamente destinado à homologação, sem atalhos de status. |
+| Transições server-side | **Parcial com boa cobertura estática** | Testes impedem lote fora de `approved`, mudança genérica capaz de pular ciclo e finalização sem cobertura fiscal configurada. | Exercitar todas as transições e concorrência em banco isolado. |
+| Cautela | **Parcial / correção existente fora da main** | Branch `audit/cautela-documento-final` contém 3 commits, com logo, marca-d'água, carimbo, A4 e regressão; ainda não incorporada à `main`. | Revisar e integrar os commits, depois validar poucos/médios/muitos itens e PDF. |
+| Web Push | **Parcial** | 6 notificações `new_order`; 3 subscriptions, todas habilitadas. Nenhum disparo artificial foi feito nesta auditoria. | Teste controlado com evento de homologação e dispositivo inscrito; validar expiração, duplicidade e foreground/background. |
+| Fiscal / espelho NF-e | **Bloqueado externamente** | Backend possui perfil, snapshots e pré-faturamento, mas não há emitente nem produtos classificados. | Validar espelho somente após dados contábeis reais; manter explícito que não há integração SEFAZ. |
+| Manual do usuário | **Pendente por dependência** | Telas e fluxo ainda serão alterados. | Produzir manuais Cliente e Administrador após homologação visual e operacional. |
+
+### Problemas anteriores confirmados
+
+- desktop administrativo exige redesign estrutural;
+- banco continua sem fornecedores e vínculos produto × fornecedor;
+- cliente ativo continua sem documento fiscal e ciência do aviso de privacidade;
+- todos os produtos ativos continuam sem classificação e validação fiscal;
+- ciclo real continua concentrado em `purchasing` e não chegou a recebimento, separação, entrega ou fiscal;
+- infraestrutura Web Push continua com inscrições ativas, mas o teste final controlado permanece pendente;
+- cautela finalizada existe em branch remota e não deve ser recriada.
+
+### Hipóteses descartadas ou refinadas
+
+- o deploy não acompanha atualmente o HEAD da `main`: o Render está no commit `2347d40`, enquanto a branch está em `3b608b9`;
+- não há ausência estrutural de RLS nas tabelas públicas: todas as 37 tabelas base públicas estão com RLS habilitado;
+- build quebrado não é uma pendência atual: lint, testes e build passaram nesta revalidação;
+- fornecedores, fiscal e ciclo não estão ausentes do código: há schema, APIs e telas; a pendência principal é dado real, comprovação operacional e qualidade da interface.
+
+### Evidências técnicas desta revalidação
+
+- Aplicação: `main` em `3b608b9`; branch de trabalho `agent/auditoria-homologacao-final-20260821`.
+- Documentação: branch `agent/auditoria-hortifruti-20260821`.
+- Render: serviço `srv-da1t54rncjis738235vg`, deploy `dep-da3n3mk9v7es7394t2ug`, status `live`, commit `2347d403dc8c359e28bdefcb066083581602cfba`.
+- Neon: projeto `dark-shadow-88410918`, branch principal `br-silent-glitter-avegm7p3`, PostgreSQL 18.
+- Validação local: ESLint aprovado; 103 testes aprovados; build de produção aprovado.
+- Produção: página pública HTTP 200; manifest HTTP 200; service worker HTTP 200; áreas autenticadas redirecionam para login.
+- Nenhum deploy, migration, escrita no banco ou notificação foi disparado nesta fase.
+
 ## Situação por área
 
 | Área | Situação | Resultado da auditoria |
