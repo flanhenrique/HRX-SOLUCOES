@@ -386,3 +386,20 @@ Os entregáveis desta auditoria foram classificados no arquivo oficial do client
 - `05_ENTREGAS/MANUAIS/Manual_de_Uso_Hortifruti_Revolucao_2026-08-21.pdf`.
 
 Nenhum código da aplicação HRX Solutions foi alterado ou reutilizado. Nenhum dado QA-E2E foi removido, nenhum dado fiscal ou de fornecedor foi criado, e nenhum push, merge ou deploy foi realizado.
+
+## Evidência complementar de QA público — 21/08/2026
+
+Foi executada uma verificação não autenticada no ambiente oficial do Render, sem escrita de dados e sem disparo de ações operacionais.
+
+- O primeiro acesso exibiu a página transitória `Render - Application loading`; após o cold start, a aplicação respondeu normalmente como `Hortifruti Revolução`.
+- Em desktop, com viewport de 1440 × 900, a página institucional e a tela de login não apresentaram overflow horizontal.
+- Em mobile, com viewport de 390 × 844, a página institucional e a tela de login não apresentaram overflow horizontal.
+- Os controles públicos da página institucional apresentaram alvos de toque de pelo menos 44 px.
+- Na versão atualmente publicada, o botão principal `Entrar` foi medido com 42 px de altura no mobile. A branch de auditoria já contém a regra `.premium-login-card .premium-btn { min-height: 44px; }`; portanto, a correção existe no código candidato, mas ainda não está publicada.
+- O manifesto oficial respondeu corretamente, com `display: standalone`, `start_url: /login`, cores de tema/fundo e dois ícones declarados.
+- O arquivo `/sw.js` respondeu HTTP 200.
+- A execução efetiva em modo standalone, instalação, atualização, cache/offline e Web Push não pôde ser homologada no navegador de inspeção e continua dependendo de dispositivo real.
+
+### Limite desta evidência
+
+O checkout local não possui `.env` nem credenciais de homologação. Por segurança, ele não foi conectado ao banco principal. Assim, esta rodada não valida login, isolamento autenticado, painel administrativo, área do cliente nem pedido piloto. Esses itens continuam condicionados a um ambiente isolado com usuários de cliente e administrador, fornecedor controlado e dados fiscais reais.
