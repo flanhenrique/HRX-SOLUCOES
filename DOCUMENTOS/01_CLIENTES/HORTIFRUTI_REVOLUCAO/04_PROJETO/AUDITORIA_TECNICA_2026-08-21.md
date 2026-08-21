@@ -419,3 +419,17 @@ Após disponibilização de login de teste, a aplicação local foi conectada ex
 - Validação final acumulada: **111 testes aprovados**, ESLint aprovado e build de produção aprovado.
 
 Esta evidência ainda não homologa o ciclo ponta a ponta: a branch possui um administrador e um cliente ativo, porém não possui conta cliente nem vínculo cliente–usuário. Fornecedor controlado e dados fiscais reais também continuam ausentes.
+
+## Conta cliente e pedido piloto — 21/08/2026
+
+- Criada a conta sintética `cliente.qa.20260821@example.com` somente no Neon Auth da branch `br-steep-mouse-avehupuj`.
+- A conta foi marcada como verificada e vinculada uma única vez ao cliente `QA — Cliente Homologação`, com registro em `audit_logs`.
+- Login cliente, catálogo isolado, seis preços personalizados e histórico exclusivo do cliente foram confirmados.
+- A primeira tentativa de pedido revelou incompatibilidade entre a chave JSON `productId` e a coluna esperada `product_id`; o cliente e a inclusão administrativa compartilhavam o defeito.
+- Após essa correção, o RLS revelou um segundo problema: itens e histórico não podiam validar o pedido criado em CTE irmã no mesmo snapshot.
+- Criada a migration `20260821_client_order_atomic.sql`, com função transacional `SECURITY INVOKER`, execução restrita a `hortifruti_client` e validação de cliente, itens, quantidades e preços.
+- A migration foi aplicada apenas à branch QA; o banco principal permanece inalterado.
+- Pedido piloto `#00008` criado pelo portal: status `received`, três itens, subtotal R$ 31,90, um evento de histórico e uma notificação administrativa.
+- Validação acumulada: **112 testes aprovados** e build de produção aprovado. O lint apontou uma variável não utilizada, removida antes do commit final.
+
+O próximo passo operacional é autenticar novamente como administrador, aprovar o pedido `#00008` pelas transições permitidas e prosseguir até compras. Fornecedores continuam sendo bloqueio para a etapa seguinte.
