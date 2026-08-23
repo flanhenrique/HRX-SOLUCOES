@@ -26,10 +26,16 @@ test('salvamento unifica itens, cálculos, parcelas e histórico no backend', as
   assert.match(backend, /custom_final_amount_confirmed/)
 })
 
-test('proposta versionada possui PDF, Central e ações explícitas de envio', async () => {
+test('proposta versionada usa o documento premium aprovado e permanece vinculada à Central', async () => {
   const [editor, pdf, backend] = await Promise.all([read('src/quotes/AdminQuotes.tsx'), read('src/quotes/proposalPdf.ts'), read('supabase/functions/quote-admin/index.ts')])
   assert.match(pdf, /RASCUNHO/)
   assert.match(pdf, /PROPOSTA COMERCIAL/)
+  assert.match(pdf, /const WHITE = '#FFFFFF'/)
+  assert.match(pdf, /drawPageHeader/)
+  assert.match(pdf, /Objeto da proposta/)
+  assert.match(pdf, /Condições de pagamento/)
+  assert.match(pdf, /Validade e observações/)
+  assert.match(pdf, /Soluções digitais pensadas para operações reais/)
   assert.match(editor, /navigator\.share/)
   assert.match(editor, /wa\.me/)
   assert.match(editor, /mailto:/)
@@ -41,7 +47,7 @@ test('proposta versionada possui PDF, Central e ações explícitas de envio', a
 })
 
 test('mobile separa lista e editor e usa fluxo comercial por etapas', async () => {
-  const [editor, css] = await Promise.all([read('src/quotes/AdminQuotes.tsx'), read('src/quotes/quote-commercial.css')])
+  const [editor, css, chrome] = await Promise.all([read('src/quotes/AdminQuotes.tsx'), read('src/quotes/quote-commercial.css'), read('src/quotes/admin-unified-chrome.css')])
   assert.match(editor, /is-mobile-detail-open/)
   assert.match(editor, /quote-back/)
   assert.match(editor, /className="admin-mobile-nav"/)
@@ -49,13 +55,20 @@ test('mobile separa lista e editor e usa fluxo comercial por etapas', async () =
   assert.match(css, /is-mobile-detail-open \.quote-queue/)
   assert.match(css, /is-mobile-detail-open \.quote-detail/)
   assert.match(css, /env\(safe-area-inset-bottom\)/)
+  assert.match(chrome, /\.quote-stage\{order:1!important/)
+  assert.match(chrome, /\.quote-summary\{order:2!important/)
+  assert.match(chrome, /\.quote-steps\{[\s\S]*display:flex!important/)
 })
 
-test('ação de finalizar permanece visível no PWA e recebe cache bust', async () => {
-  const [brandFix, index] = await Promise.all([read('public/hrx-brand-fix.css'), read('index.html')])
+test('ações de finalizar e excluir orçamento permanecem acessíveis acima do menu flutuante', async () => {
+  const [brandFix, editor, index] = await Promise.all([read('public/hrx-brand-fix.css'), read('src/quotes/AdminQuotes.tsx'), read('index.html')])
   assert.match(brandFix, /quote-review-card > footer/)
   assert.match(brandFix, /position: sticky !important/)
+  assert.match(brandFix, /bottom: calc\(82px \+ env\(safe-area-inset-bottom\)\)/)
   assert.match(brandFix, /quote-review-card > footer \.quote-primary/)
-  assert.match(brandFix, /min-height: 48px/)
-  assert.match(index, /hrx-brand-fix\.css\?v=5/)
+  assert.match(brandFix, /min-height: 50px/)
+  assert.match(brandFix, /Excluir orçamento/)
+  assert.match(editor, /confirmDelete/)
+  assert.match(editor, /action: 'delete_draft'/)
+  assert.match(index, /hrx-brand-fix\.css\?v=6/)
 })
