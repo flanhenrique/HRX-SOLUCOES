@@ -66,8 +66,14 @@ Testes automatizados: 36 PASS, 0 FAIL, 1 teste legado ignorado.
 TypeScript: PASS.
 Build Vite: PASS.
 Edge Function quote-admin: versão 8 ACTIVE, JWT obrigatório.
+GitHub main: 7a6f8ef7fb1127d85d7db0cd2a2c51f84e36f0c0.
+CI Validate HRX site: run 479, SUCCESS.
+Deploy GitHub Pages: run 340, SUCCESS.
+Release PWA publicado: 20260823.340 em 23/08/2026 21:05:30 UTC.
 
 Os cenários A a N estão cobertos pela suíte: cliente existente, novo cliente, rascunho, exclusão, duplicação, desconto, valor final, imposto, parcelamento, PDF, nova versão, e-mail, WhatsApp e PWA.
+
+O bundle publicado foi validado pela presença das telas e ações do novo módulo. O Service Worker ativo usa o cache atômico hrx-admin-atomic-20260823.340 e remove caches anteriores durante a ativação.
 
 9. DADOS
 

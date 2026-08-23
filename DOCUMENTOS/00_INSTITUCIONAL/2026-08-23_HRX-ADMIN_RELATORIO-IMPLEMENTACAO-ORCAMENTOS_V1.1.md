@@ -80,14 +80,20 @@ No mobile/PWA, o fluxo utiliza compartilhamento nativo com PDF quando suportado.
 
 ## 8. QA e evidências
 
-O relatório de implementação original registrou `30 PASS`, `0 FAIL` e `1` teste legado ignorado, além de TypeScript e build Vite aprovados.
+O resultado integrado registra `36 PASS`, `0 FAIL` e `1` teste legado ignorado, além de TypeScript e build Vite aprovados.
 
 Para remover dependência de declaração manual, a correção de rastreabilidade foi submetida ao workflow oficial `Validate HRX site`, que executa:
 
 - `npm run test:pwa`;
 - `npm run build`.
 
-O resultado do run correspondente deve ser usado como evidência canônica da integração desta correção.
+Evidências canônicas da integração:
+
+- commit remoto em `main`: `7a6f8ef7fb1127d85d7db0cd2a2c51f84e36f0c0`;
+- workflow `Validate HRX site`: run 479 — SUCCESS;
+- workflow `Deploy HRX Solutions to GitHub Pages`: run 340 — SUCCESS;
+- release PWA: `20260823.340`;
+- publicação: 23/08/2026 às 21:05:30 UTC.
 
 A Edge Function `quote-admin` foi confirmada em produção como **versão 8 ACTIVE**, com JWT obrigatório.
 
@@ -131,8 +137,8 @@ Isso é coerente com a decisão de não criar proposta comercial fictícia apena
 
 A implementação técnica do ciclo comercial pode ser encerrada após:
 
-1. integração das migrations recuperadas ao `main`;
-2. CI oficial aprovado na integração;
+1. integração das migrations recuperadas ao `main` — concluída;
+2. CI oficial aprovado na integração — concluído;
 3. homologação autenticada Desktop/PWA registrada como evidência operacional.
 
 Até a conclusão do item 3, o status recomendado é **IMPLEMENTADO / HOMOLOGAÇÃO OPERACIONAL PENDENTE**.

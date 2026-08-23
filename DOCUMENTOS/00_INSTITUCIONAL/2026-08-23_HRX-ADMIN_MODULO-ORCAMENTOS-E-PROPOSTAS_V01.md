@@ -153,3 +153,15 @@ Migrations oficiais versionadas:
 - PDF oficial armazenado no bucket e registrado na Central;
 - canais de compartilhamento sem exposição pública permanente;
 - experiência desktop e mobile sem tabela horizontal no PWA.
+
+## Publicação
+
+- branch: `main`;
+- commit remoto: `7a6f8ef7fb1127d85d7db0cd2a2c51f84e36f0c0`;
+- CI `Validate HRX site`: run 479 — SUCCESS;
+- deploy GitHub Pages: run 340 — SUCCESS;
+- release PWA: `20260823.340`;
+- publicação: 23/08/2026 às 21:05:30 UTC;
+- Edge Function `quote-admin`: versão 8 ACTIVE, JWT obrigatório.
+
+O bundle publicado contém o novo editor comercial e o Service Worker utiliza cache atômico versionado. A homologação operacional autenticada com proposta comercial real continua separada para evitar gerar dados ou documentos fictícios.
