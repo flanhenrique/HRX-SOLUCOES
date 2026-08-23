@@ -1,4 +1,5 @@
-const ADMIN_VIEWPORT = 'width=device-width, initial-scale=1, viewport-fit=cover'
+const BROWSER_VIEWPORT = 'width=device-width, initial-scale=1, viewport-fit=cover'
+const STANDALONE_VIEWPORT = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
 
 function ensureMeta(name: string, content: string) {
   let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)
@@ -8,6 +9,17 @@ function ensureMeta(name: string, content: string) {
     document.head.appendChild(meta)
   }
   meta.content = content
+}
+
+function isStandalonePwa() {
+  const iosStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  return window.matchMedia('(display-mode: standalone)').matches || iosStandalone
+}
+
+function applyViewportPolicy(viewport: HTMLMetaElement) {
+  const standalone = isStandalonePwa()
+  viewport.content = standalone ? STANDALONE_VIEWPORT : BROWSER_VIEWPORT
+  document.documentElement.dataset.hrxViewportPolicy = standalone ? 'app-locked' : 'browser-accessible'
 }
 
 export function configureAdminAppShell() {
@@ -24,7 +36,10 @@ export function configureAdminAppShell() {
     viewport.name = 'viewport'
     document.head.appendChild(viewport)
   }
-  viewport.content = ADMIN_VIEWPORT
+  applyViewportPolicy(viewport)
+
+  const standaloneMedia = window.matchMedia('(display-mode: standalone)')
+  standaloneMedia.addEventListener?.('change', () => applyViewportPolicy(viewport))
 
   ensureMeta('mobile-web-app-capable', 'yes')
   ensureMeta('apple-mobile-web-app-capable', 'yes')
