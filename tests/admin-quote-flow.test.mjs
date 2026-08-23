@@ -50,3 +50,12 @@ test('mobile separa lista e editor e usa fluxo comercial por etapas', async () =
   assert.match(css, /is-mobile-detail-open \.quote-detail/)
   assert.match(css, /env\(safe-area-inset-bottom\)/)
 })
+
+test('ação de finalizar permanece visível no PWA e recebe cache bust', async () => {
+  const [brandFix, index] = await Promise.all([read('public/hrx-brand-fix.css'), read('index.html')])
+  assert.match(brandFix, /quote-review-card > footer/)
+  assert.match(brandFix, /position: sticky !important/)
+  assert.match(brandFix, /quote-review-card > footer \.quote-primary/)
+  assert.match(brandFix, /min-height: 48px/)
+  assert.match(index, /hrx-brand-fix\.css\?v=5/)
+})
