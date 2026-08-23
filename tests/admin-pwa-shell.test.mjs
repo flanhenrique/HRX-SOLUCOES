@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin PWA preserves accessibility while constraining layout through CSS', async () => {
+test('admin PWA locks zoom only in standalone while browser mode stays accessible', async () => {
   const [shell, legacyCss, unifiedCss, manifestText, sw, deploy, publicIndex, bridge, service] = await Promise.all([
     read('src/quotes/adminAppShell.ts'),
     read('src/quotes/app-shell.css'),
@@ -20,9 +20,12 @@ test('admin PWA preserves accessibility while constraining layout through CSS', 
 
   assert.equal(manifest.display, 'standalone')
   assert.equal(manifest.orientation, undefined)
-  assert.match(shell, /width=device-width, initial-scale=1, viewport-fit=cover/)
-  assert.doesNotMatch(shell, /maximum-scale=1/)
-  assert.doesNotMatch(shell, /user-scalable=no/)
+  assert.match(shell, /BROWSER_VIEWPORT = 'width=device-width, initial-scale=1, viewport-fit=cover'/)
+  assert.match(shell, /STANDALONE_VIEWPORT = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'/)
+  assert.match(shell, /display-mode: standalone/)
+  assert.match(shell, /navigator as Navigator & \{ standalone\?: boolean \}/)
+  assert.match(shell, /standalone \? STANDALONE_VIEWPORT : BROWSER_VIEWPORT/)
+  assert.match(shell, /hrxViewportPolicy/)
   assert.doesNotMatch(shell, /gesturestart|gesturechange|gestureend/)
   assert.doesNotMatch(shell, /event\.ctrlKey|event\.metaKey/)
   assert.match(legacyCss, /html\.hrx-admin-pwa body[\s\S]*position:\s*fixed/)
