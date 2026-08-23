@@ -16,11 +16,12 @@ type ActionPayload =
 const defaultOrigins = ['http://localhost:5173', 'https://flanhenrique.github.io', 'https://hrxsolutions.com.br', 'https://www.hrxsolutions.com.br']
 const clean = (value: unknown, max = 1000) => String(value ?? '').trim().slice(0, max)
 const cents = (value: unknown) => Math.round((Number(value) || 0) * 100)
-const money = (value: number) => Math.round(value) / 100
+const money = (valueInCents: number) => Math.round(valueInCents) / 100
 const isoDate = (value: unknown) => {
   const date = clean(value, 10)
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : ''
 }
+const safePercent = (value: unknown) => Math.min(99.9999, Math.max(0, Number(value) || 0))
 
 function allowedOrigins() {
   const configured = (Deno.env.get('HRX_ALLOWED_ORIGINS') ?? '').split(',').map((item) => item.trim()).filter(Boolean)
@@ -41,18 +42,32 @@ function cors(origin: string | null) {
 const json = (body: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 
-function allocateTax(totalTax: number, installments: Array<{ amount: number }>) {
-  const taxCents = Math.max(0, cents(totalTax))
+function allocateCents(totalCents: number, installments: Array<{ amount: number }>) {
+  const target = Math.max(0, Math.round(totalCents))
   const amounts = installments.map((item) => Math.max(0, cents(item.amount)))
   const total = amounts.reduce((sum, value) => sum + value, 0)
-  if (!taxCents || !total) return amounts.map(() => 0)
+  if (!target || !total) return amounts.map(() => 0)
   let allocated = 0
   return amounts.map((value, index) => {
-    if (index === amounts.length - 1) return taxCents - allocated
-    const part = Math.floor(taxCents * value / total)
+    if (index === amounts.length - 1) return target - allocated
+    const part = Math.floor(target * value / total)
     allocated += part
     return part
   })
+}
+
+function approvedSnapshotAmountCents(version: any, fallback: unknown) {
+  const proposal = version?.snapshot?.proposal ?? {}
+  const custom = cents(proposal.custom_final_amount)
+  if (custom > 0) return custom
+  const final = cents(proposal.final_amount)
+  if (final > 0) return final
+  return cents(fallback)
+}
+
+function approvedTaxPercent(version: any, fallback: unknown) {
+  const proposal = version?.snapshot?.proposal ?? {}
+  return safePercent(proposal.tax_percent ?? fallback)
 }
 
 Deno.serve(async (req) => {
@@ -90,7 +105,7 @@ Deno.serve(async (req) => {
     const [{ data: entries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }] = await Promise.all([
       db.from('financial_entries').select('*').order('due_date', { ascending: true }).limit(600),
       db.from('financial_accounts').select('id,name,active,sort_order,created_at').order('sort_order').order('name'),
-      db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_amount,approved_version,current_version,payment_mode,installments,first_due_date,valid_until,updated_at').in('commercial_status', ['approved', 'invoiced', 'received']).order('updated_at', { ascending: false }).limit(300),
+      db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_percent,tax_amount,approved_version,current_version,payment_mode,installments,first_due_date,valid_until,updated_at').in('commercial_status', ['approved', 'invoiced', 'received']).order('updated_at', { ascending: false }).limit(300),
       db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).limit(1200),
     ])
     if (entriesError) return json({ error: 'query_failed' }, 500, headers)
@@ -102,22 +117,43 @@ Deno.serve(async (req) => {
     const [{ data: requests }, { data: installments }, { data: versions }] = await Promise.all([
       requestIds.length ? db.from('quote_requests').select('id,client_id,proposal_number,name,company,email,phone,status').in('id', requestIds) : Promise.resolve({ data: [] }),
       (drafts ?? []).length ? db.from('quote_payment_installments').select('id,draft_id,installment_number,amount,due_date,status').in('draft_id', (drafts ?? []).map((item: any) => item.id)).order('installment_number') : Promise.resolve({ data: [] }),
-      requestIds.length ? db.from('quote_versions').select('id,request_id,version_number,commercial_status,document_id,pdf_object_path,created_at').in('request_id', requestIds).order('version_number', { ascending: false }) : Promise.resolve({ data: [] }),
+      requestIds.length ? db.from('quote_versions').select('id,request_id,version_number,commercial_status,document_id,pdf_object_path,created_at,snapshot').in('request_id', requestIds).order('version_number', { ascending: false }) : Promise.resolve({ data: [] }),
     ])
+
+    const versionRows = versions ?? []
+    const installmentRows = installments ?? []
+    const financeDrafts = (drafts ?? []).map((draft: any) => {
+      const versionNumber = Number(draft.approved_version || draft.current_version || 0)
+      const version = versionRows.find((item: any) => item.request_id === draft.request_id && Number(item.version_number) === versionNumber)
+      const schedule = installmentRows.filter((item: any) => item.draft_id === draft.id && item.status === 'planned')
+      const scheduleTotal = schedule.reduce((sum: number, item: any) => sum + cents(item.amount), 0)
+      const snapshotAmount = approvedSnapshotAmountCents(version, draft.final_amount)
+      const approvedAmount = scheduleTotal > 0 ? scheduleTotal : snapshotAmount
+      const taxPercent = approvedTaxPercent(version, draft.tax_percent)
+      const taxReserve = Math.round(approvedAmount * taxPercent / 100)
+      return {
+        ...draft,
+        final_amount: money(approvedAmount),
+        tax_percent: taxPercent,
+        tax_amount: money(taxReserve),
+        approved_amount_source: scheduleTotal > 0 ? 'payment_schedule' : 'approved_version',
+      }
+    })
 
     const clientIds: string[] = [...new Set([...(requests ?? []).map((item: any) => item.client_id), ...(entries ?? []).map((item: any) => item.client_id)].filter(Boolean))]
     const { data: clients } = clientIds.length
       ? await db.from('clients').select('id,name,company,document,email,phone').in('id', clientIds)
       : { data: [] }
 
+    const publicVersions = versionRows.map(({ snapshot: _snapshot, ...version }: any) => version)
     return json({
       entries: entries ?? [],
       accounts: accounts ?? [],
-      drafts: drafts ?? [],
+      drafts: financeDrafts,
       settlements: settlements ?? [],
       requests: requests ?? [],
-      installments: installments ?? [],
-      versions: versions ?? [],
+      installments: installmentRows,
+      versions: publicVersions,
       clients: clients ?? [],
     }, 200, headers)
   }
@@ -143,7 +179,7 @@ Deno.serve(async (req) => {
     if (!requestId || !invoiceNumber || !invoiceIssuedAt) return json({ error: 'invoice_data_required' }, 400, headers)
 
     const { data: request } = await db.from('quote_requests').select('id,client_id,proposal_number,name,company').eq('id', requestId).maybeSingle()
-    const { data: draft } = await db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_amount,approved_version,current_version').eq('request_id', requestId).maybeSingle()
+    const { data: draft } = await db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_percent,tax_amount,approved_version,current_version').eq('request_id', requestId).maybeSingle()
     if (!request || !draft) return json({ error: 'quote_not_found' }, 404, headers)
     if (!['approved', 'invoiced'].includes(String(draft.commercial_status))) return json({ error: 'quote_not_approved' }, 409, headers)
     const approvedVersion = Number(draft.approved_version || 0)
@@ -163,19 +199,25 @@ Deno.serve(async (req) => {
 
     const [{ data: planned }, { data: version }] = await Promise.all([
       db.from('quote_payment_installments').select('id,draft_id,installment_number,amount,due_date,status').eq('draft_id', draft.id).eq('status', 'planned').order('installment_number'),
-      db.from('quote_versions').select('id,request_id,version_number').eq('request_id', requestId).eq('version_number', approvedVersion).maybeSingle(),
+      db.from('quote_versions').select('id,request_id,version_number,snapshot').eq('request_id', requestId).eq('version_number', approvedVersion).maybeSingle(),
     ])
     if (!version) return json({ error: 'approved_version_required' }, 409, headers)
     if (!(planned ?? []).length) return json({ error: 'payment_schedule_required' }, 409, headers)
 
-    const scheduleTotal = (planned ?? []).reduce((sum: number, item: any) => sum + cents(item.amount), 0)
-    if (scheduleTotal !== cents(draft.final_amount)) return json({ error: 'payment_schedule_mismatch' }, 409, headers)
+    const schedule = planned as Array<{ id: string; installment_number: number; amount: number; due_date: string; status: string }>
+    const scheduleTotal = schedule.reduce((sum, item) => sum + cents(item.amount), 0)
+    const approvedAmount = approvedSnapshotAmountCents(version, draft.final_amount)
+    if (scheduleTotal !== approvedAmount) {
+      return json({ error: 'approved_payment_schedule_mismatch', approvedAmount: money(approvedAmount), scheduleAmount: money(scheduleTotal) }, 409, headers)
+    }
 
-    const taxParts = allocateTax(Number(draft.tax_amount || 0), planned as Array<{ amount: number }>)
-    const rows = (planned ?? []).map((item: any, index: number) => ({
+    const taxPercent = approvedTaxPercent(version, draft.tax_percent)
+    const taxReserveTotal = Math.round(scheduleTotal * taxPercent / 100)
+    const taxParts = allocateCents(taxReserveTotal, schedule)
+    const rows = schedule.map((item, index) => ({
       entry_type: 'receivable',
       status: new Date(`${item.due_date}T12:00:00Z`).getTime() < Date.now() ? 'overdue' : 'open',
-      description: `${request.proposal_number} • Parcela ${item.installment_number}/${planned!.length}`,
+      description: `${request.proposal_number} • Parcela ${item.installment_number}/${schedule.length}`,
       client_id: request.client_id,
       quote_request_id: request.id,
       quote_version_id: version.id,
@@ -204,7 +246,16 @@ Deno.serve(async (req) => {
       request_id: request.id,
       actor_user_id: user.id,
       event_type: 'financial_receivables_created',
-      event_data: { invoiceNumber, invoiceIssuedAt, installments: rows.length, grossAmount: Number(draft.final_amount), taxReserveAmount: Number(draft.tax_amount || 0), version: approvedVersion },
+      event_data: {
+        invoiceNumber,
+        invoiceIssuedAt,
+        installments: rows.length,
+        grossAmount: money(scheduleTotal),
+        taxReserveAmount: money(taxReserveTotal),
+        taxPercent,
+        version: approvedVersion,
+        amountSource: 'approved_version_and_payment_schedule',
+      },
     })
 
     return json({ entries: created ?? [] }, 201, headers)
