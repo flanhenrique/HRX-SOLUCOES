@@ -32,11 +32,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Chromium for PWA quality gate
+        run: npx playwright install --with-deps chromium
+
       - name: Verify admin PWA shell
         run: npm run test:pwa
 
       - name: Build
         run: npm run build
+
+      - name: Verify responsive shell in real browser
+        run: npm run test:browser
 
       - name: Prepare direct admin PWA routes and atomic release
         run: |
