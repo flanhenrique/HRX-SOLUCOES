@@ -2,6 +2,7 @@ import AdminQuotes from './AdminQuotes'
 import AdminSuspensionsPage from './AdminSuspensionsPage'
 import AdminFiscalPage from './AdminFiscalPage'
 import AdminExperienceLayer from './AdminExperienceLayer'
+import AdminPersonalization from './AdminPersonalization'
 import SuspendedQuoteGuard from './SuspendedQuoteGuard'
 import './admin-page-system.css'
 import './admin-feedback.css'
@@ -15,6 +16,7 @@ export default function AdminApp() {
     <AdminSuspensionsPage />
     <AdminFiscalPage />
     <AdminExperienceLayer />
+    <AdminPersonalization />
     <SuspendedQuoteGuard />
   </>
 }
