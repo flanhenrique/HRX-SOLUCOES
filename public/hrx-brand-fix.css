@@ -47,4 +47,41 @@
     min-width: 150px;
     height: 90px;
   }
+
+  /* Mantém a ação de finalizar a proposta sempre acessível no PWA. */
+  .admin-live-shell.quote-commercial-shell .quote-editor-scroll {
+    scroll-padding-bottom: 96px;
+  }
+
+  .admin-live-shell.quote-commercial-shell .quote-review-card {
+    overflow: visible !important;
+  }
+
+  .admin-live-shell.quote-commercial-shell .quote-review-card > footer {
+    position: sticky !important;
+    bottom: 0;
+    z-index: 60;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 0 -1px -1px;
+    padding: 12px !important;
+    border-top: 1px solid rgba(164, 200, 235, .22) !important;
+    background: rgba(5, 21, 37, .96) !important;
+    box-shadow: 0 -12px 30px rgba(0, 0, 0, .26);
+    backdrop-filter: blur(20px);
+  }
+
+  .admin-live-shell.quote-commercial-shell .quote-review-card > footer .quote-primary {
+    grid-column: 1 / -1;
+    order: -1;
+    width: 100%;
+    min-height: 48px;
+    font-size: .74rem;
+  }
+
+  .admin-live-shell.quote-commercial-shell .quote-review-card > footer .quote-secondary {
+    width: 100%;
+    min-height: 42px;
+  }
 }
