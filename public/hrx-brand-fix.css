@@ -31,7 +31,7 @@
   background: url('/hrx-logo.svg?v=4') center / contain no-repeat;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .brand.brand-authentic {
     width: 118px;
     min-width: 118px;
@@ -48,19 +48,19 @@
     height: 90px;
   }
 
-  /* Mantém a ação de finalizar a proposta sempre acessível no PWA. */
-  .admin-live-shell.quote-commercial-shell .quote-editor-scroll {
-    scroll-padding-bottom: 96px;
+  /* A revisão e a finalização permanecem acima do menu flutuante do aplicativo. */
+  .hrx-unified-shell.is-pwa .admin-live-shell.quote-commercial-shell .quote-editor-scroll {
+    scroll-padding-bottom: 178px;
   }
 
-  .admin-live-shell.quote-commercial-shell .quote-review-card {
+  .hrx-unified-shell.is-pwa .admin-live-shell.quote-commercial-shell .quote-review-card {
     overflow: visible !important;
   }
 
-  .admin-live-shell.quote-commercial-shell .quote-review-card > footer {
+  .hrx-unified-shell.is-pwa .admin-live-shell.quote-commercial-shell .quote-review-card > footer {
     position: sticky !important;
-    bottom: 0;
-    z-index: 60;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    z-index: 62;
     display: grid !important;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -72,16 +72,41 @@
     backdrop-filter: blur(20px);
   }
 
-  .admin-live-shell.quote-commercial-shell .quote-review-card > footer .quote-primary {
+  .hrx-unified-shell.is-pwa .admin-live-shell.quote-commercial-shell .quote-review-card > footer .quote-primary {
     grid-column: 1 / -1;
     order: -1;
     width: 100%;
-    min-height: 48px;
-    font-size: .74rem;
+    min-height: 50px;
+    font-size: .76rem;
   }
 
-  .admin-live-shell.quote-commercial-shell .quote-review-card > footer .quote-secondary {
+  .hrx-unified-shell.is-pwa .admin-live-shell.quote-commercial-shell .quote-review-card > footer .quote-secondary {
     width: 100%;
     min-height: 42px;
+  }
+
+  /* O rascunho elegível expõe uma ação de exclusão legível, não apenas um ícone. */
+  .hrx-unified-shell.is-pwa .quote-editor-footer .quote-danger {
+    width: auto !important;
+    min-width: 132px !important;
+    padding: 0 10px !important;
+    font-size: 0 !important;
+  }
+
+  .hrx-unified-shell.is-pwa .quote-editor-footer .quote-danger::after {
+    content: 'Excluir orçamento';
+    font-size: .62rem;
+    font-weight: 800;
+  }
+
+  .hrx-unified-shell.is-pwa .quote-editor-footer .quote-danger svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .admin-live-shell.quote-commercial-shell .quote-review-card > footer {
+    border-color: rgba(25, 65, 101, .16) !important;
+    background: rgba(248, 251, 254, .97) !important;
+    box-shadow: 0 -12px 30px rgba(34, 65, 91, .14);
   }
 }
