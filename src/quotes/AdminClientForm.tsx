@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, MouseEvent, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { hrxSupabase } from './supabaseClient'
 import './admin-client-form.css'
 
@@ -56,6 +57,22 @@ export default function AdminClientForm({ onClose, onCreated }: { onClose: () =>
   const [cnpjBusy, setCnpjBusy] = useState(false)
   const [cnpjMessage, setCnpjMessage] = useState('Preencha o CNPJ e use a consulta para completar os dados cadastrais.')
   const [cnpjResult, setCnpjResult] = useState<CnpjLookup | null>(null)
+  const nameInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const focusFrame = window.requestAnimationFrame(() => nameInput.current?.focus())
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy && !cnpjBusy) onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.cancelAnimationFrame(focusFrame)
+      window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [busy, cnpjBusy, onClose])
 
   const lookupCnpj = async () => {
     const cnpj = form.document.replace(/\D/g, '')
@@ -113,23 +130,34 @@ export default function AdminClientForm({ onClose, onCreated }: { onClose: () =>
     onClose()
   }
 
-  return <div className="admin-ops-modal-backdrop">
-    <form className="admin-ops-modal" onSubmit={submit}>
-      <header><div><span>NOVO CADASTRO</span><h3>Adicionar cliente</h3></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>
-      {error && <div className="admin-ops-error">{error}</div>}
-      <div className="admin-ops-form-grid">
-        <label>Nome / responsável<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-        <label>Empresa<input value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} /></label>
-        <label>E-mail<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
-        <label>Telefone / WhatsApp<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label>
-        <label className="is-wide">CPF/CNPJ
-          <div className="hrx-cnpj-inline"><input value={form.document} onChange={(event) => setForm({ ...form, document: event.target.value })} /><button type="button" onClick={() => void lookupCnpj()} disabled={cnpjBusy}>{cnpjBusy ? 'Consultando…' : 'Consultar CNPJ'}</button></div>
-          <small>{cnpjMessage}</small>
-          {cnpjResult && <div className="hrx-cnpj-result"><strong>{cnpjResult.legalName || cnpjResult.tradeName}</strong><span>{cnpjResult.status || 'Situação não informada'}{cnpjResult.city ? ` · ${cnpjResult.city}/${cnpjResult.state}` : ''}</span><em>Fonte automática: {cnpjResult.source}</em>{cnpjResult.sefazVerificationUrl && <a href={cnpjResult.sefazVerificationUrl} target="_blank" rel="noreferrer">Verificar cadastro na SEFAZ/AM ↗</a>}</div>}
-        </label>
-        <label className="is-wide">Observações<textarea rows={4} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+  const closeFromBackdrop = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget && !busy && !cnpjBusy) onClose()
+  }
+
+  const modal = <div className="admin-client-modal-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
+    <form className="admin-client-modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="admin-client-modal-title">
+      <header className="admin-client-modal-header">
+        <div><span>NOVO CADASTRO</span><h2 id="admin-client-modal-title">Adicionar cliente</h2><p>Cadastre os dados principais do cliente sem sair da carteira comercial.</p></div>
+        <button type="button" className="admin-client-modal-close" onClick={onClose} aria-label="Fechar" disabled={busy || cnpjBusy}>×</button>
+      </header>
+      {error && <div className="admin-client-modal-error" role="alert">{error}</div>}
+      <div className="admin-client-modal-body">
+        <div className="admin-client-form-grid">
+          <label>Nome / responsável<input ref={nameInput} required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" /></label>
+          <label>Empresa<input value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} autoComplete="organization" /></label>
+          <label>E-mail<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} autoComplete="email" /></label>
+          <label>Telefone / WhatsApp<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} inputMode="tel" autoComplete="tel" /></label>
+          <label className="is-wide">CPF/CNPJ
+            <div className="hrx-cnpj-inline"><input value={form.document} onChange={(event) => setForm({ ...form, document: event.target.value })} inputMode="numeric" /><button type="button" onClick={() => void lookupCnpj()} disabled={cnpjBusy}>{cnpjBusy ? 'Consultando…' : 'Consultar CNPJ'}</button></div>
+            <small>{cnpjMessage}</small>
+            {cnpjResult && <div className="hrx-cnpj-result"><strong>{cnpjResult.legalName || cnpjResult.tradeName}</strong><span>{cnpjResult.status || 'Situação não informada'}{cnpjResult.city ? ` · ${cnpjResult.city}/${cnpjResult.state}` : ''}</span><em>Fonte automática: {cnpjResult.source}</em>{cnpjResult.sefazVerificationUrl && <a href={cnpjResult.sefazVerificationUrl} target="_blank" rel="noreferrer">Verificar cadastro na SEFAZ/AM ↗</a>}</div>}
+          </label>
+          <label className="is-wide">Observações<textarea rows={4} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+        </div>
       </div>
-      <footer><button type="button" onClick={onClose}>Cancelar</button><button className="is-primary" disabled={busy || !form.name || (!form.email && !form.phone)} type="submit">{busy ? 'Salvando…' : 'Salvar cliente'}</button></footer>
+      <footer className="admin-client-modal-footer"><button type="button" onClick={onClose} disabled={busy || cnpjBusy}>Cancelar</button><button className="is-primary" disabled={busy || cnpjBusy || !form.name || (!form.email && !form.phone)} type="submit">{busy ? 'Salvando…' : 'Salvar cliente'}</button></footer>
     </form>
   </div>
+
+  return createPortal(modal, document.body)
 }
