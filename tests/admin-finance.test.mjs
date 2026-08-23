@@ -20,6 +20,16 @@ test('financeiro reutiliza ledger oficial e vincula proposta, parcela e versão'
   assert.match(backend, /commercial_status_received/)
 })
 
+test('faturamento usa a versão aprovada e o cronograma como fonte de verdade', async () => {
+  const backend = await read('supabase/functions/finance-admin/index.ts')
+  assert.match(backend, /approvedSnapshotAmountCents/)
+  assert.match(backend, /proposal\.custom_final_amount/)
+  assert.match(backend, /approved_payment_schedule_mismatch/)
+  assert.match(backend, /amountSource: 'approved_version_and_payment_schedule'/)
+  assert.match(backend, /taxReserveTotal = Math\.round\(scheduleTotal \* taxPercent \/ 100\)/)
+  assert.doesNotMatch(backend, /allocateTax\(Number\(draft\.tax_amount/)
+})
+
 test('baixa exige conta configurável e comprovante permanece opcional na Central', async () => {
   const [page, backend] = await Promise.all([
     read('src/quotes/AdminFinancePage.tsx'),

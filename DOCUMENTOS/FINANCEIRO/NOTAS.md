@@ -1,1 +1,0 @@
-Notas técnicas provisórias.
