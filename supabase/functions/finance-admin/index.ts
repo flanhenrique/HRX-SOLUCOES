@@ -80,11 +80,11 @@ Deno.serve(async (req) => {
   if (!admin) return json({ error: 'forbidden' }, 403, headers)
 
   if (req.method === 'GET') {
-    const today = new Date().toISOString().slice(0, 10)
+    const currentDate = new Date().toISOString().slice(0, 10)
     await db.from('financial_entries')
       .update({ status: 'overdue', updated_at: new Date().toISOString() })
       .eq('entry_type', 'receivable')
-      .lt('due_date', today)
+      .lt('due_date', currentDate)
       .in('status', ['open', 'partial'])
 
     const [{ data: entries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }] = await Promise.all([
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     ])
     if (entriesError) return json({ error: 'query_failed' }, 500, headers)
 
-    const requestIds = [...new Set((drafts ?? []).map((item: any) => item.request_id).filter(Boolean))]
+    const requestIds: string[] = [...new Set((drafts ?? []).map((item: any) => item.request_id).filter(Boolean))]
     const entryRequestIds = (entries ?? []).map((item: any) => item.quote_request_id).filter(Boolean)
     for (const id of entryRequestIds) if (!requestIds.includes(id)) requestIds.push(id)
 
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       requestIds.length ? db.from('quote_versions').select('id,request_id,version_number,commercial_status,document_id,pdf_object_path,created_at').in('request_id', requestIds).order('version_number', { ascending: false }) : Promise.resolve({ data: [] }),
     ])
 
-    const clientIds = [...new Set([...(requests ?? []).map((item: any) => item.client_id), ...(entries ?? []).map((item: any) => item.client_id)].filter(Boolean))]
+    const clientIds: string[] = [...new Set([...(requests ?? []).map((item: any) => item.client_id), ...(entries ?? []).map((item: any) => item.client_id)].filter(Boolean))]
     const { data: clients } = clientIds.length
       ? await db.from('clients').select('id,name,company,document,email,phone').in('id', clientIds)
       : { data: [] }
