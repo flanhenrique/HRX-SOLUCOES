@@ -31,6 +31,16 @@
   background: url('/hrx-logo.svg?v=4') center / contain no-repeat;
 }
 
+/* O shell já informa contexto pela navegação ativa; não repetimos títulos grandes em cada página. */
+.hrx-unified-title > strong,
+.hrx-unified-content .hrx-view-title h1,
+.hrx-unified-content .finance-page-header h1,
+.hrx-unified-content .hrx-fiscal-header h2,
+.hrx-unified-content .hrx-suspensions-header h1,
+.hrx-unified-content .quote-topbar > div:first-child {
+  display: none !important;
+}
+
 @media (max-width: 1100px) {
   .brand.brand-authentic {
     width: 118px;
