@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { readFile } from 'node:fs/promises'
 
@@ -77,10 +77,10 @@ function desktopShell() {
     </div>`
 }
 
-async function mountFixture(page: Parameters<typeof test>[0] extends never ? never : any, width: number) {
+async function mountFixture(page: Page, width: number) {
   const kind = viewportClass(width)
   const shell = kind === 'desktop' ? desktopShell() : compactShell(kind)
-  await page.setContent(`<!doctype html><html class="hrx-admin-pwa"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>html,body,#root{margin:0;width:100%;height:100%;background:#061325}${css}</style></head><body class="hrx-admin-pwa"><div id="root">${shell}</div></body></html>`)
+  await page.setContent(`<!doctype html><html lang="pt-BR" class="hrx-admin-pwa"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>HRX Admin — QA responsivo</title><style>html,body,#root{margin:0;width:100%;height:100%;background:#061325}${css}</style></head><body class="hrx-admin-pwa"><div id="root">${shell}</div></body></html>`)
 }
 
 for (const viewport of viewports) {
