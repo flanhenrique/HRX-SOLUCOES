@@ -3,6 +3,7 @@ import AdminSuspensionsPage from './AdminSuspensionsPage'
 import AdminFiscalPage from './AdminFiscalPage'
 import AdminExperienceLayer from './AdminExperienceLayer'
 import AdminPersonalizationBridge from './AdminPersonalizationBridge'
+import AdminSettingsShortcut from './AdminSettingsShortcut'
 import SuspendedQuoteGuard from './SuspendedQuoteGuard'
 import './admin-page-system.css'
 import './admin-feedback.css'
@@ -18,6 +19,7 @@ export default function AdminApp() {
     <AdminFiscalPage />
     <AdminExperienceLayer />
     <AdminPersonalizationBridge />
+    <AdminSettingsShortcut />
     <SuspendedQuoteGuard />
   </>
 }
