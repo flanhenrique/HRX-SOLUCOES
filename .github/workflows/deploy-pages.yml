@@ -38,10 +38,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Prepare direct admin PWA route and atomic release
+      - name: Prepare direct admin PWA routes and atomic release
         run: |
-          mkdir -p dist/admin/orcamentos
+          mkdir -p dist/admin/orcamentos dist/admin/financeiro
           cp dist/index.html dist/admin/orcamentos/index.html
+          cp dist/index.html dist/admin/financeiro/index.html
           python - <<'PY'
           from datetime import datetime, timezone
           from pathlib import Path
@@ -68,15 +69,8 @@ jobs:
               raise SystemExit('placeholder de build não encontrado no service worker do HRX Admin')
           sw_path.write_text(sw.replace('__HRX_ADMIN_BUILD__', build))
 
-          path = Path('dist/admin/orcamentos/index.html')
-          html = path.read_text()
           locked_viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />'
           viewport_pattern = r"<meta\s+name=['\"]viewport['\"][^>]*>"
-          if re.search(viewport_pattern, html, flags=re.IGNORECASE):
-              html = re.sub(viewport_pattern, locked_viewport, html, count=1, flags=re.IGNORECASE)
-          else:
-              html = html.replace('<head>', f'<head>\n    {locked_viewport}')
-
           build_tag = f'<script>globalThis.__HRX_ADMIN_BUILD__={json.dumps(build)};</script>'
           tags = [
               '<link rel="manifest" href="/admin/manifest.webmanifest" />',
@@ -89,8 +83,16 @@ jobs:
               build_tag,
           ]
           tags_html = '\n    '.join(tags)
-          html = html.replace('</head>', f'    {tags_html}\n  </head>')
-          path.write_text(html)
+
+          for route in ('orcamentos', 'financeiro'):
+              path = Path(f'dist/admin/{route}/index.html')
+              html = path.read_text()
+              if re.search(viewport_pattern, html, flags=re.IGNORECASE):
+                  html = re.sub(viewport_pattern, locked_viewport, html, count=1, flags=re.IGNORECASE)
+              else:
+                  html = html.replace('<head>', f'<head>\n    {locked_viewport}')
+              html = html.replace('</head>', f'    {tags_html}\n  </head>')
+              path.write_text(html)
           PY
 
       - name: Upload Pages artifact
