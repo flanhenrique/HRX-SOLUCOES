@@ -1,9 +1,9 @@
 @media(max-width:760px){
-  /* No PWA mobile, a página volta a usar rolagem documental. Evita o shell fixo + main absoluto que mantinha a interface visualmente presa. */
-  html.hrx-admin-pwa,
-  html.hrx-admin-pwa body,
-  html.hrx-admin-pwa #root{min-height:100%;height:auto;overflow-x:hidden}
-  html.hrx-admin-pwa body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto}
+  /* Depois do MFA, o Admin deixa de usar o body fixo herdado do shell de login e passa a rolar como documento. */
+  html.hrx-admin-pwa:has(.hrx-glass-app){min-height:100%;height:auto;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
+  html.hrx-admin-pwa:has(.hrx-glass-app) body{position:static;inset:auto;width:100%;min-height:100dvh;height:auto;overflow:visible;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto}
+  html.hrx-admin-pwa:has(.hrx-glass-app) #root{width:100%;min-height:100dvh;height:auto;overflow:visible}
+
   html.hrx-admin-pwa .hrx-glass-app{position:relative;inset:auto;width:100%;min-height:100dvh;height:auto;overflow:visible}
   html.hrx-admin-pwa .hrx-glass-topbar{position:sticky;z-index:50;top:0;right:auto;left:auto;width:100%;flex:0 0 var(--hrx-topbar)}
   html.hrx-admin-pwa .hrx-glass-main{position:relative;inset:auto;top:auto;right:auto;bottom:auto;left:auto;min-height:calc(100dvh - var(--hrx-topbar));padding-bottom:0;overflow:visible}
