@@ -4,21 +4,28 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('mobile admin separates PWA safe area from the desktop shell', async () => {
-  const [root, css] = await Promise.all([
+test('admin separates runtime mode from phone/tablet/desktop viewport class', async () => {
+  const [root, shellCss, chromeCss] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/admin-unified-shell.css'),
+    read('src/quotes/admin-unified-chrome.css'),
   ])
 
-  assert.match(root, /function DesktopShell/)
-  assert.match(root, /function PwaShell/)
-  assert.match(root, /window\.matchMedia\('\(max-width: 760px\)'\)/)
-  assert.match(css, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding-top:env\(safe-area-inset-top\)/)
-  assert.match(css, /\.hrx-unified-mobile-nav\{[\s\S]*bottom:max\(8px,env\(safe-area-inset-bottom\)\)!important/)
-  assert.match(css, /\.hrx-unified-shell\.is-desktop\{[\s\S]*grid-template-columns:var\(--hrx-shell-sidebar\)/)
+  assert.match(root, /type RuntimeMode = 'standalone' \| 'browser'/)
+  assert.match(root, /type ViewportClass = 'phone' \| 'tablet' \| 'desktop'/)
+  assert.match(root, /display-mode: standalone/)
+  assert.match(root, /standalone\?: boolean/)
+  assert.match(root, /window\.innerWidth <= 760/)
+  assert.match(root, /window\.innerWidth <= 1100/)
+  assert.match(root, /data-runtime=\{runtime\}/)
+  assert.match(root, /data-viewport=\{viewport\}/)
+  assert.match(shellCss, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding-top:env\(safe-area-inset-top\)/)
+  assert.match(shellCss, /\.hrx-unified-mobile-nav\{[\s\S]*bottom:max\(8px,env\(safe-area-inset-bottom\)\)!important/)
+  assert.match(chromeCss, /data-viewport="tablet"/)
+  assert.match(chromeCss, /orientation:landscape/)
 })
 
-test('personalization persists locally and syncs non-sensitive preferences to the signed-in account', async () => {
+test('personalization persists locally and syncs non-sensitive preferences without notification DOM observers', async () => {
   const [bridge, root, adminApp] = await Promise.all([
     read('src/quotes/AdminPersonalizationBridge.tsx'),
     read('src/quotes/AdminUnifiedRoot.tsx'),
@@ -26,7 +33,7 @@ test('personalization persists locally and syncs non-sensitive preferences to th
   ])
 
   assert.match(adminApp, /AdminUnifiedRoot/)
-  assert.match(root, /<AdminPersonalizationBridge \/>/)
+  assert.match(root, /<AdminPersonalizationBridge settingsActive=\{active === 'settings'\} \/>/)
   assert.match(bridge, /hrx_ui_preferences/)
   assert.match(bridge, /localStorage\.setItem/)
   assert.match(bridge, /auth\.updateUser/)
@@ -35,19 +42,27 @@ test('personalization persists locally and syncs non-sensitive preferences to th
   assert.match(bridge, /Cor de destaque/)
   assert.match(bridge, /Densidade/)
   assert.match(bridge, /Tamanho da interface/)
+  assert.doesNotMatch(bridge, /MutationObserver/)
+  assert.doesNotMatch(bridge, /\.hrx-notifications/)
+  assert.doesNotMatch(bridge, /\.click\(\)/)
 })
 
-test('notification bell remains actionable in the canonical chrome', async () => {
-  const [bridge, root] = await Promise.all([
+test('notification bell and panel are controlled by React with database counts', async () => {
+  const [bridge, root, chrome] = await Promise.all([
     read('src/quotes/AdminPersonalizationBridge.tsx'),
     read('src/quotes/AdminUnifiedRoot.tsx'),
+    read('src/quotes/admin-unified-chrome.css'),
   ])
 
-  assert.match(root, /className="hrx-notifications"/)
-  assert.match(root, /from\('quote_drafts'\)/)
-  assert.match(root, /from\('hrx_documents'\)/)
-  assert.match(bridge, /\.hrx-notifications/)
-  assert.match(bridge, /aria-haspopup/)
-  assert.match(bridge, /Ver atividades e bloqueios/)
-  assert.match(bridge, /Revisar documentos/)
+  assert.match(root, /function NotificationButton/)
+  assert.match(root, /function NotificationPanel/)
+  assert.match(root, /aria-haspopup="dialog"/)
+  assert.match(root, /aria-expanded=\{open\}/)
+  assert.match(root, /head:\s*true/)
+  assert.match(root, /count:\s*'exact'/)
+  assert.match(root, /AlertLoadStatus = 'loading' \| 'ready' \| 'unavailable'/)
+  assert.match(root, /navigateAdmin\(destination\)/)
+  assert.doesNotMatch(bridge, /MutationObserver|addEventListener\('click'|clickAdminNavigation/)
+  assert.doesNotMatch(chrome, /top:-6px|right:-5px/)
+  assert.match(chrome, /top:2px!important;right:2px!important/)
 })
