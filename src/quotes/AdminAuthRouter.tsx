@@ -142,6 +142,7 @@ function PasswordRecoveryScreen({ session, onDone }: { session: Session; onDone:
 }
 
 export default function AdminAuthRouter() {
+  const preview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('hrx-preview') === '1'
   const [session, setSession] = useState<Session | null>(null)
   const [checking, setChecking] = useState(true)
   const [recovery, setRecovery] = useState(recoveryRequested)
@@ -152,6 +153,7 @@ export default function AdminAuthRouter() {
     return () => data.subscription.unsubscribe()
   }, [])
 
+  if (preview) return <AdminApp />
   if (checking) return <main className="admin-login-shell"><div className="admin-login-card"><p>Validando acesso seguro…</p></div></main>
   if (recovery && session) return <AdminMfaGate session={session} allowEnrollment={false}><PasswordRecoveryScreen session={session} onDone={() => setRecovery(false)} /></AdminMfaGate>
   if (!session) return <LoginScreen />

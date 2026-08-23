@@ -1,18 +1,15 @@
-export type AdminDestination = 'executive' | 'quotes' | 'clients' | 'suspensions' | 'documents' | 'panels' | 'fiscal' | 'settings'
+export type AdminDestination = 'executive' | 'quotes' | 'clients' | 'suspensions' | 'documents' | 'panels' | 'activities' | 'fiscal' | 'settings'
 
 export const ADMIN_NAVIGATE_EVENT = 'hrx:admin-navigate'
 
 export function navigateAdmin(destination: AdminDestination) {
   window.dispatchEvent(new CustomEvent<AdminDestination>(ADMIN_NAVIGATE_EVENT, { detail: destination }))
-
-  if (destination === 'panels') {
-    window.location.hash = '#admin/painels'
-    return
+  const hashes: Partial<Record<AdminDestination, string>> = {
+    executive: '#admin/visao-geral', panels: '#admin/painels', activities: '#admin/atividades',
+    clients: '#admin/clientes', documents: '#admin/documentos', settings: '#admin/configuracoes',
+    quotes: '#admin/orcamentos', suspensions: '#admin/suspensoes', fiscal: '#admin/fiscal',
   }
-
-  if (window.location.hash === '#admin/painels') {
-    history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
-  }
+  history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hashes[destination] ?? ''}`)
 }
 
 export function onAdminNavigate(handler: (destination: AdminDestination) => void) {

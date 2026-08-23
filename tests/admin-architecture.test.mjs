@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin application is centralized behind MFA and shell-native pages avoid DOM bridges', async () => {
+test.skip('legacy admin composition before the approved Liquid Glass refactor', async () => {
   const [navigation, executive, documents, clients, suspensions, experience, shellCss, fiscal, panels, adminApp, authRouter, main] = await Promise.all([
     read('src/quotes/adminNavigation.ts'),
     read('src/quotes/AdminExecutiveDashboard.tsx'),
@@ -56,6 +56,38 @@ test('admin application is centralized behind MFA and shell-native pages avoid D
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.match(main, /<AdminAuthRouter \/>/)
   assert.doesNotMatch(main, /AdminClientsPage|AdminDocumentsPage|AdminExecutiveDashboard|AdminOperationsHub|AdminDocumentsHub/)
+})
+
+test('approved Liquid Glass admin is centralized behind MFA and real data sources', async () => {
+  const [navigation, experience, liquidCss, adminApp, authRouter, main] = await Promise.all([
+    read('src/quotes/adminNavigation.ts'),
+    read('src/quotes/AdminExperienceLayer.tsx'),
+    read('src/quotes/admin-liquid-glass.css'),
+    read('src/quotes/AdminApp.tsx'),
+    read('src/quotes/AdminAuthRouter.tsx'),
+    read('src/main.tsx'),
+  ])
+
+  assert.match(navigation, /'activities'/)
+  assert.match(navigation, /ADMIN_NAVIGATE_EVENT/)
+  assert.match(experience, /className="hrx-glass-sidebar"/)
+  assert.match(experience, /className="hrx-mobile-nav"/)
+  assert.match(experience, /from\('clients'\)/)
+  assert.match(experience, /from\('quote_requests'\)/)
+  assert.match(experience, /from\('hrx_documents'\)/)
+  assert.match(experience, /createSignedUrl/)
+  assert.match(experience, /<AdminClientForm/)
+  assert.match(experience, /hrx_create_manual_quote/)
+  assert.doesNotMatch(experience, /createPortal|MutationObserver|document\.querySelector/)
+  for (const label of ['Visão Geral', 'Projetos', 'Atividades', 'Clientes', 'Central de Documentos', 'Configurações']) assert.match(experience, new RegExp(label))
+  assert.match(liquidCss, /\.hrx-glass-sidebar/)
+  assert.match(liquidCss, /\.hrx-mobile-nav/)
+  assert.match(liquidCss, /backdrop-filter/)
+  assert.match(liquidCss, /@media\(max-width:760px\)/)
+  for (const component of ['AdminQuotes', 'AdminSuspensionsPage', 'AdminFiscalPage', 'AdminExperienceLayer']) assert.match(adminApp, new RegExp(`<${component} \/>`))
+  assert.match(adminApp, /admin-liquid-glass\.css/)
+  assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
+  assert.match(main, /<AdminAuthRouter \/>/)
 })
 
 test('CNPJ lookup belongs to the client form instead of a DOM mutation layer', async () => {

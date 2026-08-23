@@ -1,26 +1,19 @@
 import AdminQuotes from './AdminQuotes'
-import AdminClientsPage from './AdminClientsPage'
 import AdminSuspensionsPage from './AdminSuspensionsPage'
-import AdminDocumentsPage from './AdminDocumentsPage'
 import AdminFiscalPage from './AdminFiscalPage'
-import AdminProjectPanelsPage from './AdminProjectPanelsPage'
-import AdminExecutiveDashboard from './AdminExecutiveDashboard'
 import AdminExperienceLayer from './AdminExperienceLayer'
 import SuspendedQuoteGuard from './SuspendedQuoteGuard'
 import './admin-page-system.css'
 import './admin-feedback.css'
 import './admin-interactions.css'
 import './admin-executive-intelligence.css'
+import './admin-liquid-glass.css'
 
 export default function AdminApp() {
   return <>
     <AdminQuotes />
-    <AdminClientsPage />
     <AdminSuspensionsPage />
-    <AdminDocumentsPage />
     <AdminFiscalPage />
-    <AdminProjectPanelsPage />
-    <AdminExecutiveDashboard />
     <AdminExperienceLayer />
     <SuspendedQuoteGuard />
   </>

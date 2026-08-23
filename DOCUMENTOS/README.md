@@ -20,3 +20,7 @@
 Exemplo: `2026-08-17_HORTIFRUTI-REVOLUCAO_CHECKLIST-INFORMACOES_V01.pdf`
 
 > Este repositório é público. Não armazenar senhas, tokens, chaves de API ou outras credenciais.
+
+## Registros recentes
+
+- `00_INSTITUCIONAL/2026-08-23_HRX-ADMIN_RELATORIO-IMPLEMENTACAO-LIQUID-GLASS_V01.md` — implementação do espaço administrativo conforme as cinco mockups aprovadas.
