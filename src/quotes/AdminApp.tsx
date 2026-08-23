@@ -1,10 +1,4 @@
-import AdminQuotes from './AdminQuotes'
-import AdminSuspensionsPage from './AdminSuspensionsPage'
-import AdminFiscalPage from './AdminFiscalPage'
-import AdminExperienceLayer from './AdminExperienceLayer'
-import AdminPersonalizationBridge from './AdminPersonalizationBridge'
-import AdminSettingsShortcut from './AdminSettingsShortcut'
-import SuspendedQuoteGuard from './SuspendedQuoteGuard'
+import AdminUnifiedRoot from './AdminUnifiedRoot'
 import './admin-page-system.css'
 import './admin-feedback.css'
 import './admin-interactions.css'
@@ -14,13 +8,5 @@ import './admin-responsive-hardening.css'
 import './admin-mobile-safe-area-fixes.css'
 
 export default function AdminApp() {
-  return <>
-    <AdminQuotes />
-    <AdminSuspensionsPage />
-    <AdminFiscalPage />
-    <AdminExperienceLayer />
-    <AdminPersonalizationBridge />
-    <AdminSettingsShortcut />
-    <SuspendedQuoteGuard />
-  </>
+  return <AdminUnifiedRoot />
 }
