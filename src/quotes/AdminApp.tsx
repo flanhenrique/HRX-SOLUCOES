@@ -8,6 +8,7 @@ import './admin-responsive-hardening.css'
 import './admin-mobile-safe-area-fixes.css'
 import './admin-unified-shell.css'
 import './admin-unified-chrome.css'
+import './admin-usability-overrides.css'
 
 export default function AdminApp() {
   return <AdminUnifiedRoot />
