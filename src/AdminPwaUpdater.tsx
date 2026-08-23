@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { canUseAdminServiceWorker, ensureAdminServiceWorker } from './adminPwaService'
 import './admin-pwa-update.css'
 
 type AdminVersion = {
@@ -17,39 +18,52 @@ type HrxWindow = Window & typeof globalThis & {
   __HRX_ADMIN_BUILD__?: string
 }
 
+type UpdateState = 'idle' | 'available' | 'checking' | 'downloading' | 'installing' | 'activating' | 'complete' | 'error'
+
 const VERSION_URL = '/admin/version.json'
-const SERVICE_WORKER_URL = '/admin/sw.js'
-const SERVICE_WORKER_SCOPE = '/admin/'
 const CHECK_COOLDOWN_MS = 30_000
+const ACTIVATION_TIMEOUT_MS = 20_000
 
 function installedBuild() {
   return String((window as HrxWindow).__HRX_ADMIN_BUILD__ || 'dev').trim()
 }
 
+function messageForState(state: UpdateState) {
+  if (state === 'checking') return 'Verificando nova versão…'
+  if (state === 'downloading') return 'Baixando dados…'
+  if (state === 'installing') return 'Instalando dados…'
+  if (state === 'activating') return 'Ativando nova versão…'
+  if (state === 'complete') return 'Atualização completa'
+  if (state === 'error') return 'A atualização não foi concluída'
+  return 'Preparando atualização…'
+}
+
 export default function AdminPwaUpdater() {
-  const [available, setAvailable] = useState(false)
-  const [updating, setUpdating] = useState(false)
-  const [complete, setComplete] = useState(false)
+  const [state, setState] = useState<UpdateState>('idle')
   const [version, setVersion] = useState<AdminVersion | null>(null)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState('Preparando atualização…')
+  const [errorMessage, setErrorMessage] = useState('')
   const applyUpdateRef = useRef<() => Promise<void>>(async () => undefined)
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return
+    if (!canUseAdminServiceWorker()) return
 
     let registration: ServiceWorkerRegistration | null = null
     let lastCheckAt = 0
     let progressValue = 0
     let applyingUpdate = false
     let reloadScheduled = false
+    let activationTimeout = 0
     let disposed = false
 
-    const setUpdateProgress = (percent: number, nextStatus: string) => {
+    const transition = (nextState: UpdateState, percent = progressValue, nextStatus = messageForState(nextState)) => {
       progressValue = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)))
       if (disposed) return
+      setState(nextState)
       setProgress(progressValue)
       setStatus(nextStatus)
+      if (nextState !== 'error') setErrorMessage('')
     }
 
     const setBadge = async () => {
@@ -70,31 +84,39 @@ export default function AdminPwaUpdater() {
       }
     }
 
-    const ensureRegistration = async () => {
-      const existing = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_SCOPE)
-      return existing || navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: SERVICE_WORKER_SCOPE })
+    const markError = (message: string) => {
+      applyingUpdate = false
+      if (activationTimeout) window.clearTimeout(activationTimeout)
+      activationTimeout = 0
+      if (disposed) return
+      setErrorMessage(message)
+      transition('error', Math.min(progressValue, 94), 'A atualização não foi concluída')
     }
 
     const finishAndReload = () => {
-      if (reloadScheduled) return
+      if (!applyingUpdate || reloadScheduled) return
       reloadScheduled = true
-      setUpdateProgress(100, 'Atualização completa')
-      if (!disposed) setComplete(true)
+      applyingUpdate = false
+      if (activationTimeout) window.clearTimeout(activationTimeout)
+      activationTimeout = 0
+      transition('complete', 100, 'Atualização completa')
       window.setTimeout(() => window.location.reload(), 850)
     }
 
     const waitUntilInstalled = (worker: ServiceWorker) => {
+      if (worker.state === 'redundant') return Promise.reject(new Error('worker_redundant'))
       if (['installed', 'activated'].includes(worker.state)) return Promise.resolve(worker)
 
-      return new Promise<ServiceWorker>((resolve) => {
+      return new Promise<ServiceWorker>((resolve, reject) => {
         const onStateChange = () => {
-          if (worker.state === 'installing') {
-            setUpdateProgress(Math.max(progressValue, 22), 'Baixando dados…')
+          if (worker.state === 'installing') transition('downloading', Math.max(progressValue, 22))
+          if (worker.state === 'installed') transition('installing', Math.max(progressValue, 72))
+          if (worker.state === 'redundant') {
+            worker.removeEventListener('statechange', onStateChange)
+            reject(new Error('worker_redundant'))
+            return
           }
-          if (worker.state === 'installed') {
-            setUpdateProgress(Math.max(progressValue, 72), 'Download concluído. Instalando dados…')
-          }
-          if (['installed', 'activated', 'redundant'].includes(worker.state)) {
+          if (['installed', 'activated'].includes(worker.state)) {
             worker.removeEventListener('statechange', onStateChange)
             resolve(worker)
           }
@@ -109,8 +131,8 @@ export default function AdminPwaUpdater() {
       lastCheckAt = now
 
       try {
-        registration ||= await ensureRegistration()
-        await registration.update().catch(() => undefined)
+        registration ||= await ensureAdminServiceWorker()
+        await registration.update()
 
         const response = await fetch(`${VERSION_URL}?t=${now}`, {
           cache: 'no-store',
@@ -125,31 +147,22 @@ export default function AdminPwaUpdater() {
           navigator.serviceWorker.controller && (registration.waiting || registration.installing),
         )
         const hasBuildMismatch = currentBuild !== 'dev' && Boolean(remoteBuild && remoteBuild !== currentBuild)
-        const hasNewBuild = hasPendingWorker || hasBuildMismatch
 
-        if (hasNewBuild) {
-          if (!disposed) {
-            setVersion(remoteVersion)
-            setAvailable(true)
-            if (!applyingUpdate) {
-              setComplete(false)
-              setUpdateProgress(0, 'Preparando atualização…')
-            }
-          }
+        if (hasPendingWorker || hasBuildMismatch) {
+          if (!disposed) setVersion(remoteVersion)
+          if (!applyingUpdate) transition('available', 0)
           await setBadge()
         } else if (!applyingUpdate) {
-          if (!disposed) setAvailable(false)
+          transition('idle', 0)
           await clearBadge()
         }
       } catch {
-        // Sem rede, o PWA segue usando a versão instalada.
+        // Checagem em background não derruba a versão instalada.
       }
     }
 
     const observeRegistration = (activeRegistration: ServiceWorkerRegistration) => {
-      if (activeRegistration.waiting && navigator.serviceWorker.controller) {
-        void checkForUpdate(true)
-      }
+      if (activeRegistration.waiting && navigator.serviceWorker.controller) void checkForUpdate(true)
 
       activeRegistration.addEventListener('updatefound', () => {
         const worker = activeRegistration.installing
@@ -164,8 +177,8 @@ export default function AdminPwaUpdater() {
 
     const handleControllerChange = () => {
       if (applyingUpdate) {
-        setUpdateProgress(96, 'Ativando nova versão…')
-        window.setTimeout(finishAndReload, 180)
+        transition('activating', 98, 'Ativando nova versão…')
+        finishAndReload()
       } else {
         void checkForUpdate(true)
       }
@@ -174,18 +187,16 @@ export default function AdminPwaUpdater() {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       const payload = event.data || {}
       if (payload.type === 'HRX_UPDATE_PROGRESS' && applyingUpdate) {
-        const nextProgress = Math.max(progressValue, Number(payload.progress) || 0)
-        const nextStatus = payload.phase === 'install'
-          ? 'Instalando dados…'
-          : payload.phase === 'complete'
-            ? 'Atualização completa'
-            : 'Baixando dados…'
-        setUpdateProgress(nextProgress, nextStatus)
+        const reported = Number(payload.progress) || 0
+        const nextProgress = Math.min(94, Math.max(progressValue, reported))
+        if (payload.phase === 'install') transition('installing', nextProgress)
+        else if (payload.phase === 'complete') transition('activating', Math.max(nextProgress, 94))
+        else transition('downloading', nextProgress)
         return
       }
 
       if (payload.type === 'HRX_UPDATED') {
-        if (applyingUpdate) setUpdateProgress(96, 'Ativando nova versão…')
+        if (applyingUpdate) transition('activating', Math.max(progressValue, 94))
         else void checkForUpdate(true)
       }
     }
@@ -193,41 +204,45 @@ export default function AdminPwaUpdater() {
     const applyUpdate = async () => {
       if (applyingUpdate) return
       applyingUpdate = true
-      if (!disposed) {
-        setUpdating(true)
-        setComplete(false)
-      }
-      setUpdateProgress(4, 'Preparando atualização…')
+      reloadScheduled = false
+      transition('checking', 4)
       await clearBadge()
 
       try {
-        registration ||= await ensureRegistration()
-        setUpdateProgress(10, 'Verificando nova versão…')
+        registration ||= await ensureAdminServiceWorker()
+        transition('checking', 10)
 
         const waitingBeforeUpdate = registration.waiting
         if (!waitingBeforeUpdate) {
-          setUpdateProgress(14, 'Baixando dados…')
+          transition('downloading', 14)
           await registration.update()
         }
 
         const candidate = registration.waiting || registration.installing || waitingBeforeUpdate
-        if (candidate) {
-          if (candidate.state === 'installing') {
-            setUpdateProgress(18, 'Baixando dados…')
-          }
-          const worker = await waitUntilInstalled(candidate)
-          if (worker.state === 'installed') {
-            setUpdateProgress(Math.max(progressValue, 78), 'Instalando dados…')
-            worker.postMessage({ type: 'SKIP_WAITING' })
-            return
-          }
+        if (!candidate) throw new Error('worker_candidate_missing')
+
+        const worker = await waitUntilInstalled(candidate)
+        if (worker.state === 'redundant') throw new Error('worker_redundant')
+
+        if (worker.state === 'activated') {
+          transition('activating', 98)
+          finishAndReload()
+          return
         }
 
-        setUpdateProgress(92, 'Aplicando atualização…')
-        finishAndReload()
-      } catch {
-        setUpdateProgress(92, 'Finalizando atualização…')
-        finishAndReload()
+        if (worker.state !== 'installed') throw new Error(`worker_invalid_state_${worker.state}`)
+
+        transition('activating', Math.max(progressValue, 90))
+        activationTimeout = window.setTimeout(() => {
+          if (applyingUpdate) markError('A nova versão foi baixada, mas não conseguiu assumir o controle do aplicativo. A versão atual continua ativa.')
+        }, ACTIVATION_TIMEOUT_MS)
+        worker.postMessage({ type: 'SKIP_WAITING' })
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : 'update_failed'
+        const message = reason === 'worker_redundant'
+          ? 'O pacote de atualização foi descartado pelo navegador. A versão atual continua ativa; tente novamente.'
+          : 'Não foi possível concluir a atualização. A versão instalada continua funcionando normalmente.'
+        markError(message)
       }
     }
 
@@ -249,7 +264,7 @@ export default function AdminPwaUpdater() {
 
     const initialize = async () => {
       try {
-        registration = await ensureRegistration()
+        registration = await ensureAdminServiceWorker()
         observeRegistration(registration)
         await checkForUpdate(true)
       } catch {
@@ -261,6 +276,8 @@ export default function AdminPwaUpdater() {
 
     return () => {
       disposed = true
+      applyingUpdate = false
+      if (activationTimeout) window.clearTimeout(activationTimeout)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('focus', onFocus)
@@ -270,29 +287,40 @@ export default function AdminPwaUpdater() {
     }
   }, [])
 
-  if (!available && !updating) return null
+  if (state === 'idle') return null
+
+  const working = ['checking', 'downloading', 'installing', 'activating'].includes(state)
+  const failed = state === 'error'
+  const completed = state === 'complete'
 
   return (
     <aside
       className="admin-pwa-update-banner"
-      data-updating={updating ? 'true' : undefined}
-      data-complete={complete ? 'true' : undefined}
-      role="status"
-      aria-live="polite"
+      data-updating={working ? 'true' : undefined}
+      data-complete={completed ? 'true' : undefined}
+      data-error={failed ? 'true' : undefined}
+      role={failed ? 'alert' : 'status'}
+      aria-live={failed ? 'assertive' : 'polite'}
     >
-      <span className="admin-pwa-update-icon" aria-hidden="true">↑</span>
+      <span className="admin-pwa-update-icon" aria-hidden="true">{failed ? '!' : completed ? '✓' : '↑'}</span>
       <span className="admin-pwa-update-copy">
-        <strong>Nova versão do HRX Admin disponível</strong>
-        <small>{version?.message || 'Melhorias e correções estão prontas para instalar.'}</small>
+        <strong>{failed ? 'Não foi possível instalar a nova versão' : completed ? 'HRX Admin atualizado' : 'Nova versão do HRX Admin disponível'}</strong>
+        <small>{failed ? errorMessage : version?.message || 'Melhorias e correções estão prontas para instalar.'}</small>
       </span>
 
-      {!updating && (
+      {state === 'available' && (
         <button className="admin-pwa-update-action" type="button" onClick={() => void applyUpdateRef.current()}>
           Atualizar agora
         </button>
       )}
 
-      {updating && (
+      {failed && (
+        <button className="admin-pwa-update-action" type="button" onClick={() => void applyUpdateRef.current()}>
+          Tentar novamente
+        </button>
+      )}
+
+      {(working || completed || failed) && (
         <div className="admin-pwa-update-progress">
           <div className="admin-pwa-update-progress-copy">
             <span>{status}</span>
