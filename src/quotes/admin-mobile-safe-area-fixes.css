@@ -2,9 +2,52 @@
   html.hrx-admin-pwa .hrx-notification-panel{top:calc(64px + env(safe-area-inset-top))}
   html.hrx-admin-pwa .hrx-loading{top:calc(64px + env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
   html.hrx-admin-pwa .hrx-back-to-dashboard{top:max(14px,calc(env(safe-area-inset-top) + 8px));left:max(14px,env(safe-area-inset-left))}
+
+  /* A marca oficial substitui o wordmark tipográfico improvisado no topo mobile. */
+  html.hrx-admin-pwa .hrx-mobile-brand{display:flex;align-items:center;flex:1 1 auto;min-width:0;height:50px;overflow:hidden}
+  html.hrx-admin-pwa .hrx-mobile-brand strong,
+  html.hrx-admin-pwa .hrx-mobile-brand span{display:none}
+  html.hrx-admin-pwa .hrx-mobile-brand::before{content:"";display:block;flex:0 0 auto;width:84px;height:50px;background:url('/hrx-logo.svg') center/contain no-repeat}
+
+  /* A tela volta a correr até o rodapé; a navegação deixa de reservar uma faixa fixa. */
+  html.hrx-admin-pwa .hrx-glass-main{inset:var(--hrx-topbar) 0 0 0;bottom:0;padding-bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  html.hrx-admin-pwa .hrx-view{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+
+  /* Navegação inferior flutuante acima do home indicator, sem ocupar toda a base da tela. */
+  html.hrx-admin-pwa .hrx-mobile-nav{
+    inset:auto max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+    width:auto;
+    height:64px;
+    min-height:64px;
+    padding:4px 8px;
+    gap:4px;
+    border:1px solid rgba(177,207,235,.2);
+    border-radius:20px;
+    background:rgba(8,26,45,.84);
+    box-shadow:0 16px 44px rgba(0,8,20,.38),inset 0 1px 0 rgba(255,255,255,.04);
+    backdrop-filter:blur(24px) saturate(1.12);
+    -webkit-backdrop-filter:blur(24px) saturate(1.12);
+    overflow:hidden;
+  }
+  html.hrx-admin-pwa .hrx-mobile-nav button{min-width:0;min-height:52px;padding:4px 2px;border-radius:14px;overflow:hidden;touch-action:manipulation}
+  html.hrx-admin-pwa .hrx-mobile-nav button.is-active{background:rgba(67,137,255,.12)}
+  html.hrx-admin-pwa .hrx-mobile-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  html.hrx-admin-pwa .hrx-detail-drawer{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+}
+
+@media(max-width:390px){
+  html.hrx-admin-pwa .hrx-mobile-brand{height:46px}
+  html.hrx-admin-pwa .hrx-mobile-brand::before{width:76px;height:46px}
+  html.hrx-admin-pwa .hrx-mobile-nav{inset-right:max(10px,env(safe-area-inset-right));inset-left:max(10px,env(safe-area-inset-left));gap:2px;padding-inline:6px}
 }
 
 @media(orientation:landscape) and (max-height:520px) and (max-width:932px){
   html.hrx-admin-pwa .hrx-notification-panel{top:calc(58px + env(safe-area-inset-top))}
   html.hrx-admin-pwa .hrx-loading{top:calc(58px + env(safe-area-inset-top))}
+  html.hrx-admin-pwa .hrx-mobile-brand{height:42px}
+  html.hrx-admin-pwa .hrx-mobile-brand::before{width:72px;height:42px}
+  html.hrx-admin-pwa .hrx-mobile-nav{height:56px;min-height:56px;bottom:max(7px,env(safe-area-inset-bottom))}
+  html.hrx-admin-pwa .hrx-mobile-nav button{min-height:46px}
+  html.hrx-admin-pwa .hrx-view,
+  html.hrx-admin-pwa .hrx-detail-drawer{padding-bottom:calc(94px + env(safe-area-inset-bottom))}
 }
