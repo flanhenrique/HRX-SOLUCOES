@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react'
 import AdminExperienceLayer from './AdminExperienceLayer'
+import AdminFinancePage from './AdminFinancePage'
 import AdminFiscalPage from './AdminFiscalPage'
 import AdminPersonalizationBridge from './AdminPersonalizationBridge'
 import AdminQuotes from './AdminQuotes'
@@ -17,6 +18,7 @@ const navItems: NavItem[] = [
   { destination: 'clients', label: 'Clientes', icon: '♙' },
   { destination: 'suspensions', label: 'Suspensões', icon: 'Ⅱ' },
   { destination: 'fiscal', label: 'Fiscal', icon: '§' },
+  { destination: 'finance', label: 'Financeiro', icon: '¤' },
   { destination: 'documents', label: 'Central de Documentos', shortLabel: 'Docs', icon: '▤' },
   { destination: 'settings', label: 'Configurações', shortLabel: 'Perfil', icon: '⚙' },
 ]
@@ -34,12 +36,14 @@ function initialDestination(): AdminDestination {
     clientes: 'clients',
     suspensoes: 'suspensions',
     fiscal: 'fiscal',
+    financeiro: 'finance',
     documentos: 'documents',
     configuracoes: 'settings',
   }
   if (map[hash]) return map[hash]
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
   if (pathname === '/admin/orcamentos') return 'quotes'
+  if (pathname === '/admin/financeiro') return 'finance'
   return 'executive'
 }
 
@@ -66,6 +70,7 @@ function ActivatedRoute({ destination, children }: { destination: 'fiscal' | 'su
 function RouteContent({ destination }: { destination: AdminDestination }) {
   if (coreDestinations.has(destination)) return <AdminExperienceLayer />
   if (destination === 'quotes') return <AdminQuotes />
+  if (destination === 'finance') return <AdminFinancePage />
   if (destination === 'suspensions') return <ActivatedRoute destination="suspensions"><AdminSuspensionsPage /></ActivatedRoute>
   if (destination === 'fiscal') return <ActivatedRoute destination="fiscal"><AdminFiscalPage /></ActivatedRoute>
   return <AdminExperienceLayer />
