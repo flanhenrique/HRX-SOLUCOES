@@ -101,6 +101,24 @@ jobs:
               path.write_text(html)
           PY
 
+      - name: Track Lighthouse metrics
+        continue-on-error: true
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/hrx-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill $PREVIEW_PID || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/admin/orcamentos/ >/dev/null; then break; fi
+            sleep 1
+          done
+          npm run audit:lighthouse
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const report = JSON.parse(fs.readFileSync('lighthouse-admin.json', 'utf8'))
+          const scores = Object.fromEntries(Object.entries(report.categories).map(([key, value]) => [key, Math.round((value.score || 0) * 100)]))
+          console.log('Lighthouse HRX Admin:', scores)
+          NODE
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
