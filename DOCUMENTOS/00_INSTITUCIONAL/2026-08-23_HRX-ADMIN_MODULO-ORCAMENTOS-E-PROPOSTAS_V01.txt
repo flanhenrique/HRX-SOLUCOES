@@ -1,0 +1,84 @@
+HRX SOLUTIONS — RELATÓRIO DE IMPLEMENTAÇÃO
+MÓDULO DE ORÇAMENTOS E PROPOSTAS COMERCIAIS
+
+Versão: 1.0
+Data: 23/08/2026
+Área: Comercial / Administrativo
+
+1. RESULTADO
+
+O módulo de Orçamentos foi evoluído sobre as estruturas existentes da HRX Solutions. O fluxo comercial agora suporta Rascunho, Revisado, Enviado, Em negociação, Aprovado, Faturado, Recebido, Perdido e Cancelado, com validação de transições e histórico administrativo.
+
+2. IMPLEMENTADO
+
+- pesquisa do cliente real por nome, empresa, CPF/CNPJ, e-mail e telefone;
+- cadastro rápido com retorno ao orçamento sem cadastro paralelo;
+- número oficial HRX-ORC-AAAA-NNNNNN;
+- autosave, continuação, exclusão confirmada e duplicação de rascunho;
+- itens manuais ou de catálogo, com quantidade, unidade, valor e subtotal;
+- cálculo em centavos de subtotal, desconto, imposto, taxas e total;
+- imposto configurável por proposta;
+- validade em dias e data final calculada;
+- valor final desejado com MFA/AAL2, justificativa e auditoria;
+- pagamento à vista ou parcelado, vencimentos e fechamento exato do total;
+- revisão final antes da geração oficial;
+- versões imutáveis e PDF profissional HRX;
+- marca RASCUNHO apenas no PDF preliminar;
+- registro do PDF no bucket privado hrx-documents e em hrx_documents;
+- vínculo documental com cliente, orçamento e versão;
+- preparação de e-mail editável, com confirmação do administrador;
+- compartilhamento nativo com PDF e WhatsApp com URL assinada temporária;
+- histórico comercial e registro da aprovação;
+- experiência PWA própria, sem tabela ou navegação de etapas horizontal.
+
+3. BANCO DE DADOS
+
+Foram versionadas quatro migrations específicas para a evolução do schema e seu endurecimento de segurança:
+
+- 20260823203057_quote_commercial_lifecycle.sql
+- 20260823203211_optimize_quote_commercial_lifecycle.sql
+- 20260823204142_harden_quote_version_immutability.sql
+- 20260823204215_restrict_quote_table_grants.sql
+
+Novas estruturas principais: quote_payment_installments e quote_versions. Estruturas existentes quote_requests, quote_drafts, quote_items e hrx_documents foram ampliadas. RLS, autenticação, MFA/AAL2 e bucket privado foram preservados.
+
+4. SEGURANÇA
+
+Operações administrativas exigem usuário autorizado e AAL2. Ajustes manuais exigem justificativa. Propostas aprovadas ou encerradas ficam somente leitura. Não há senha de iCloud, token do WhatsApp nem segredo no frontend ou repositório. Documentos privados usam URL assinada temporária.
+
+5. PDF E CENTRAL DE DOCUMENTOS
+
+O PDF contém identidade HRX, número, versão, cliente, itens, resumo financeiro, imposto, condição de pagamento, parcelas, validade e rodapé institucional. A finalização cria objeto físico e metadado documental; falhas intermediárias são compensadas para evitar documento órfão.
+
+6. E-MAIL
+
+Funcional: preparação de destinatário, assunto, mensagem, abertura do cliente de e-mail e compartilhamento nativo com PDF.
+
+Pendente de infraestrutura futura: envio SMTP automático pelo iCloud. A implementação segura exige backend e senha específica de aplicativo armazenada como secret; isso não foi improvisado no frontend.
+
+7. WHATSAPP
+
+No mobile/PWA, o sistema usa o compartilhamento nativo com PDF quando suportado. No desktop, prepara a conversa com mensagem e URL assinada temporária. A API paga do WhatsApp Business não foi implementada.
+
+8. QA
+
+Testes automatizados: 36 PASS, 0 FAIL, 1 teste legado ignorado.
+TypeScript: PASS.
+Build Vite: PASS.
+Edge Function quote-admin: versão 8 ACTIVE, JWT obrigatório.
+
+Os cenários A a N estão cobertos pela suíte: cliente existente, novo cliente, rascunho, exclusão, duplicação, desconto, valor final, imposto, parcelamento, PDF, nova versão, e-mail, WhatsApp e PWA.
+
+9. DADOS
+
+Nenhum cliente, orçamento, valor ou documento fictício foi inserido. A base real mantém 3 clientes ativos e 3 rascunhos existentes. Nenhuma proposta oficial foi gerada durante o QA para evitar criar documento comercial fictício.
+
+10. PENDÊNCIAS FUTURAS
+
+- Contas a Receber;
+- vínculo e emissão de nota fiscal;
+- recorrência automática;
+- backend transacional de e-mail;
+- WhatsApp Business API, somente se houver necessidade futura.
+
+Fim do relatório.

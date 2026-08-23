@@ -1,60 +1,475 @@
-import { useEffect, useMemo, useState } from 'react'
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { assessDiscount, DISCOUNT_LEVELS } from './discount'
-import { calculateQuotePreview } from './quoteMath'
-import type { DiscountLevel, RetentionInput } from './types'
+import AdminClientForm from './AdminClientForm'
+import { navigateAdmin } from './adminNavigation'
+import { generateProposalPdf, type ProposalPdfData } from './proposalPdf'
+import { buildInstallmentSchedule, calculateQuotePreview, toCents } from './quoteMath'
+import type { CommercialStatus, DiscountLevel, PaymentMode, RetentionInput } from './types'
 import { hrxPublishableKey, hrxSupabase, quoteAdminEndpoint } from './supabaseClient'
 import './quotes.css'
+import './quote-commercial.css'
 
-type ProviderRule = { provider: 'nubank' | 'mercadopago'; display_name: string; boleto_fee_per_paid: number; fee_note?: string | null }
-type PricingRule = { service_key: string; service_name: string; category: string; base_amount: number; minimum_amount: number; fiscal_code?: string | null; invoice_description?: string | null }
-type QuoteItem = { id?: string; draft_id?: string; service_key: string; service_name: string; quantity: number; unit_amount: number; total_amount: number; source: 'engine' | 'manual' }
-type ClientFiscalProfile = { client_id: string; cnpj: string; legal_name?: string | null; trade_name?: string | null; registration_status?: string | null; main_cnae_code?: string | null; main_cnae_description?: string | null; simple_option?: boolean | null; mei_option?: boolean | null; tax_regime?: string | null; tax_regime_requires_confirmation?: boolean | null; state_registration?: string | null; state_registration_status?: string | null; icms_taxpayer?: boolean | null; federal_validation_status?: string | null; state_validation_status?: string | null; data_source?: string | null; source_note?: string | null; checked_at?: string | null; updated_at?: string | null }
-type AdminDraft = { id: string; request_id: string; base_amount: number; complexity_multiplier: number; urgency_multiplier: number; pre_discount_amount: number; discount_percent: DiscountLevel; discount_status: 'green' | 'yellow' | 'red' | 'purple'; discount_amount: number; final_amount: number; payment_provider: 'none' | 'nubank' | 'mercadopago'; installments: number; payment_fee_total: number; retentions: RetentionInput; retention_total: number; retention_pricing_mode: 'informational' | 'preserve_net'; retention_gross_up_suggestion: number; estimated_net: number; fiscal_review_required: boolean; fiscal_review_confirmed: boolean; notes?: string | null; status: 'awaiting_review' | 'needs_scope' | 'approved' | 'rejected' | 'suspended'; items?: QuoteItem[]; updated_at?: string }
-type AdminRequest = { id: string; protocol: string; created_at: string; name: string; email: string; phone: string; company?: string | null; request_text: string; desired_deadline?: string | null; status: string; interpretation?: { summary: string; suggested_service_keys: string[]; confidence: number; missing_information: string[] } | null; draft?: AdminDraft | null }
-type AdminResponse = { requests: AdminRequest[]; providers: ProviderRule[]; pricingRules: PricingRule[] }
-type SaveQuotePayload = { items: { serviceKey: string; quantity: number }[]; discountPercent: DiscountLevel; complexityMultiplier: number; urgencyMultiplier: number; paymentProvider: 'none' | 'nubank' | 'mercadopago'; installments: number; retentions: RetentionInput; retentionPricingMode: 'informational' | 'preserve_net'; fiscalReviewConfirmed: boolean; notes: string }
-type EditorTab = 'overview' | 'composition' | 'finance' | 'fiscal' | 'send'
-type FiscalProfileState = 'idle' | 'loading' | 'ready' | 'missing' | 'error'
-type FiscalAssessment = { status: string; applied?: boolean; version?: string; retentions: RetentionInput; retentionTotal?: number; serviceCodes?: string[]; explanations?: string[]; issuerRegime?: string }
+type ProviderRule = { provider: 'nubank' | 'mercadopago'; display_name: string; boleto_fee_per_paid: number }
+type PricingRule = { service_key: string; service_name: string; category: string; base_amount: number; minimum_amount: number; invoice_description?: string | null }
+type Client = { id: string; name: string; company?: string | null; email?: string | null; phone?: string | null; document?: string | null; notes?: string | null; active: boolean }
+type QuoteItem = { id?: string; service_key?: string | null; service_name: string; item_description?: string | null; unit_label?: string; quantity: number; unit_amount: number; total_amount?: number }
+type Installment = { id?: string; installment_number: number; amount: number; due_date: string; status?: string }
+type Version = { id: string; version_number: number; commercial_status: CommercialStatus; pdf_object_path?: string | null; document_id?: string | null; created_at: string }
+type Audit = { id: string; event_type: string; event_data?: Record<string, unknown>; created_at: string }
+type Draft = {
+  id: string
+  request_id: string
+  base_amount: number
+  complexity_multiplier: number
+  urgency_multiplier: number
+  pre_discount_amount: number
+  discount_percent: DiscountLevel
+  discount_amount: number
+  tax_percent: number
+  tax_amount: number
+  final_amount: number
+  custom_final_amount?: number | null
+  custom_adjustment_reason?: string | null
+  payment_provider: 'none' | 'nubank' | 'mercadopago'
+  payment_mode: PaymentMode
+  installments: number
+  installment_interval_days: number
+  first_due_date?: string | null
+  payment_fee_total: number
+  retentions: RetentionInput
+  retention_total: number
+  retention_pricing_mode: 'informational' | 'preserve_net'
+  estimated_net: number
+  fiscal_review_required: boolean
+  fiscal_review_confirmed: boolean
+  proposal_title?: string | null
+  project_service?: string | null
+  proposal_description?: string | null
+  customer_notes?: string | null
+  notes?: string | null
+  validity_days: number
+  valid_until?: string | null
+  commercial_status: CommercialStatus
+  current_version: number
+  approved_version?: number | null
+  status: string
+  updated_at: string
+  items: QuoteItem[]
+  paymentInstallments: Installment[]
+}
+type Request = {
+  id: string
+  client_id?: string | null
+  protocol: string
+  proposal_number: string
+  created_at: string
+  updated_at?: string
+  name: string
+  email: string
+  phone: string
+  company?: string | null
+  request_text: string
+  status: string
+  draft: Draft
+  versions: Version[]
+  audit: Audit[]
+}
+type AdminResponse = { requests: Request[]; clients: Client[]; providers: ProviderRule[]; pricingRules: PricingRule[] }
+type ItemState = { key: string; serviceKey?: string | null; serviceName: string; description: string; unitLabel: string; quantity: number; unitAmount: number }
+type EditorState = {
+  proposalTitle: string
+  projectService: string
+  description: string
+  customerNotes: string
+  notes: string
+  items: ItemState[]
+  discountPercent: DiscountLevel
+  complexityMultiplier: number
+  urgencyMultiplier: number
+  taxPercent: number
+  desiredFinalAmount: number | null
+  adjustmentReason: string
+  paymentProvider: 'none' | 'nubank' | 'mercadopago'
+  paymentMode: PaymentMode
+  installments: number
+  installmentIntervalDays: number
+  firstDueDate: string
+  validityDays: number
+  retentions: RetentionInput
+  retentionPricingMode: 'informational' | 'preserve_net'
+  fiscalReviewConfirmed: boolean
+}
+type Step = 'client' | 'items' | 'values' | 'payment' | 'review' | 'send'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const emptyRetentions: RetentionInput = { iss: 0, irrf: 0, pis: 0, cofins: 0, csll: 0, inss: 0 }
-const retentionLabels: Record<keyof RetentionInput, string> = { iss: 'ISS', irrf: 'IRRF', pis: 'PIS', cofins: 'COFINS', csll: 'CSLL', inss: 'INSS' }
-const statusLabels: Record<string, string> = { awaiting_review: 'Aguardando revisão', needs_scope: 'Escopo pendente', approved: 'Aprovado', rejected: 'Rejeitado', suspended: 'Suspenso', new: 'Novo', received: 'Recebido' }
-const statusLabel = (status: string) => statusLabels[status] ?? status.replaceAll('_', ' ')
-const fiscalLabel = (value?: string | null) => { if (!value) return 'Não informado'; const labels: Record<string, string> = { LUCRO_PRESUMIDO: 'Lucro Presumido', LUCRO_REAL: 'Lucro Real', SIMPLES_NACIONAL: 'Simples Nacional', IMUNE_ISENTA: 'Imune / Isenta', SIMEI: 'SIMEI', NAO_VERIFICADO: 'Não verificado', PENDENTE_SEFAZ_AM: 'Pendente SEFAZ-AM', NAO_HABILITADO: 'Não habilitado', HABILITADO: 'Habilitado' }; return labels[value] ?? value.replaceAll('_', ' ').toLocaleLowerCase('pt-BR').replace(/(^|\s)\S/g, (letter) => letter.toLocaleUpperCase('pt-BR')) }
-const yesNo = (value?: boolean | null) => value === true ? 'Sim' : value === false ? 'Não' : 'Não informado'
-const formatCnpj = (value?: string | null) => { const digits = (value ?? '').replace(/\D/g, ''); if (digits.length !== 14) return value || 'Não informado'; return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') }
-const formatFiscalDate = (value?: string | null) => value ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Não consultado'
+const statusLabels: Record<CommercialStatus, string> = { draft: 'Rascunho', reviewed: 'Revisado', sent: 'Enviado', negotiating: 'Em negociação', approved: 'Aprovado', invoiced: 'Faturado', received: 'Recebido', lost: 'Perdido', cancelled: 'Cancelado' }
+const eventLabels: Record<string, string> = {
+  quote_created: 'Orçamento criado',
+  manual_quote_created: 'Orçamento criado',
+  draft_saved: 'Rascunho salvo',
+  quote_duplicated: 'Orçamento duplicado',
+  custom_final_amount_confirmed: 'Valor final negociado',
+  proposal_version_generated: 'Versão e PDF gerados',
+  email_prepared: 'E-mail preparado',
+  email_shared: 'E-mail compartilhado',
+  whatsapp_prepared: 'WhatsApp preparado',
+  whatsapp_shared: 'Compartilhado pelo WhatsApp',
+  proposal_copied: 'Mensagem e link copiados',
+  pdf_downloaded: 'PDF baixado',
+  commercial_status_sent: 'Proposta marcada como enviada',
+  commercial_status_approved: 'Proposta aprovada',
+  commercial_status_negotiating: 'Negociação iniciada',
+  commercial_status_lost: 'Proposta marcada como perdida',
+  commercial_status_cancelled: 'Proposta cancelada',
+}
+const today = () => new Date().toISOString().slice(0, 10)
+const futureDate = (days: number) => { const value = new Date(); value.setDate(value.getDate() + days); return value.toISOString().slice(0, 10) }
+const normalizeWhatsApp = (phone: string) => { const digits = phone.replace(/\D/g, ''); return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits }
+const safeFileName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_.-]+/g, '_')
 
-async function adminFetch<T>(session: Session, init?: RequestInit): Promise<T> { const response = await fetch(quoteAdminEndpoint, { ...init, headers: { 'Content-Type': 'application/json', apikey: hrxPublishableKey, Authorization: `Bearer ${session.access_token}`, ...(init?.headers ?? {}) } }); const body = await response.json().catch(() => ({})) as { error?: string }; if (!response.ok) throw new Error(body.error ?? `HTTP_${response.status}`); return body as T }
-function normalizeWhatsApp(phone: string) { const digits = phone.replace(/\D/g, ''); return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits }
-function retentionText(retentions: RetentionInput) { return (Object.entries(retentions) as [keyof RetentionInput, number][]).filter(([, value]) => Number(value) > 0).map(([key, value]) => `${retentionLabels[key]} ${Number(value).toLocaleString('pt-BR')}%`).join(' · ') }
-function buildClientQuoteMessage(request: AdminRequest, draft: AdminDraft, providers: ProviderRule[]) { const lines = ['HRX SOLUTIONS — ORÇAMENTO', `Protocolo: ${request.protocol}`, `Cliente: ${request.name}${request.company ? ` · ${request.company}` : ''}`, '', 'Serviços:']; for (const item of draft.items ?? []) { const quantity = Number(item.quantity) || 1; lines.push(`• ${item.service_name} — ${quantity} × ${currency.format(Number(item.unit_amount))} = ${currency.format(Number(item.total_amount))}`) } lines.push('', `Subtotal do catálogo: ${currency.format(Number(draft.base_amount))}`); if (Number(draft.discount_amount) > 0) lines.push(`Desconto: - ${currency.format(Number(draft.discount_amount))}`); if (Number(draft.payment_fee_total) > 0) { const provider = providers.find((item) => item.provider === draft.payment_provider); lines.push(`Cobrança${provider ? ` via ${provider.display_name}` : ''}: ${currency.format(Number(draft.payment_fee_total))}`) } if (Number(draft.retention_total) > 0) lines.push(`Retenções consideradas: ${retentionText(draft.retentions)} · total ${Number(draft.retention_total).toLocaleString('pt-BR')}%`); lines.push(`Valor do orçamento: ${currency.format(Number(draft.final_amount))}`); if (Number(draft.retention_total) > 0) lines.push(`Líquido estimado após retenções: ${currency.format(Number(draft.estimated_net))}`); lines.push('', 'Validade: 7 dias.', 'HRX Solutions · Soluções inteligentes. Resultados reais.'); return lines.join('\n') }
-
-export default function AdminQuotes() {
-  const [session, setSession] = useState<Session | null>(null); const [checking, setChecking] = useState(true); const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [requests, setRequests] = useState<AdminRequest[]>([]); const [providers, setProviders] = useState<ProviderRule[]>([]); const [pricingRules, setPricingRules] = useState<PricingRule[]>([]); const [selectedId, setSelectedId] = useState<string | null>(null); const [query, setQuery] = useState(''); const [mobileDetailOpen, setMobileDetailOpen] = useState(false); const [online, setOnline] = useState(() => window.navigator.onLine)
-  useEffect(() => { void hrxSupabase.auth.getSession().then(({ data }) => { setSession(data.session); setChecking(false) }); const { data } = hrxSupabase.auth.onAuthStateChange((_event, nextSession) => { setSession(nextSession); setChecking(false) }); return () => data.subscription.unsubscribe() }, [])
-  useEffect(() => { const onOnline = () => setOnline(true); const onOffline = () => setOnline(false); window.addEventListener('online', onOnline); window.addEventListener('offline', onOffline); return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline) } }, [])
-  const load = async (currentSession: Session) => { setLoading(true); setError(''); try { const result = await adminFetch<AdminResponse>(currentSession); setRequests(result.requests); setProviders(result.providers); setPricingRules(result.pricingRules ?? []); setSelectedId((current) => current && result.requests.some((item) => item.id === current) ? current : result.requests[0]?.id ?? null) } catch (loadError) { const code = loadError instanceof Error ? loadError.message : ''; setError(code === 'forbidden' ? 'Este login ainda não está autorizado como administrador da HRX.' : 'Não foi possível carregar os orçamentos agora.') } finally { setLoading(false) } }
-  useEffect(() => { if (session) void load(session) }, [session])
-  const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId])
-  const filteredRequests = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('pt-BR'); if (!normalized) return requests; return requests.filter((item) => [item.name, item.company, item.email, item.protocol].some((value) => value?.toLocaleLowerCase('pt-BR').includes(normalized))) }, [query, requests])
-  const metrics = useMemo(() => ({ pipeline: requests.reduce((sum, item) => sum + (item.draft?.status === 'rejected' || item.draft?.status === 'suspended' ? 0 : Number(item.draft?.final_amount ?? 0)), 0), awaiting: requests.filter((item) => item.draft?.status === 'awaiting_review').length, pendingScope: requests.filter((item) => item.draft?.status === 'needs_scope').length, approved: requests.filter((item) => item.draft?.status === 'approved').length }), [requests])
-  const saveQuote = async (payload: SaveQuotePayload) => { if (!session || !selected?.draft) return; setError(''); try { await adminFetch(session, { method: 'PATCH', body: JSON.stringify({ action: 'save_quote', requestId: selected.id, ...payload }) }); await load(session) } catch (err) { const code = err instanceof Error ? err.message : ''; const messages: Record<string, string> = { invalid_service: 'Há um serviço inválido ou inativo na composição.', invalid_items: 'A composição enviada não é válida.', items_update_failed: 'Não foi possível atualizar os itens do orçamento.', invalid_retention_total: 'A soma das retenções precisa ser menor que 100%.', invalid_discount: 'O desconto selecionado não é permitido.' }; setError(messages[code] ?? 'Não foi possível salvar e recalcular o orçamento.'); throw err } }
-  const approve = async () => { if (!session || !selected?.draft) return; setError(''); try { await adminFetch(session, { method: 'PATCH', body: JSON.stringify({ action: 'approve', requestId: selected.id }) }); await load(session) } catch (err) { const code = err instanceof Error ? err.message : ''; const messages: Record<string, string> = { discount_blocked: 'Desconto de 20% está bloqueado.', fiscal_review_required: 'Confirme a revisão fiscal antes de aprovar.', scope_not_ready: 'O escopo ainda precisa ser fechado.' }; setError(messages[code] ?? 'Não foi possível aprovar este orçamento.') } }
-  if (checking || !session) return <main className="admin-login-shell"><div className="admin-login-card"><p>Validando acesso…</p></div></main>
-  const selectRequest = (id: string) => { setSelectedId(id); setMobileDetailOpen(true) }
-  return <main className={`admin-live-shell${mobileDetailOpen ? ' is-mobile-detail-open' : ''}`}><aside className="admin-exec-sidebar" aria-label="Navegação administrativa"><div className="admin-exec-brand"><span>HRX</span><small>SOLUTIONS</small></div><nav><button className="is-active" type="button"><span aria-hidden="true">▦</span>Orçamentos</button></nav><div className="admin-exec-sidebar-footer"><div className="admin-exec-user"><span>HR</span><div><strong>Administrador</strong><small>HRX Solutions</small></div></div><button type="button" onClick={() => void hrxSupabase.auth.signOut()}>Sair</button></div></aside><section className="admin-exec-main"><header className="admin-exec-topbar"><div><span className="admin-section-kicker">BACKOFFICE</span><h1>Orçamentos</h1></div><div className="admin-exec-system"><span className={online ? 'admin-online-dot is-online' : 'admin-online-dot'} /><span>{online ? 'Online' : 'Sem conexão'}</span><button type="button" onClick={() => void load(session)} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar'}</button></div></header>{error && <div className="admin-global-error" role="alert">{error}</div>}<section className="admin-exec-metrics" aria-label="Resumo executivo"><article><span>Volume em análise</span><strong>{currency.format(metrics.pipeline)}</strong><small>{requests.length} solicitações</small></article><article><span>Aguardando revisão</span><strong>{metrics.awaiting}</strong><small>Precisam de validação</small></article><article><span>Escopo pendente</span><strong>{metrics.pendingScope}</strong><small>Exigem complementação</small></article><article><span>Aprovados</span><strong>{metrics.approved}</strong><small>Prontos para envio</small></article></section><div className="admin-workspace"><aside className="admin-queue"><div className="admin-queue-header"><div><strong>Solicitações</strong><span>{filteredRequests.length}</span></div><label className="admin-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar cliente ou protocolo" /></label></div><div className="admin-queue-list">{loading && <p className="admin-empty">Atualizando solicitações…</p>}{!loading && filteredRequests.length === 0 && <p className="admin-empty">Nenhuma solicitação encontrada.</p>}{filteredRequests.map((request) => <button key={request.id} type="button" className={selectedId === request.id ? 'admin-lead is-active' : 'admin-lead'} onClick={() => selectRequest(request.id)}><div className="admin-lead-top"><span className={`admin-status-dot status-${request.draft?.status ?? request.status}`} /><span>{statusLabel(request.draft?.status ?? request.status)}</span><time>{new Date(request.created_at).toLocaleDateString('pt-BR')}</time></div><strong>{request.name}</strong><small>{request.company || request.email}</small><div className="admin-lead-bottom"><span>{request.protocol}</span><b>{currency.format(Number(request.draft?.final_amount ?? 0))}</b></div></button>)}</div></aside><section className="admin-detail">{selected ? <QuoteEditor request={selected} providers={providers} pricingRules={pricingRules} onSave={saveQuote} onApprove={approve} onBack={() => setMobileDetailOpen(false)} /> : <div className="admin-empty-state"><span>▦</span><h2>Selecione uma solicitação</h2><p>Escolha um orçamento na fila para abrir o editor.</p></div>}</section></div><nav className="admin-mobile-nav" aria-label="Navegação do aplicativo"><button className={!mobileDetailOpen ? 'is-active' : ''} type="button" onClick={() => setMobileDetailOpen(false)}><span>☷</span>Solicitações</button><button className={mobileDetailOpen ? 'is-active' : ''} type="button" disabled={!selected} onClick={() => setMobileDetailOpen(true)}><span>▤</span>Orçamento</button><button type="button" onClick={() => void load(session)} disabled={loading}><span>↻</span>Atualizar</button></nav></section></main>
+function Icon({ children, size = 20 }: { children: ReactNode; size?: number }) {
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+}
+const icons = {
+  plus: <Icon><path d="M12 5v14M5 12h14"/></Icon>,
+  search: <Icon><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></Icon>,
+  file: <Icon><path d="M14 2H6a2 2 0 0 0-2 2v16h14a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></Icon>,
+  user: <Icon><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></Icon>,
+  trash: <Icon><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></Icon>,
+  copy: <Icon><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></Icon>,
+  download: <Icon><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></Icon>,
+  send: <Icon><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></Icon>,
+  check: <Icon><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></Icon>,
+  history: <Icon><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></Icon>,
+  back: <Icon><path d="m15 18-6-6 6-6"/></Icon>,
 }
 
-function QuoteEditor({ request, providers, pricingRules, onSave, onApprove, onBack }: { request: AdminRequest; providers: ProviderRule[]; pricingRules: PricingRule[]; onSave: (payload: SaveQuotePayload) => Promise<void>; onApprove: () => Promise<void>; onBack: () => void }) {
-  const draft = request.draft; const [activeTab, setActiveTab] = useState<EditorTab>('overview'); const [discount, setDiscount] = useState<DiscountLevel>(draft?.discount_percent ?? 0); const [complexity, setComplexity] = useState(draft?.complexity_multiplier ?? 1); const [urgency, setUrgency] = useState(draft?.urgency_multiplier ?? 1); const [provider, setProvider] = useState<'none' | 'nubank' | 'mercadopago'>(draft?.payment_provider ?? 'none'); const [installments, setInstallments] = useState(draft?.installments ?? 1); const [retentions, setRetentions] = useState<RetentionInput>(draft?.retentions ?? emptyRetentions); const [retentionMode, setRetentionMode] = useState<'informational' | 'preserve_net'>(draft?.retention_pricing_mode ?? 'informational'); const [fiscalConfirmed, setFiscalConfirmed] = useState(draft?.fiscal_review_confirmed ?? false); const [notes, setNotes] = useState(draft?.notes ?? ''); const [quantities, setQuantities] = useState<Record<string, number>>({}); const [saving, setSaving] = useState(false); const [shareStatus, setShareStatus] = useState(''); const [fiscalProfile, setFiscalProfile] = useState<ClientFiscalProfile | null>(null); const [fiscalProfileState, setFiscalProfileState] = useState<FiscalProfileState>('idle'); const [fiscalAssessment, setFiscalAssessment] = useState<FiscalAssessment | null>(null)
-  useEffect(() => { setActiveTab('overview'); setDiscount(draft?.discount_percent ?? 0); setComplexity(draft?.complexity_multiplier ?? 1); setUrgency(draft?.urgency_multiplier ?? 1); setProvider(draft?.payment_provider ?? 'none'); setInstallments(draft?.installments ?? 1); setRetentions(draft?.retentions ?? emptyRetentions); setRetentionMode(draft?.retention_pricing_mode ?? 'informational'); setFiscalConfirmed(draft?.fiscal_review_confirmed ?? false); setNotes(draft?.notes ?? ''); setQuantities(Object.fromEntries((draft?.items ?? []).map((item) => [item.service_key, Number(item.quantity) || 1]))); setShareStatus(''); setFiscalProfile(null); setFiscalProfileState('idle'); setFiscalAssessment(null) }, [request.id, draft?.updated_at])
-  useEffect(() => { if (activeTab !== 'fiscal') return; let alive = true; const run = async () => { setFiscalProfileState('loading'); setFiscalAssessment(null); const { data: engineData, error: engineError } = await hrxSupabase.rpc('hrx_calculate_quote_fiscal', { p_request_id: request.id, p_apply: false }); if (!alive) return; setFiscalAssessment(engineError ? null : engineData as FiscalAssessment); const { data: link, error: linkError } = await hrxSupabase.from('quote_requests').select('client_id').eq('id', request.id).maybeSingle(); if (!alive) return; if (linkError) { setFiscalProfile(null); setFiscalProfileState('error'); return } const clientId = link?.client_id as string | null | undefined; if (!clientId) { setFiscalProfile(null); setFiscalProfileState('missing'); return } const { data: profile, error: profileError } = await hrxSupabase.from('client_fiscal_profiles').select('client_id,cnpj,legal_name,trade_name,registration_status,main_cnae_code,main_cnae_description,simple_option,mei_option,tax_regime,tax_regime_requires_confirmation,state_registration,state_registration_status,icms_taxpayer,federal_validation_status,state_validation_status,data_source,source_note,checked_at,updated_at').eq('client_id', clientId).maybeSingle(); if (!alive) return; if (profileError) { setFiscalProfile(null); setFiscalProfileState('error'); return } if (!profile) { setFiscalProfile(null); setFiscalProfileState('missing'); return } setFiscalProfile(profile as ClientFiscalProfile); setFiscalProfileState('ready') }; void run(); return () => { alive = false } }, [activeTab, request.id])
-  const groupedRules = useMemo(() => { const groups = new Map<string, PricingRule[]>(); for (const rule of pricingRules) groups.set(rule.category, [...(groups.get(rule.category) ?? []), rule]); return [...groups.entries()] }, [pricingRules]); if (!draft) return <div className="admin-empty-state"><h2>Rascunho ainda não disponível</h2><p>Esta solicitação ainda não possui um orçamento preparado.</p></div>
-  const assessment = assessDiscount(discount); const selectedRules = pricingRules.filter((rule) => Number(quantities[rule.service_key] ?? 0) > 0); const compositionBase = selectedRules.reduce((sum, rule) => sum + Number(rule.base_amount) * Number(quantities[rule.service_key] ?? 1), 0); const retentionInputTotal = Object.values(retentions).reduce((sum, value) => sum + Number(value || 0), 0); const preview = calculateQuotePreview({ baseAmount: compositionBase, complexityMultiplier: complexity, urgencyMultiplier: urgency, discountPercent: discount, paymentProvider: provider, installments, providers, retentions, retentionPricingMode: retentionMode, fiscalReviewConfirmed: fiscalConfirmed }); const savedQuantities = Object.fromEntries((draft.items ?? []).map((item) => [item.service_key, Number(item.quantity) || 1])); const currentEntries = Object.entries(quantities).filter(([, quantity]) => Number(quantity) > 0).sort(([a], [b]) => a.localeCompare(b)); const savedEntries = Object.entries(savedQuantities).filter(([, quantity]) => Number(quantity) > 0).sort(([a], [b]) => a.localeCompare(b)); const hasUnsavedChanges = JSON.stringify(currentEntries) !== JSON.stringify(savedEntries) || Number(discount) !== Number(draft.discount_percent) || Number(complexity) !== Number(draft.complexity_multiplier) || Number(urgency) !== Number(draft.urgency_multiplier) || provider !== draft.payment_provider || Number(installments) !== Number(draft.installments) || retentionMode !== draft.retention_pricing_mode || fiscalConfirmed !== draft.fiscal_review_confirmed || (Object.keys(retentions) as (keyof RetentionInput)[]).some((key) => Number(retentions[key]) !== Number(draft.retentions?.[key] ?? 0)) || notes !== (draft.notes ?? ''); const retentionInvalid = retentionInputTotal >= 100; const canApprove = !hasUnsavedChanges && !retentionInvalid && draft.discount_status !== 'purple' && draft.status !== 'needs_scope' && (!draft.fiscal_review_required || draft.fiscal_review_confirmed); const canSend = draft.status === 'approved' && !hasUnsavedChanges; const whatsapp = normalizeWhatsApp(request.phone); const whatsappText = encodeURIComponent(`Olá, ${request.name}! Aqui é da HRX Solutions. Recebemos sua solicitação ${request.protocol} e estou entrando em contato para validar alguns pontos antes da proposta.`); const fiscalNeedsTaxRegime = fiscalProfile?.tax_regime_requires_confirmation === true; const fiscalNeedsStateValidation = fiscalProfileState === 'ready' && (!fiscalProfile?.state_registration || fiscalProfile.state_validation_status !== 'HABILITADO'); const fiscalEngineReady = fiscalAssessment?.status === 'READY'; const fiscalEngineStatus = fiscalEngineReady ? 'Verificado' : fiscalAssessment ? 'Pendente de validação' : 'Aguardando verificação'; const retentionIndicator = (key: keyof RetentionInput) => { const current = Number(retentions[key] ?? 0); const automaticValue = fiscalAssessment ? Number(fiscalAssessment.retentions?.[key] ?? Number.NaN) : Number.NaN; if (Number.isFinite(automaticValue) && Math.abs(current - automaticValue) > 0.0001) return { label: 'Alterado manualmente', state: 'needs_scope' }; if (!fiscalEngineReady) return { label: 'Pendente de validação', state: 'needs_scope' }; return current > 0 ? { label: `Verificado · Aplica ${current.toLocaleString('pt-BR')}%`, state: 'approved' } : { label: 'Verificado · Não se aplica', state: 'approved' } }; const approvalButtonLabel = draft.status === 'approved' ? 'Aprovado' : hasUnsavedChanges ? 'Salve antes de aprovar' : draft.discount_status === 'purple' ? '20% bloqueado' : draft.status === 'needs_scope' ? 'Escopo pendente' : draft.fiscal_review_required && !draft.fiscal_review_confirmed ? 'Revisão fiscal pendente' : 'Aprovar orçamento'
-  const toggleRule = (key: string, checked: boolean) => setQuantities((current) => { const next = { ...current }; if (checked) next[key] = Math.max(1, Number(next[key] ?? 1)); else delete next[key]; return next }); const save = async () => { if (retentionInvalid) return; setSaving(true); setShareStatus(''); try { await onSave({ items: Object.entries(quantities).filter(([, quantity]) => quantity > 0).map(([serviceKey, quantity]) => ({ serviceKey, quantity })), discountPercent: discount, complexityMultiplier: complexity, urgencyMultiplier: urgency, paymentProvider: provider, installments, retentions, retentionPricingMode: retentionMode, fiscalReviewConfirmed: fiscalConfirmed, notes }) } finally { setSaving(false) } }; const changeRetention = (key: keyof RetentionInput, value: number) => { setRetentions((current) => ({ ...current, [key]: Math.max(0, value || 0) })); setFiscalConfirmed(false) }; const approvedMessage = buildClientQuoteMessage(request, draft, providers); const sendWhatsApp = () => { if (!canSend || !whatsapp) return; window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(approvedMessage)}`, '_blank', 'noopener,noreferrer'); setShareStatus('Orçamento aberto no WhatsApp. Revise e confirme o envio no aplicativo.') }; const sendEmail = () => { if (!canSend || !request.email) return; const subject = encodeURIComponent(`Orçamento HRX Solutions · ${request.protocol}`); window.location.href = `mailto:${request.email}?subject=${subject}&body=${encodeURIComponent(approvedMessage)}`; setShareStatus('Orçamento preparado no aplicativo de e-mail.') }; const shareQuote = async () => { if (!canSend) return; if (typeof navigator.share === 'function') { try { await navigator.share({ title: `Orçamento HRX · ${request.protocol}`, text: approvedMessage }); setShareStatus('Orçamento compartilhado pelo sistema.'); return } catch (error) { if (error instanceof DOMException && error.name === 'AbortError') return } } if (whatsapp) sendWhatsApp(); else sendEmail() }; const copyQuote = async () => { if (!canSend) return; try { await navigator.clipboard.writeText(approvedMessage); setShareStatus('Orçamento copiado. Agora é só colar no canal de atendimento.') } catch { setShareStatus('Não foi possível copiar automaticamente neste dispositivo.') } }
-  return <div className="admin-editor-shell"><header className="admin-editor-header"><button className="admin-mobile-back" type="button" onClick={onBack} aria-label="Voltar para solicitações">←</button><div className="admin-editor-identity"><span>{request.protocol}</span><div><h2>{request.name}</h2><p>{request.company || 'Empresa não informada'}</p></div></div><div className="admin-editor-value"><span className={`admin-request-state state-${draft.status}`}>{statusLabel(draft.status)}</span><strong>{currency.format(preview.finalAmount)}</strong><small>valor atual</small></div></header><nav className="admin-editor-tabs" aria-label="Etapas do orçamento"><button className={activeTab === 'overview' ? 'is-active' : ''} type="button" onClick={() => setActiveTab('overview')}>Visão geral</button><button className={activeTab === 'composition' ? 'is-active' : ''} type="button" onClick={() => setActiveTab('composition')}>Composição <span>{selectedRules.length}</span></button><button className={activeTab === 'finance' ? 'is-active' : ''} type="button" onClick={() => setActiveTab('finance')}>Financeiro</button><button className={activeTab === 'fiscal' ? 'is-active' : ''} type="button" onClick={() => setActiveTab('fiscal')}>Fiscal</button><button className={activeTab === 'send' ? 'is-active' : ''} type="button" onClick={() => setActiveTab('send')}>Envio</button></nav><div className="admin-editor-content">{activeTab === 'overview' && <div className="admin-view-grid admin-view-overview"><article className="admin-panel admin-panel-primary"><span className="admin-card-kicker">SOLICITAÇÃO</span><div className="admin-title-row"><div><h3>{request.name}</h3><p>{request.company || 'Empresa não informada'}</p></div><span className={`admin-request-state state-${request.status}`}>{statusLabel(request.status)}</span></div><div className="admin-contact-row"><a href={`mailto:${request.email}`}>{request.email}</a><a href={`tel:${request.phone}`}>{request.phone}</a>{whatsapp && <a href={`https://wa.me/${whatsapp}?text=${whatsappText}`} target="_blank" rel="noreferrer">WhatsApp ↗</a>}</div><blockquote className="admin-request-text">{request.request_text}</blockquote>{request.desired_deadline && <p className="admin-note"><strong>Prazo solicitado:</strong> {request.desired_deadline}</p>}</article><article className="admin-panel"><span className="admin-card-kicker">LEITURA DO MOTOR</span><h3>Interpretação</h3><p>{request.interpretation?.summary || 'Sem interpretação disponível.'}</p><div className="admin-confidence-line"><span>Confiança</span><strong>{request.interpretation?.confidence ?? 0}%</strong></div><div className="admin-service-tags">{request.interpretation?.suggested_service_keys.map((key) => <span key={key}>{pricingRules.find((rule) => rule.service_key === key)?.service_name ?? key.replaceAll('_', ' ')}</span>)}</div>{!!request.interpretation?.missing_information.length && <div className="admin-missing"><strong>Pontos a confirmar</strong>{request.interpretation.missing_information.map((item) => <span key={item}>• {item}</span>)}</div>}</article><article className="admin-panel admin-overview-summary"><span className="admin-card-kicker">RESUMO</span><h3>Posição do orçamento</h3><dl><div><dt>Serviços selecionados</dt><dd>{selectedRules.length}</dd></div><div><dt>Subtotal</dt><dd>{currency.format(preview.baseAmount)}</dd></div><div><dt>Valor final</dt><dd>{currency.format(preview.finalAmount)}</dd></div><div><dt>Líquido estimado</dt><dd>{currency.format(preview.estimatedNet)}</dd></div></dl></article></div>}{activeTab === 'composition' && <article className="admin-panel admin-rules-card"><div className="admin-rules-heading"><div><span className="admin-card-kicker">CATÁLOGO DE SERVIÇOS</span><h3>Composição do orçamento</h3><p>Selecione os serviços e quantidades. O subtotal é recalculado em tempo real.</p></div><div className="admin-rules-total"><span>{selectedRules.length} serviço(s)</span><strong>{currency.format(compositionBase)}</strong><small>subtotal atual</small></div></div><div className="admin-rule-groups">{groupedRules.map(([category, rules]) => <section className="admin-rule-group" key={category}><h4>{category}</h4><div className="admin-rule-list">{rules.map((rule) => { const quantity = Number(quantities[rule.service_key] ?? 0); const checked = quantity > 0; return <div className={checked ? 'admin-rule-row is-selected' : 'admin-rule-row'} key={rule.service_key}><label className="admin-rule-check"><input type="checkbox" checked={checked} onChange={(event) => toggleRule(rule.service_key, event.target.checked)} /><span><strong>{rule.service_name}</strong><small>{rule.fiscal_code ? `NFS-e ${rule.fiscal_code}` : 'Código fiscal a validar'} · mínimo interno {currency.format(Number(rule.minimum_amount))}</small></span></label><div className="admin-rule-price"><strong>{currency.format(Number(rule.base_amount))}</strong><small>unitário</small></div><label className="admin-rule-qty">Qtd.<input type="number" min="1" max="99" disabled={!checked} value={checked ? quantity : 1} onChange={(event) => setQuantities((current) => ({ ...current, [rule.service_key]: Math.min(99, Math.max(1, Math.round(Number(event.target.value) || 1))) }))} /></label><div className="admin-rule-line-total"><small>Total</small><strong>{currency.format(Number(rule.base_amount) * (checked ? quantity : 0))}</strong></div></div>})}</div></section>)}</div></article>}{activeTab === 'finance' && <div className="admin-view-grid admin-finance-grid"><article className="admin-panel"><span className="admin-card-kicker">PREÇO</span><h3>Base e complexidade</h3><div className="price-summary"><div><span>Base do catálogo</span><strong>{currency.format(preview.baseAmount)}</strong></div><div><span>Pré-desconto</span><strong>{currency.format(preview.preDiscountAmount)}</strong></div></div><div className="admin-inline-fields"><label className="admin-field">Complexidade<select value={complexity} onChange={(e) => setComplexity(Number(e.target.value))}><option value={1}>Padrão · 1x</option><option value={1.25}>Intermediária · 1,25x</option><option value={1.5}>Alta · 1,5x</option><option value={2}>Especial · 2x</option></select></label><label className="admin-field">Urgência<select value={urgency} onChange={(e) => setUrgency(Number(e.target.value))}><option value={1}>Normal · 1x</option><option value={1.15}>Prioritária · 1,15x</option><option value={1.3}>Urgente · 1,3x</option></select></label></div></article><article className="admin-panel"><span className="admin-card-kicker">DESCONTO</span><h3>Faixa autorizada</h3><div className="discount-options">{DISCOUNT_LEVELS.map((level) => { const item = assessDiscount(level); return <button key={level} type="button" className={`discount-choice discount-${item.tone} ${discount === level ? 'is-active' : ''}`} onClick={() => setDiscount(level)}><strong>{level}%</strong><span>{item.label}</span></button> })}</div><div className={`discount-assessment discount-${assessment.tone}`}><strong>{assessment.label}</strong><p>{assessment.message}</p></div></article><article className="admin-panel"><span className="admin-card-kicker">PAGAMENTO</span><h3>Cobrança</h3><div className="admin-inline-fields"><label className="admin-field">Provedor<select value={provider} onChange={(e) => setProvider(e.target.value as typeof provider)}><option value="none">Sem boleto</option>{providers.map((item) => <option key={item.provider} value={item.provider}>{item.display_name}</option>)}</select></label><label className="admin-field">Parcelas<input type="number" min="1" max="24" value={installments} onChange={(e) => setInstallments(Math.min(24, Math.max(1, Math.round(Number(e.target.value) || 1))))} /></label></div><div className="price-summary"><div><span>Taxa total prevista</span><strong>{currency.format(preview.paymentFeeTotal)}</strong></div></div></article><article className="admin-panel admin-finance-summary"><div><span className="admin-card-kicker">RESUMO FINANCEIRO</span><h3>Valor para validação</h3>{hasUnsavedChanges && <p className="admin-note warning">A prévia contém alterações ainda não salvas.</p>}</div><div className="admin-total-values"><div><span>Subtotal catálogo</span><strong>{currency.format(preview.baseAmount)}</strong></div><div><span>Pré-desconto</span><strong>{currency.format(preview.preDiscountAmount)}</strong></div><div><span>Desconto</span><strong>- {currency.format(preview.discountAmount)}</strong></div><div><span>Taxas de cobrança</span><strong>+ {currency.format(preview.paymentFeeTotal)}</strong></div><div><span>Retenções</span><strong>{preview.retentionTotal.toLocaleString('pt-BR')}% · {currency.format(preview.retentionAmount)}</strong></div><div className="admin-grand-total"><span>Valor final</span><strong>{currency.format(preview.finalAmount)}</strong></div><div><span>Líquido estimado</span><strong>{currency.format(preview.estimatedNet)}</strong></div></div><label className="admin-field">Observações internas<textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} /></label></article></div>}{activeTab === 'fiscal' && <article className="admin-panel admin-fiscal-panel"><div><span className="admin-card-kicker">PERFIL FISCAL DO CLIENTE</span><h3>Dados cadastrais vinculados</h3></div>{fiscalProfileState === 'loading' && <p className="admin-note">Carregando situação fiscal do cliente…</p>}{fiscalProfileState === 'error' && <p className="admin-note warning">Não foi possível consultar o perfil fiscal agora. Os dados do orçamento permanecem preservados.</p>}{fiscalProfileState === 'missing' && <p className="admin-note warning">Este orçamento ainda não possui um perfil fiscal consultado. Use o módulo Fiscal para consultar o CNPJ do cliente.</p>}{fiscalProfileState === 'ready' && fiscalProfile && <><div className="admin-total-values"><div><span>CNPJ</span><strong>{formatCnpj(fiscalProfile.cnpj)}</strong></div><div><span>Razão social</span><strong>{fiscalProfile.legal_name || request.name}</strong></div><div><span>Situação federal</span><strong>{fiscalLabel(fiscalProfile.registration_status || fiscalProfile.federal_validation_status)}</strong></div><div><span>Regime tributário</span><strong>{fiscalLabel(fiscalProfile.tax_regime)}</strong></div><div><span>Simples Nacional</span><strong>{yesNo(fiscalProfile.simple_option)}</strong></div><div><span>MEI</span><strong>{yesNo(fiscalProfile.mei_option)}</strong></div><div><span>CNAE principal</span><strong>{[fiscalProfile.main_cnae_code, fiscalProfile.main_cnae_description].filter(Boolean).join(' · ') || 'Não informado'}</strong></div><div><span>Inscrição Estadual</span><strong>{fiscalProfile.state_registration || 'Não informada'}</strong></div><div><span>Situação da IE</span><strong>{fiscalLabel(fiscalProfile.state_registration_status)}</strong></div><div><span>Contribuinte de ICMS</span><strong>{yesNo(fiscalProfile.icms_taxpayer)}</strong></div><div><span>Validação estadual</span><strong>{fiscalLabel(fiscalProfile.state_validation_status)}</strong></div><div><span>Última consulta cadastral</span><strong>{formatFiscalDate(fiscalProfile.checked_at || fiscalProfile.updated_at)}</strong></div></div>{fiscalNeedsTaxRegime && <p className="admin-note warning">O regime tributário ainda requer confirmação manual no módulo Fiscal.</p>}{fiscalNeedsStateValidation && <p className="admin-note warning">A validação estadual ainda está pendente ou a Inscrição Estadual não foi informada.</p>}<p className="admin-note">O perfil cadastral é combinado com o código fiscal dos serviços do orçamento para alimentar o motor fiscal antes da emissão da nota.</p></>}<div><span className="admin-card-kicker">RETENÇÕES DO ORÇAMENTO</span><h3>Revisão fiscal</h3><p className="admin-note">As retenções são verificadas pelo código fiscal do serviço. A edição manual continua disponível como exceção e fica indicada na própria linha.</p></div>{fiscalAssessment && <><div className="admin-total-values"><div><span>Motor fiscal</span><strong>{fiscalEngineStatus}</strong></div><div><span>Código(s) do serviço</span><strong>{fiscalAssessment.serviceCodes?.length ? fiscalAssessment.serviceCodes.join(' · ') : 'Não identificado'}</strong></div><div><span>Regime da prestadora</span><strong>{fiscalLabel(fiscalAssessment.issuerRegime)}</strong></div><div><span>Versão da regra</span><strong>{fiscalAssessment.version || 'Não informada'}</strong></div></div>{!!fiscalAssessment.explanations?.length && <div className="admin-missing"><strong>Resultado da verificação</strong>{fiscalAssessment.explanations.map((item) => <span key={item}>• {item}</span>)}</div>}</>}{!fiscalAssessment && fiscalProfileState !== 'loading' && <p className="admin-note warning">Não foi possível executar a verificação automática neste momento.</p>}<div className="retention-grid">{(Object.keys(retentions) as (keyof RetentionInput)[]).map((key) => { const indicator = retentionIndicator(key); return <label className="admin-field" key={key}>{retentionLabels[key]} (%)<input type="number" min="0" max="100" step="0.01" value={retentions[key]} onChange={(e) => changeRetention(key, Number(e.target.value))} /><span className={`admin-request-state state-${indicator.state}`}>{indicator.label}</span></label> })}</div><div className={retentionInvalid ? 'retention-total-alert is-invalid' : 'retention-total-alert'}><span>Total das retenções</span><strong>{retentionInputTotal.toLocaleString('pt-BR')}%</strong><span>{currency.format(preview.retentionAmount)} estimados</span></div>{retentionInvalid && <p className="admin-note retention-error">A soma das retenções precisa ser menor que 100%.</p>}<label className="admin-field">Tratamento<select value={retentionMode} onChange={(e) => { setRetentionMode(e.target.value as typeof retentionMode); setFiscalConfirmed(false) }}><option value="informational">Somente informar impacto</option><option value="preserve_net">Preservar líquido por gross-up</option></select></label>{retentionInputTotal > 0 && <label className="privacy-check"><input type="checkbox" checked={fiscalConfirmed} onChange={(e) => setFiscalConfirmed(e.target.checked)} /><span>Confirmei a revisão fiscal das retenções deste orçamento.</span></label>}<div className="retention-breakdown">{(Object.entries(retentions) as [keyof RetentionInput, number][]).filter(([, value]) => Number(value) > 0).map(([key, value]) => <div key={key}><span>{retentionLabels[key]} · {Number(value).toLocaleString('pt-BR')}%</span><strong>- {currency.format(preview.retentionBreakdown[key])}</strong></div>)}</div><div className="admin-fiscal-summary"><span>Bruto sugerido para preservar líquido</span><strong>{currency.format(preview.retentionGrossUpSuggestion)}</strong></div>{!hasUnsavedChanges && <p className="admin-note">O orçamento já está sincronizado. Altere uma retenção ou o tratamento fiscal para habilitar o salvamento.</p>}</article>}{activeTab === 'send' && <article className="admin-panel admin-send-card"><div><span className="admin-card-kicker">ENVIO AO CLIENTE</span><h3>Orçamento aprovado</h3><p>{canSend ? 'O orçamento está aprovado e sincronizado. Escolha o canal de envio.' : hasUnsavedChanges ? 'Existem alterações não salvas. Salve e aprove novamente antes de enviar.' : 'Aprove o orçamento para liberar o envio ao cliente.'}</p></div><div className="admin-send-preview"><pre>{approvedMessage}</pre></div><div className="admin-send-actions"><button className="button button-primary" type="button" disabled={!canSend} onClick={() => void shareQuote()}>Enviar orçamento</button><button className="button button-secondary" type="button" disabled={!canSend || !whatsapp} onClick={sendWhatsApp}>WhatsApp</button><button className="button button-secondary" type="button" disabled={!canSend || !request.email} onClick={sendEmail}>E-mail</button><button className="button button-secondary" type="button" disabled={!canSend} onClick={() => void copyQuote()}>Copiar</button></div>{shareStatus && <div className="admin-send-status" role="status">{shareStatus}</div>}<small>O sistema prepara o orçamento; o envio final ainda exige sua confirmação no aplicativo escolhido.</small></article>}</div><footer className="admin-editor-actions"><div className={hasUnsavedChanges ? 'admin-save-state is-dirty' : 'admin-save-state'}><span />{hasUnsavedChanges ? 'Alterações não salvas' : 'Orçamento sincronizado'}</div><div><button className="button button-secondary" type="button" disabled={saving || retentionInvalid || !hasUnsavedChanges} onClick={() => void save()}>{saving ? 'Salvando…' : hasUnsavedChanges ? 'Salvar alterações' : 'Sem alterações'}</button><button className="button button-primary" type="button" disabled={!canApprove} onClick={() => void onApprove()}>{approvalButtonLabel}</button></div></footer></div>
+async function adminFetch<T>(session: Session, body?: Record<string, unknown>): Promise<T> {
+  const response = await fetch(quoteAdminEndpoint, {
+    method: body ? 'PATCH' : 'GET',
+    headers: { 'Content-Type': 'application/json', apikey: hrxPublishableKey, Authorization: `Bearer ${session.access_token}` },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  const payload = await response.json().catch(() => ({})) as { error?: string }
+  if (!response.ok) throw new Error(payload.error || `HTTP_${response.status}`)
+  return payload as T
+}
+
+function stateFrom(request: Request): EditorState {
+  const draft = request.draft
+  return {
+    proposalTitle: draft.proposal_title || '',
+    projectService: draft.project_service || '',
+    description: draft.proposal_description || request.request_text || '',
+    customerNotes: draft.customer_notes || '',
+    notes: draft.notes || '',
+    items: (draft.items || []).map((item) => ({
+      key: item.id || crypto.randomUUID(),
+      serviceKey: item.service_key?.startsWith('manual-') ? null : item.service_key,
+      serviceName: item.service_name,
+      description: item.item_description || '',
+      unitLabel: item.unit_label || 'un.',
+      quantity: Number(item.quantity),
+      unitAmount: Number(item.unit_amount),
+    })),
+    discountPercent: Number(draft.discount_percent || 0) as DiscountLevel,
+    complexityMultiplier: Number(draft.complexity_multiplier || 1),
+    urgencyMultiplier: Number(draft.urgency_multiplier || 1),
+    taxPercent: Number(draft.tax_percent || 0),
+    desiredFinalAmount: draft.custom_final_amount == null ? null : Number(draft.custom_final_amount),
+    adjustmentReason: draft.custom_adjustment_reason || '',
+    paymentProvider: draft.payment_provider || 'none',
+    paymentMode: draft.payment_mode || 'cash',
+    installments: Number(draft.installments || 1),
+    installmentIntervalDays: Number(draft.installment_interval_days || 30),
+    firstDueDate: draft.first_due_date || today(),
+    validityDays: Number(draft.validity_days || 15),
+    retentions: draft.retentions || emptyRetentions,
+    retentionPricingMode: draft.retention_pricing_mode || 'informational',
+    fiscalReviewConfirmed: draft.fiscal_review_confirmed,
+  }
+}
+
+function payloadFrom(state: EditorState) {
+  return {
+    proposalTitle: state.proposalTitle,
+    projectService: state.projectService,
+    description: state.description,
+    customerNotes: state.customerNotes,
+    notes: state.notes,
+    items: state.items.map((item) => ({ serviceKey: item.serviceKey || null, serviceName: item.serviceName, description: item.description, unitLabel: item.unitLabel, quantity: item.quantity, unitAmount: item.unitAmount })),
+    discountPercent: state.discountPercent,
+    complexityMultiplier: state.complexityMultiplier,
+    urgencyMultiplier: state.urgencyMultiplier,
+    taxPercent: state.taxPercent,
+    desiredFinalAmount: state.desiredFinalAmount,
+    adjustmentReason: state.adjustmentReason || null,
+    paymentProvider: state.paymentProvider,
+    paymentMode: state.paymentMode,
+    installments: state.paymentMode === 'cash' ? 1 : state.installments,
+    installmentIntervalDays: state.installmentIntervalDays,
+    firstDueDate: state.firstDueDate,
+    validityDays: state.validityDays,
+    retentions: state.retentions,
+    retentionPricingMode: state.retentionPricingMode,
+    fiscalReviewConfirmed: state.fiscalReviewConfirmed,
+  }
+}
+
+export default function AdminQuotes() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [checking, setChecking] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [data, setData] = useState<AdminResponse>({ requests: [], clients: [], providers: [], pricingRules: [] })
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | CommercialStatus>('all')
+  const [mobileDetail, setMobileDetail] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
+  useEffect(() => {
+    void hrxSupabase.auth.getSession().then(({ data: auth }) => { setSession(auth.session); setChecking(false) })
+    const { data: listener } = hrxSupabase.auth.onAuthStateChange((_event, next) => { setSession(next); setChecking(false) })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+  const load = async (current = session, select?: string) => {
+    if (!current) return
+    setLoading(true); setError('')
+    try {
+      const response = await adminFetch<AdminResponse>(current)
+      setData(response)
+      setSelectedId((currentId) => select || (currentId && response.requests.some((item) => item.id === currentId) ? currentId : response.requests[0]?.id || null))
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : ''
+      setError(code === 'mfa_required' ? 'Confirme o MFA para acessar o módulo comercial.' : 'Não foi possível carregar os orçamentos.')
+    } finally { setLoading(false) }
+  }
+  useEffect(() => { if (session) void load(session) }, [session])
+  const selected = data.requests.find((item) => item.id === selectedId) || null
+  const visible = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase('pt-BR')
+    return data.requests.filter((item) => {
+      const match = !term || [item.proposal_number, item.protocol, item.name, item.company, item.email].some((value) => value?.toLocaleLowerCase('pt-BR').includes(term))
+      return match && (filter === 'all' || item.draft.commercial_status === filter)
+    })
+  }, [data.requests, query, filter])
+  const metrics = useMemo(() => ({
+    pipeline: data.requests.filter((item) => !(item.draft?.status === 'rejected' || item.draft?.status === 'suspended') && !['lost', 'cancelled', 'received'].includes(item.draft.commercial_status)).reduce((sum, item) => sum + Number(item.draft.final_amount || 0), 0),
+    drafts: data.requests.filter((item) => item.draft.commercial_status === 'draft').length,
+    negotiation: data.requests.filter((item) => ['reviewed', 'sent', 'negotiating'].includes(item.draft.commercial_status)).length,
+    approved: data.requests.filter((item) => ['approved', 'invoiced', 'received'].includes(item.draft.commercial_status)).length,
+  }), [data.requests])
+  const mutate = async <T,>(body: Record<string, unknown>, select?: string) => {
+    if (!session) throw new Error('unauthorized')
+    const result = await adminFetch<T>(session, body)
+    const createdId = (result as { request?: { id?: string } })?.request?.id
+    await load(session, select || createdId)
+    return result
+  }
+  if (checking || !session) return <main className="admin-login-shell"><div className="admin-login-card"><p>Validando acesso administrativo…</p></div></main>
+  return <main className={`admin-live-shell quote-commercial-shell${mobileDetail ? ' is-mobile-detail-open' : ''}`}>
+    <aside className="admin-exec-sidebar"><div className="admin-exec-brand"><span>HRX</span><small>SOLUTIONS</small></div><nav><button className="is-active">{icons.file}Orçamentos</button></nav></aside>
+    <section className="admin-exec-main">
+      <header className="admin-exec-topbar quote-topbar"><div><span className="admin-section-kicker">OPERAÇÃO COMERCIAL</span><h1>Orçamentos e propostas</h1></div><div><button className="quote-secondary" onClick={() => void load()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar'}</button><button className="quote-primary" onClick={() => setNewOpen(true)}>{icons.plus}Novo orçamento</button></div></header>
+      {error && <div className="admin-global-error" role="alert">{error}</div>}
+      <section className="admin-exec-metrics quote-metrics"><article><span>Pipeline comercial</span><strong>{currency.format(metrics.pipeline)}</strong><small>Propostas em aberto</small></article><article><span>Rascunhos</span><strong>{metrics.drafts}</strong><small>Podem ser continuados</small></article><article><span>Em negociação</span><strong>{metrics.negotiation}</strong><small>Revisadas ou enviadas</small></article><article><span>Aprovadas</span><strong>{metrics.approved}</strong><small>Preparadas para o financeiro</small></article></section>
+      <div className="admin-workspace quote-workspace">
+        <aside className="admin-queue quote-queue">
+          <div className="admin-queue-header"><div><strong>Propostas</strong><span>{visible.length}</span></div><label className="admin-search">{icons.search}<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cliente, CNPJ ou número" /></label><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">Todos os estados</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="admin-queue-list">{visible.map((request) => <button type="button" className={selectedId === request.id ? 'admin-lead is-active' : 'admin-lead'} key={request.id} onClick={() => { setSelectedId(request.id); setMobileDetail(true) }}><div className="admin-lead-top"><span className={`quote-status-dot is-${request.draft.commercial_status}`}/><span>{statusLabels[request.draft.commercial_status]}</span><time>{new Date(request.draft.updated_at || request.created_at).toLocaleDateString('pt-BR')}</time></div><strong>{request.company || request.name}</strong><small>{request.draft.proposal_title || 'Proposta ainda sem título'}</small><div className="admin-lead-bottom"><span>{request.proposal_number}</span><b>{currency.format(Number(request.draft.final_amount || 0))}</b></div></button>)}{!loading && !visible.length && <div className="quote-empty">{icons.file}<strong>Nenhuma proposta encontrada</strong><span>Crie um orçamento usando um cliente real.</span></div>}</div>
+        </aside>
+        <section className="admin-detail quote-detail">{selected ? <QuoteEditor key={selected.id} request={selected} clients={data.clients} providers={data.providers} pricingRules={data.pricingRules} session={session} onMutate={mutate} onError={setError} onBack={() => setMobileDetail(false)} /> : <div className="quote-empty">{icons.file}<strong>Selecione uma proposta</strong><span>Abra um orçamento para continuar o fluxo comercial.</span></div>}</section>
+      </div>
+      <nav className="admin-mobile-nav"><button className={!mobileDetail ? 'is-active' : ''} onClick={() => setMobileDetail(false)}>{icons.file}<span>Orçamentos</span></button><button className={mobileDetail ? 'is-active' : ''} disabled={!selected} onClick={() => setMobileDetail(true)}>{icons.check}<span>Editar</span></button><button onClick={() => setNewOpen(true)}>{icons.plus}<span>Novo</span></button><button onClick={() => navigateAdmin('documents')}>{icons.download}<span>Docs</span></button><button onClick={() => navigateAdmin('executive')}>{icons.back}<span>Início</span></button></nav>
+    </section>
+    {newOpen && <NewQuoteModal clients={data.clients} onClose={() => setNewOpen(false)} onCreate={async (payload) => { const result = await mutate<{ request: { id: string } }>({ action: 'create_quote', ...payload }); setNewOpen(false); setSelectedId(result.request.id); setMobileDetail(true) }} onClientCreated={async () => { await load(session) }}/>}
+  </main>
+}
+
+function NewQuoteModal({ clients, onClose, onCreate, onClientCreated }: { clients: Client[]; onClose: () => void; onCreate: (payload: { clientId: string; proposalTitle: string; scope: string }) => Promise<void>; onClientCreated: (id?: string) => Promise<void> }) {
+  const [search, setSearch] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [proposalTitle, setProposalTitle] = useState('')
+  const [scope, setScope] = useState('')
+  const [clientForm, setClientForm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const results = clients.filter((client) => !search || [client.name, client.company, client.email, client.phone, client.document].some((value) => value?.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')))).slice(0, 8)
+  const submit = async (event: FormEvent) => { event.preventDefault(); if (!clientId) return; setBusy(true); try { await onCreate({ clientId, proposalTitle, scope }) } finally { setBusy(false) } }
+  return <div className="quote-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><form className="quote-modal quote-new-modal" onSubmit={submit}><header><div><span>NOVO ORÇAMENTO</span><h2>Comece pelo cliente</h2><p>Pesquise a base oficial ou cadastre sem perder o preenchimento.</p></div><button type="button" onClick={onClose}>×</button></header><label className="quote-field">Cliente<input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome, razão social, CPF/CNPJ, e-mail ou telefone" /></label><div className="quote-client-results">{results.map((client) => <button type="button" className={clientId === client.id ? 'is-selected' : ''} key={client.id} onClick={() => { setClientId(client.id); setSearch(client.company || client.name) }}><span>{icons.user}</span><div><strong>{client.company || client.name}</strong><small>{[client.name, client.document, client.email || client.phone].filter(Boolean).join(' · ')}</small></div>{clientId === client.id && icons.check}</button>)}</div><button className="quote-inline-create" type="button" onClick={() => setClientForm(true)}>{icons.plus}Cadastrar novo cliente</button><div className="quote-form-grid"><label className="quote-field">Título da proposta<input value={proposalTitle} onChange={(event) => setProposalTitle(event.target.value)} placeholder="Ex.: Implantação e consultoria" /></label><label className="quote-field is-wide">Escopo inicial<textarea rows={4} value={scope} onChange={(event) => setScope(event.target.value)} placeholder="Contexto e necessidade do cliente."/></label></div><footer><button type="button" className="quote-secondary" onClick={onClose}>Cancelar</button><button className="quote-primary" disabled={!clientId || busy}>{busy ? 'Criando…' : 'Criar rascunho'}</button></footer></form>{clientForm && <AdminClientForm onClose={() => setClientForm(false)} onCreated={async (id) => { if (id) setClientId(id); await onClientCreated(id) }}/>}</div>
+}
+
+function QuoteEditor({ request, clients, providers, pricingRules, session, onMutate, onError, onBack }: { request: Request; clients: Client[]; providers: ProviderRule[]; pricingRules: PricingRule[]; session: Session; onMutate: <T>(body: Record<string, unknown>, select?: string) => Promise<T>; onError: (value: string) => void; onBack: () => void }) {
+  const [state, setState] = useState(() => stateFrom(request))
+  const [step, setStep] = useState<Step>('client')
+  const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving' | 'error'>('saved')
+  const [busy, setBusy] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [adjustmentOpen, setAdjustmentOpen] = useState(false)
+  const [desiredInput, setDesiredInput] = useState(String(state.desiredFinalAmount || ''))
+  const [adjustmentReason, setAdjustmentReason] = useState(state.adjustmentReason)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailTo, setEmailTo] = useState(request.email || '')
+  const [emailSubject, setEmailSubject] = useState(`Proposta Comercial HRX Solutions — ${request.proposal_number}`)
+  const [emailBody, setEmailBody] = useState(`Olá, ${request.name}.\n\nSegue a proposta comercial ${request.proposal_number} da HRX Solutions. Ela permanece válida até ${new Date(request.draft.valid_until || futureDate(state.validityDays)).toLocaleDateString('pt-BR')}.\n\nFicamos à disposição para qualquer esclarecimento.\n\nHRX Solutions`)
+  const hydrated = useRef(false)
+  const linkedClient = clients.find((item) => item.id === request.client_id)
+  const client = { name: linkedClient?.name || request.name, company: linkedClient?.company || request.company, email: linkedClient?.email || request.email, phone: linkedClient?.phone || request.phone, document: linkedClient?.document || null }
+  const isReadOnly = ['approved', 'invoiced', 'received', 'lost', 'cancelled'].includes(request.draft.commercial_status) || request.draft.status === 'suspended'
+  const baseAmount = state.items.reduce((sum, item) => sum + (toCents(item.unitAmount) * item.quantity) / 100, 0)
+  const preview = calculateQuotePreview({ baseAmount, complexityMultiplier: state.complexityMultiplier, urgencyMultiplier: state.urgencyMultiplier, discountPercent: state.discountPercent, taxPercent: state.taxPercent, desiredFinalAmount: state.desiredFinalAmount, paymentProvider: state.paymentProvider, installments: state.paymentMode === 'cash' ? 1 : state.installments, providers, retentions: state.retentions, retentionPricingMode: state.retentionPricingMode, fiscalReviewConfirmed: state.fiscalReviewConfirmed })
+  const schedule = buildInstallmentSchedule({ total: preview.finalAmount, count: state.paymentMode === 'cash' ? 1 : state.installments, firstDueDate: state.firstDueDate, intervalDays: state.installmentIntervalDays })
+  const validUntil = futureDate(state.validityDays)
+  const validation = [!state.proposalTitle.trim() && 'Informe o título da proposta.', !state.items.length && 'Adicione pelo menos um item.', state.items.some((item) => !item.serviceName.trim() || item.quantity <= 0 || item.unitAmount <= 0) && 'Revise descrição, quantidade e valor dos itens.', preview.finalAmount <= 0 && 'O total precisa ser maior que zero.', !state.firstDueDate && 'Informe o primeiro vencimento.', schedule.reduce((sum, item) => sum + toCents(item.amount), 0) !== toCents(preview.finalAmount) && 'A soma das parcelas não fecha com o total.'].filter(Boolean) as string[]
+  const patch = (update: Partial<EditorState>) => {
+    if (isReadOnly) { onError('Esta proposta está encerrada ou suspensa. Duplique-a para iniciar uma nova negociação.'); return }
+    setState((current) => ({ ...current, ...update })); setSaveState('dirty')
+  }
+  const save = async () => {
+    if (saveState === 'saving') return
+    setSaveState('saving')
+    try {
+      await onMutate({ action: 'save_quote', requestId: request.id, ...payloadFrom(state) }, request.id)
+      setSaveState('saved')
+    } catch (cause) {
+      setSaveState('error')
+      const code = cause instanceof Error ? cause.message : ''
+      const message: Record<string, string> = { invalid_items: 'Revise os itens e valores.', invalid_desired_final: 'O valor desejado deve ser maior que zero e não pode exceder o calculado.', adjustment_reason_required: 'Informe a justificativa comercial do ajuste.', quote_is_read_only: 'Este orçamento está encerrado e não pode ser editado.' }
+      onError(message[code] || 'Não foi possível salvar o rascunho.')
+      throw cause
+    }
+  }
+  useEffect(() => {
+    if (!hydrated.current) { hydrated.current = true; return }
+    if (saveState !== 'dirty' || (state.desiredFinalAmount != null && state.adjustmentReason.length < 8)) return
+    const timer = window.setTimeout(() => { void save() }, 1600)
+    return () => window.clearTimeout(timer)
+  }, [state, saveState])
+  const addManual = () => patch({ items: [...state.items, { key: crypto.randomUUID(), serviceKey: null, serviceName: '', description: '', unitLabel: 'un.', quantity: 1, unitAmount: 0 }] })
+  const addCatalog = (key: string) => {
+    const rule = pricingRules.find((item) => item.service_key === key)
+    if (!rule || state.items.some((item) => item.serviceKey === key)) return
+    patch({ items: [...state.items, { key: crypto.randomUUID(), serviceKey: key, serviceName: rule.service_name, description: rule.invoice_description || '', unitLabel: 'un.', quantity: 1, unitAmount: Number(rule.base_amount) }] })
+  }
+  const updateItem = (key: string, update: Partial<ItemState>) => patch({ items: state.items.map((item) => item.key === key ? { ...item, ...update } : item) })
+  const moveItem = (index: number, delta: number) => { const next = [...state.items]; const target = index + delta; if (target < 0 || target >= next.length) return; [next[index], next[target]] = [next[target], next[index]]; patch({ items: next }) }
+  const pdfData = (draft: boolean): ProposalPdfData => ({
+    proposalNumber: request.proposal_number,
+    protocol: request.protocol,
+    version: draft ? Math.max(1, request.draft.current_version + 1) : request.draft.current_version,
+    draft,
+    createdAt: today(),
+    validUntil,
+    title: state.proposalTitle,
+    description: state.description,
+    customerNotes: state.customerNotes,
+    client,
+    items: state.items.map((item) => ({ serviceName: item.serviceName, description: item.description, unitLabel: item.unitLabel, quantity: item.quantity, unitAmount: item.unitAmount, totalAmount: Math.round(toCents(item.unitAmount) * item.quantity) / 100 })),
+    subtotal: preview.preDiscountAmount,
+    discountAmount: preview.discountAmount + preview.customAdjustmentAmount,
+    discountPercent: state.desiredFinalAmount == null ? state.discountPercent : preview.customAdjustmentPercent,
+    taxAmount: preview.taxAmount,
+    taxPercent: state.taxPercent,
+    finalAmount: preview.finalAmount,
+    paymentMode: state.paymentMode,
+    installments: schedule,
+  })
+  const downloadBlob = (blob: Blob, suffix: string) => { const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = safeFileName(`${request.proposal_number}_${suffix}.pdf`); anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
+  const downloadDraft = async () => { setBusy('pdf'); try { downloadBlob(await generateProposalPdf(pdfData(true)), 'RASCUNHO') } finally { setBusy('') } }
+  const finalize = async () => {
+    if (validation.length) { setStep('review'); return }
+    setBusy('finalize')
+    try {
+      if (saveState !== 'saved') await save()
+      const version = request.draft.current_version + 1
+      const blob = await generateProposalPdf({ ...pdfData(false), version })
+      const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
+      const checksum = [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('')
+      const objectPath = `commercial/proposals/${request.id}/${safeFileName(request.proposal_number)}_V${String(version).padStart(2, '0')}.pdf`
+      const { error: uploadError } = await hrxSupabase.storage.from('hrx-documents').upload(objectPath, blob, { contentType: 'application/pdf', upsert: false })
+      if (uploadError) throw new Error('pdf_upload_failed')
+      await onMutate({ action: 'finalize', requestId: request.id, pdfObjectPath: objectPath, checksumSha256: checksum, sizeBytes: blob.size }, request.id)
+      downloadBlob(blob, `V${String(version).padStart(2, '0')}`)
+      setStep('send')
+    } catch (cause) {
+      onError(cause instanceof Error && cause.message === 'pdf_upload_failed' ? 'O PDF não pôde ser armazenado na Central.' : 'Não foi possível finalizar e versionar a proposta.')
+    } finally { setBusy('') }
+  }
+  const confirmAdjustment = async () => {
+    const desired = Number(desiredInput.replace(',', '.'))
+    if (!desired || desired > preview.calculatedAmount || adjustmentReason.trim().length < 8) { onError('Informe um valor válido e uma justificativa com pelo menos 8 caracteres.'); return }
+    const { data: aal, error } = await hrxSupabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (error || aal.currentLevel !== 'aal2') { onError('Confirme o MFA/AAL2 antes de ajustar manualmente o valor.'); return }
+    patch({ desiredFinalAmount: desired, adjustmentReason: adjustmentReason.trim() }); setAdjustmentOpen(false)
+  }
+  const latest = request.versions[0]
+  const signedLink = async () => {
+    if (!latest?.pdf_object_path) throw new Error('version_required')
+    const { data, error } = await hrxSupabase.storage.from('hrx-documents').createSignedUrl(latest.pdf_object_path, 604800)
+    if (error || !data?.signedUrl) throw new Error('signed_url_failed')
+    return data.signedUrl
+  }
+  const log = (eventType: string, eventData?: Record<string, unknown>) => onMutate({ action: 'log_event', requestId: request.id, eventType, eventData }, request.id)
+  const openEmail = () => { if (!request.draft.current_version) { onError('Finalize uma versão antes de preparar o envio.'); return } setEmailOpen(true) }
+  const prepareEmail = async () => { await log('email_prepared', { recipient: emailTo, version: request.draft.current_version, channel: 'mailto' }); window.location.href = `mailto:${encodeURIComponent(emailTo)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`; setEmailOpen(false) }
+  const downloadOfficialBlob = async () => {
+    if (!latest?.pdf_object_path) throw new Error('version_required')
+    const { data, error } = await hrxSupabase.storage.from('hrx-documents').download(latest.pdf_object_path)
+    if (error || !data) throw new Error('download_failed')
+    return data
+  }
+  const shareEmailNative = async () => {
+    try {
+      const blob = await downloadOfficialBlob()
+      const file = new File([blob], `${request.proposal_number}_V${String(request.draft.current_version).padStart(2, '0')}.pdf`, { type: 'application/pdf' })
+      if (!navigator.share || (navigator.canShare && !navigator.canShare({ files: [file] }))) throw new Error('share_unavailable')
+      await navigator.share({ title: emailSubject, text: emailBody, files: [file] })
+      await log('email_shared', { recipient: emailTo, version: request.draft.current_version, mode: 'native_share' })
+      setEmailOpen(false)
+    } catch (cause) { if (!(cause instanceof DOMException && cause.name === 'AbortError')) onError('O compartilhamento nativo com PDF não está disponível neste dispositivo.') }
+  }
+  const downloadOfficial = async () => { try { const blob = await downloadOfficialBlob(); downloadBlob(blob, `V${String(request.draft.current_version).padStart(2, '0')}`); await log('pdf_downloaded', { version: request.draft.current_version }) } catch { onError('Não foi possível baixar o PDF oficial.') } }
+  const shareWhatsApp = async () => {
+    if (!request.draft.current_version) { onError('Finalize uma versão antes de compartilhar.'); return }
+    setBusy('share')
+    try {
+      const link = await signedLink()
+      const message = `Olá, ${request.name}. Segue a proposta comercial ${request.proposal_number} da HRX Solutions: ${link}`
+      const blob = await downloadOfficialBlob()
+      const file = new File([blob], `${request.proposal_number}.pdf`, { type: 'application/pdf' })
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ title: request.proposal_number, text: message, files: [file] })
+        await log('whatsapp_shared', { version: request.draft.current_version, mode: 'native_share' })
+      } else {
+        window.open(`https://wa.me/${normalizeWhatsApp(request.phone)}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+        await log('whatsapp_prepared', { version: request.draft.current_version, signedUrlExpiresIn: 604800 })
+      }
+    } catch (cause) { if (!(cause instanceof DOMException && cause.name === 'AbortError')) onError('Não foi possível preparar o compartilhamento agora.') } finally { setBusy('') }
+  }
+  const copy = async () => { const link = await signedLink(); await navigator.clipboard.writeText(`Olá, ${request.name}. Segue a proposta ${request.proposal_number}: ${link}`); await log('proposal_copied', { version: request.draft.current_version, signedUrlExpiresIn: 604800 }) }
+  const setStatus = async (status: CommercialStatus, note?: string) => { setBusy('status'); try { await onMutate({ action: 'set_status', requestId: request.id, status, channel: 'administrative', note: note || '' }, request.id) } catch { onError('Essa transição de estado não é permitida no momento.') } finally { setBusy('') } }
+  const steps: Array<[Step, string]> = [['client', 'Cliente'], ['items', 'Itens'], ['values', 'Valores'], ['payment', 'Pagamento'], ['review', 'Revisão'], ['send', 'Envio']]
+  return <div className="quote-editor">
+    <header className="quote-editor-header"><button className="quote-back" onClick={onBack}>{icons.back}</button><div><span>{request.proposal_number}</span><h2>{state.proposalTitle || 'Proposta sem título'}</h2><p>{request.company || request.name}</p></div><div className="quote-header-value"><span className={`quote-status is-${request.draft.commercial_status}`}>{statusLabels[request.draft.commercial_status]}</span><strong>{currency.format(preview.finalAmount)}</strong></div></header>
+    <nav className="quote-steps">{steps.map(([value, label], index) => <button key={value} className={step === value ? 'is-active' : ''} onClick={() => setStep(value)}><span>{index + 1}</span>{label}</button>)}</nav>
+    <div className="quote-editor-scroll">{isReadOnly && <div className="quote-readonly-banner" role="status">Proposta somente leitura. O documento e o histórico permanecem preservados; use Duplicar para uma nova negociação.</div>}<div className="quote-editor-main">
+      <section className="quote-stage">
+        {step === 'client' && <div className="quote-section"><SectionTitle eyebrow="DADOS GERAIS" title="Cliente e identificação" text="O cliente vem da base oficial; a proposta guarda apenas o snapshot documental ao versionar."/><div className="quote-client-card"><span>{icons.user}</span><div><strong>{request.company || request.name}</strong><small>{[request.name, request.email, request.phone].filter(Boolean).join(' · ')}</small><em>Cliente vinculado à base real</em></div></div><div className="quote-form-grid"><label className="quote-field">Título da proposta<input value={state.proposalTitle} onChange={(event) => patch({ proposalTitle: event.target.value })}/></label><label className="quote-field">Projeto / serviço<input value={state.projectService} onChange={(event) => patch({ projectService: event.target.value })}/></label><label className="quote-field is-wide">Descrição / escopo<textarea rows={6} value={state.description} onChange={(event) => patch({ description: event.target.value })}/></label><label className="quote-field">Validade<select value={state.validityDays} onChange={(event) => patch({ validityDays: Number(event.target.value) })}><option value={7}>7 dias</option><option value={10}>10 dias</option><option value={15}>15 dias</option><option value={30}>30 dias</option><option value={60}>60 dias</option><option value={90}>90 dias</option></select><small>Válida até {new Date(`${validUntil}T12:00:00`).toLocaleDateString('pt-BR')}</small></label><label className="quote-field is-wide">Observações para o cliente<textarea rows={4} value={state.customerNotes} onChange={(event) => patch({ customerNotes: event.target.value })}/></label></div></div>}
+        {step === 'items' && <div className="quote-section"><SectionTitle eyebrow="COMPOSIÇÃO" title="Itens do orçamento" text="Adicione serviços do catálogo ou itens manuais. Os cálculos usam precisão em centavos." actions={<><select className="quote-catalog-select" value="" onChange={(event) => addCatalog(event.target.value)}><option value="">Adicionar do catálogo…</option>{pricingRules.map((rule) => <option value={rule.service_key} key={rule.service_key}>{rule.service_name} · {currency.format(rule.base_amount)}</option>)}</select><button className="quote-secondary" onClick={addManual}>{icons.plus}Item manual</button></>}/><div className="quote-items-table"><div className="quote-items-head"><span>Descrição</span><span>Qtd.</span><span>Unidade</span><span>Valor unitário</span><span>Subtotal</span><span/></div>{state.items.map((item, index) => <div className="quote-item-row" key={item.key}><div><input aria-label="Descrição do item" value={item.serviceName} disabled={Boolean(item.serviceKey)} onChange={(event) => updateItem(item.key, { serviceName: event.target.value })}/><input className="quote-item-description" aria-label="Detalhe do item" value={item.description} onChange={(event) => updateItem(item.key, { description: event.target.value })} placeholder="Escopo ou detalhe opcional"/></div><input aria-label="Quantidade" type="number" min=".01" step=".01" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: Number(event.target.value) })}/><input aria-label="Unidade" value={item.unitLabel} onChange={(event) => updateItem(item.key, { unitLabel: event.target.value })}/><input aria-label="Valor unitário" type="number" min="0" step=".01" value={item.unitAmount} disabled={Boolean(item.serviceKey)} onChange={(event) => updateItem(item.key, { unitAmount: Number(event.target.value) })}/><strong>{currency.format(Math.round(toCents(item.unitAmount) * item.quantity) / 100)}</strong><div className="quote-item-actions"><button aria-label="Mover item para cima" disabled={index === 0} onClick={() => moveItem(index, -1)}>↑</button><button aria-label="Mover item para baixo" disabled={index === state.items.length - 1} onClick={() => moveItem(index, 1)}>↓</button><button aria-label="Remover item" onClick={() => patch({ items: state.items.filter((current) => current.key !== item.key) })}>{icons.trash}</button></div></div>)}{!state.items.length && <div className="quote-empty">{icons.plus}<strong>Nenhum item adicionado</strong><span>Use o catálogo ou crie um item manual.</span></div>}</div></div>}
+        {step === 'values' && <div className="quote-section"><SectionTitle eyebrow="NEGOCIAÇÃO" title="Valores, desconto e imposto" text="A alíquota é configurável por proposta e nunca é tratada como regra fiscal universal."/><div className="quote-values-grid"><article><h3>Desconto percentual</h3><div className="quote-discounts">{([0, 5, 10, 15, 20] as DiscountLevel[]).map((value) => <button className={state.discountPercent === value ? 'is-active' : ''} onClick={() => patch({ discountPercent: value, desiredFinalAmount: null, adjustmentReason: '' })} key={value}>{value}%</button>)}</div><p>20% permanece sinalizado para revisão comercial.</p></article><article><h3>Imposto estimado</h3><label className="quote-field">Alíquota (%)<input type="number" min="0" max="99.99" step=".01" value={state.taxPercent} onChange={(event) => patch({ taxPercent: Number(event.target.value) })}/><small>{state.taxPercent.toLocaleString('pt-BR')}% → {currency.format(preview.taxAmount)}</small></label></article><article className="quote-custom-value"><h3>Valor final desejado</h3>{state.desiredFinalAmount == null ? <><p>Valor calculado: <strong>{currency.format(preview.calculatedAmount)}</strong></p><button className="quote-secondary" onClick={() => { setDesiredInput(String(preview.finalAmount)); setAdjustmentReason(''); setAdjustmentOpen(true) }}>Definir valor final</button></> : <><p>Valor negociado: <strong>{currency.format(state.desiredFinalAmount)}</strong></p><small>Desconto adicional de {currency.format(preview.customAdjustmentAmount)} ({preview.customAdjustmentPercent.toLocaleString('pt-BR')}%).</small><button className="quote-text-button" onClick={() => patch({ desiredFinalAmount: null, adjustmentReason: '' })}>Remover ajuste</button></>}</article><article><h3>Parâmetros internos</h3><div className="quote-form-grid"><label className="quote-field">Complexidade<select value={state.complexityMultiplier} onChange={(event) => patch({ complexityMultiplier: Number(event.target.value) })}><option value={1}>Padrão · 1x</option><option value={1.25}>Intermediária · 1,25x</option><option value={1.5}>Alta · 1,5x</option><option value={2}>Especial · 2x</option></select></label><label className="quote-field">Urgência<select value={state.urgencyMultiplier} onChange={(event) => patch({ urgencyMultiplier: Number(event.target.value) })}><option value={1}>Normal · 1x</option><option value={1.15}>Prioritária · 1,15x</option><option value={1.3}>Urgente · 1,3x</option></select></label></div></article></div></div>}
+        {step === 'payment' && <div className="quote-section"><SectionTitle eyebrow="CONDIÇÃO DE PAGAMENTO" title="Vencimentos previstos" text="Este cronograma prepara o futuro Contas a Receber, sem gerar cobrança ou baixa financeira."/><div className="quote-payment-options"><button className={state.paymentMode === 'cash' ? 'is-active' : ''} onClick={() => patch({ paymentMode: 'cash', installments: 1 })}><strong>À vista</strong><span>Uma parcela prevista</span></button><button className={state.paymentMode === 'installments' ? 'is-active' : ''} onClick={() => patch({ paymentMode: 'installments', installments: Math.max(2, state.installments) })}><strong>Parcelado</strong><span>Até 24 parcelas previstas</span></button></div><div className="quote-form-grid"><label className="quote-field">Primeiro vencimento<input type="date" value={state.firstDueDate} onChange={(event) => patch({ firstDueDate: event.target.value })}/></label>{state.paymentMode === 'installments' && <><label className="quote-field">Parcelas<input type="number" min="2" max="24" value={state.installments} onChange={(event) => patch({ installments: Math.min(24, Math.max(2, Number(event.target.value))) })}/></label><label className="quote-field">Intervalo (dias)<input type="number" min="1" max="365" value={state.installmentIntervalDays} onChange={(event) => patch({ installmentIntervalDays: Number(event.target.value) })}/></label></>}<label className="quote-field">Meio previsto<select value={state.paymentProvider} onChange={(event) => patch({ paymentProvider: event.target.value as EditorState['paymentProvider'] })}><option value="none">A definir / sem taxa</option>{providers.map((provider) => <option value={provider.provider} key={provider.provider}>{provider.display_name}</option>)}</select></label></div><div className="quote-installments">{schedule.map((item) => <article key={item.installmentNumber}><span>{item.installmentNumber}</span><div><strong>{currency.format(item.amount)}</strong><small>{new Date(`${item.dueDate}T12:00:00`).toLocaleDateString('pt-BR')}</small></div></article>)}</div><p className="quote-schedule-total">Soma prevista <strong>{currency.format(schedule.reduce((sum, item) => sum + item.amount, 0))}</strong> · Total da proposta <strong>{currency.format(preview.finalAmount)}</strong></p></div>}
+        {step === 'review' && <div className="quote-section"><SectionTitle eyebrow="REVISÃO FINAL" title="Confira antes de finalizar" text="Finalizar gera uma nova versão imutável, o PDF oficial e o registro na Central de Documentos."/><div className="quote-review-card"><header><div><span>{request.proposal_number}</span><h3>{state.proposalTitle || 'Título pendente'}</h3><p>{request.company || request.name}</p></div><strong>{currency.format(preview.finalAmount)}</strong></header><dl><div><dt>Itens</dt><dd>{state.items.length}</dd></div><div><dt>Subtotal</dt><dd>{currency.format(preview.preDiscountAmount)}</dd></div><div><dt>Desconto</dt><dd>− {currency.format(preview.discountAmount + preview.customAdjustmentAmount)}</dd></div><div><dt>Imposto</dt><dd>+ {currency.format(preview.taxAmount)}</dd></div><div><dt>Pagamento</dt><dd>{state.paymentMode === 'cash' ? 'À vista' : `${schedule.length} parcelas`}</dd></div><div><dt>Validade</dt><dd>{new Date(`${validUntil}T12:00:00`).toLocaleDateString('pt-BR')}</dd></div></dl>{validation.length > 0 && <div className="quote-validation" role="alert"><strong>Antes de finalizar:</strong>{validation.map((item) => <span key={item}>• {item}</span>)}</div>}<footer><button className="quote-secondary" onClick={() => setStep('items')}>Voltar e editar</button><button className="quote-secondary" onClick={() => void downloadDraft()} disabled={busy === 'pdf'}>{icons.download}{busy === 'pdf' ? 'Gerando…' : 'Baixar rascunho'}</button><button className="quote-primary" disabled={Boolean(validation.length) || busy === 'finalize'} onClick={() => void finalize()}>{icons.check}{busy === 'finalize' ? 'Gerando versão…' : 'Finalizar proposta'}</button></footer></div></div>}
+        {step === 'send' && <div className="quote-section"><SectionTitle eyebrow="VERSÕES E ENVIO" title="Documento oficial" text="O envio sempre exige confirmação. Links compartilhados são temporários e assinados."/><div className="quote-send-grid"><article><h3>Versões</h3>{request.versions.map((version) => <div className="quote-version" key={version.id}><span>{icons.file}</span><div><strong>Versão {version.version_number}</strong><small>{new Date(version.created_at).toLocaleString('pt-BR')}</small></div><span className={`quote-status is-${version.commercial_status}`}>{statusLabels[version.commercial_status]}</span></div>)}{!request.versions.length && <p>Nenhuma versão oficial gerada.</p>}</article><article><h3>Compartilhar</h3><div className="quote-send-actions"><button className="quote-primary" disabled={!request.draft.current_version} onClick={openEmail}>{icons.send}Enviar por e-mail</button><button className="quote-secondary" disabled={!request.draft.current_version || !request.phone || busy === 'share'} onClick={() => void shareWhatsApp()}>{icons.send}WhatsApp</button><button className="quote-secondary" disabled={!request.draft.current_version} onClick={() => void downloadOfficial()}>{icons.download}Baixar PDF</button><button className="quote-secondary" disabled={!request.draft.current_version} onClick={() => void copy()}>{icons.copy}Copiar mensagem/link</button></div><small>O e-mail usa o aplicativo configurado no dispositivo; nenhuma senha do iCloud fica no frontend.</small></article><article><h3>Estado comercial</h3><div className="quote-status-actions">{request.draft.commercial_status === 'reviewed' && <button onClick={() => void setStatus('sent')}>Marcar como enviado</button>}{['reviewed', 'sent', 'negotiating'].includes(request.draft.commercial_status) && <><button onClick={() => void setStatus('approved', 'Aprovação registrada pelo administrador')}>Aprovar proposta</button><button onClick={() => void setStatus('lost')}>Marcar como perdida</button></>} {['draft', 'reviewed', 'sent', 'negotiating'].includes(request.draft.commercial_status) && <button className="is-danger" onClick={() => void setStatus('cancelled')}>Cancelar</button>}</div></article><article><h3>Histórico</h3><div className="quote-history">{request.audit.slice(0, 20).map((event) => <div key={event.id}><span>{icons.history}</span><div><strong>{eventLabels[event.event_type] || event.event_type.replaceAll('_', ' ')}</strong><small>{new Date(event.created_at).toLocaleString('pt-BR')}</small></div></div>)}</div></article></div></div>}
+      </section>
+      <aside className="quote-summary"><span>RESUMO FINANCEIRO</span><h3>{request.proposal_number}</h3><dl><div><dt>Subtotal</dt><dd>{currency.format(preview.preDiscountAmount)}</dd></div><div><dt>Desconto</dt><dd>− {currency.format(preview.discountAmount)}</dd></div>{preview.customAdjustmentAmount > 0 && <div><dt>Ajuste negociado</dt><dd>− {currency.format(preview.customAdjustmentAmount)}</dd></div>}<div><dt>Imposto ({state.taxPercent.toLocaleString('pt-BR')}%)</dt><dd>+ {currency.format(preview.taxAmount)}</dd></div>{preview.paymentFeeTotal > 0 && <div><dt>Taxas previstas</dt><dd>+ {currency.format(preview.paymentFeeTotal)}</dd></div>}<div className="is-total"><dt>Total final</dt><dd>{currency.format(preview.finalAmount)}</dd></div></dl><p>{state.paymentMode === 'cash' ? 'Pagamento à vista' : `${schedule.length} parcelas`} · válida até {new Date(`${validUntil}T12:00:00`).toLocaleDateString('pt-BR')}</p></aside>
+    </div></div>
+    <footer className="quote-editor-footer"><div className={`quote-save-state is-${saveState}`}><span/>{isReadOnly ? 'Somente leitura' : saveState === 'saved' ? 'Salvo agora' : saveState === 'saving' ? 'Salvando…' : saveState === 'error' ? 'Falha ao salvar' : 'Alterações pendentes'}</div><div><button className="quote-secondary" onClick={() => void onMutate({ action: 'duplicate_quote', requestId: request.id }, request.id)}>{icons.copy}Duplicar</button>{request.draft.commercial_status === 'draft' && request.draft.current_version === 0 && request.draft.status !== 'suspended' && <button className="quote-danger" onClick={() => setConfirmDelete(true)}>{icons.trash}Excluir rascunho</button>}<button className="quote-primary" disabled={isReadOnly || saveState === 'saving'} onClick={() => void save()}>{saveState === 'saving' ? 'Salvando…' : 'Salvar'}</button></div></footer>
+    {adjustmentOpen && <div className="quote-modal-backdrop"><div className="quote-modal quote-confirm-modal"><header><div><span>CONFIRMAÇÃO ADMINISTRATIVA</span><h2>Definir valor final</h2><p>O MFA/AAL2 da sessão será verificado e a alteração ficará no histórico.</p></div><button onClick={() => setAdjustmentOpen(false)}>×</button></header><div className="quote-form-grid"><label className="quote-field">Valor calculado<input readOnly value={currency.format(preview.calculatedAmount)}/></label><label className="quote-field">Quero receber<input inputMode="decimal" value={desiredInput} onChange={(event) => setDesiredInput(event.target.value)}/></label><label className="quote-field is-wide">Justificativa do ajuste<textarea rows={4} value={adjustmentReason} onChange={(event) => setAdjustmentReason(event.target.value)} placeholder="Ex.: Valor comercial negociado com o cliente."/></label></div><footer><button className="quote-secondary" onClick={() => setAdjustmentOpen(false)}>Cancelar</button><button className="quote-primary" onClick={() => void confirmAdjustment()}>Confirmar com AAL2</button></footer></div></div>}
+    {confirmDelete && <div className="quote-modal-backdrop"><div className="quote-modal quote-confirm-modal"><header><div><span>EXCLUSÃO DE RASCUNHO</span><h2>Excluir este rascunho?</h2><p>Esta ação não poderá ser desfeita. Propostas versionadas não podem ser excluídas por este fluxo.</p></div></header><footer><button className="quote-secondary" onClick={() => setConfirmDelete(false)}>Manter rascunho</button><button className="quote-danger" onClick={() => void onMutate({ action: 'delete_draft', requestId: request.id })}>{icons.trash}Excluir definitivamente</button></footer></div></div>}
+    {emailOpen && <div className="quote-modal-backdrop"><div className="quote-modal quote-email-modal"><header><div><span>ENVIO POR E-MAIL</span><h2>Revise antes de enviar</h2><p>O documento oficial é a versão {request.draft.current_version}. O compartilhamento nativo inclui o PDF; o fluxo mailto abre apenas a mensagem e exige anexar o arquivo.</p></div><button onClick={() => setEmailOpen(false)}>×</button></header><div className="quote-form-grid"><label className="quote-field is-wide">Para<input type="email" value={emailTo} onChange={(event) => setEmailTo(event.target.value)}/></label><label className="quote-field is-wide">Assunto<input value={emailSubject} onChange={(event) => setEmailSubject(event.target.value)}/></label><label className="quote-field is-wide">Mensagem<textarea rows={8} value={emailBody} onChange={(event) => setEmailBody(event.target.value)}/></label><div className="quote-email-document">{icons.file}<div><strong>{request.proposal_number}_V{String(request.draft.current_version).padStart(2, '0')}.pdf</strong><small>PDF oficial privado na Central de Documentos</small></div></div></div><footer><button className="quote-secondary" onClick={() => setEmailOpen(false)}>Cancelar</button><button className="quote-secondary" disabled={!emailTo} onClick={() => void prepareEmail()}>{icons.send}Abrir e-mail sem anexo</button><button className="quote-primary" disabled={!emailTo} onClick={() => void shareEmailNative()}>{icons.file}Compartilhar com PDF</button></footer></div></div>}
+  </div>
+}
+
+function SectionTitle({ eyebrow, title, text, actions }: { eyebrow: string; title: string; text: string; actions?: ReactNode }) {
+  return <header className="quote-section-title"><div><span>{eyebrow}</span><h3>{title}</h3><p>{text}</p></div>{actions && <div>{actions}</div>}</header>
 }
