@@ -1,0 +1,131 @@
+/* HRX Admin — ajustes de usabilidade solicitados em 23/08/2026. */
+
+/* O shell já informa a seção ativa. Oculta títulos internos duplicados sem remover ações. */
+.hrx-unified-content .hrx-view-title>div:first-child,
+.hrx-unified-content .hrx-mobile-page-title,
+.hrx-unified-content .quote-topbar>div:first-child{display:none!important}
+.hrx-unified-content .hrx-view-title{justify-content:flex-end;margin-bottom:14px!important}
+.hrx-unified-content .quote-topbar{min-height:58px!important;height:auto!important;justify-content:flex-end!important;padding:9px 14px!important}
+.hrx-unified-content .quote-topbar>div:last-child{margin-left:auto}
+
+/* No PWA existe um único acesso a configurações: Perfil no dock inferior. */
+.hrx-unified-shell.is-pwa .hrx-pwa-settings{display:none!important}
+
+/* Dock inferior realmente flutuante: centralizado, afastado das bordas e independente do conteúdo. */
+.hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
+  position:absolute!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:max(14px,calc(env(safe-area-inset-bottom) + 8px))!important;
+  width:min(560px,calc(100vw - max(28px,calc(env(safe-area-inset-left) + env(safe-area-inset-right) + 20px))))!important;
+  height:66px!important;
+  min-height:66px!important;
+  transform:translateX(-50%)!important;
+  border-radius:24px!important;
+  border:1px solid rgba(177,207,235,.24)!important;
+  background:rgba(7,25,44,.88)!important;
+  box-shadow:0 22px 54px rgba(0,7,18,.5),0 2px 10px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.06)!important;
+  backdrop-filter:blur(28px) saturate(1.18)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(1.18)!important;
+}
+.hrx-unified-shell.is-pwa>.hrx-unified-content{padding-bottom:102px!important}
+
+/* Editor comercial: ações essenciais sempre alcançáveis e etapa de revisão confortável no telefone. */
+.hrx-unified-shell.is-pwa .quote-editor{min-height:100%;height:auto!important}
+.hrx-unified-shell.is-pwa .quote-editor-header{position:sticky;top:0;z-index:24;min-height:64px;padding:9px 11px;background:rgba(7,25,43,.94);backdrop-filter:blur(20px)}
+.hrx-unified-shell.is-pwa .quote-editor-header h2{font-size:.86rem}
+.hrx-unified-shell.is-pwa .quote-editor-header p{display:none}
+.hrx-unified-shell.is-pwa .quote-steps{position:sticky;top:64px;z-index:23;display:flex!important;gap:5px;padding:6px 8px;overflow-x:auto;scrollbar-width:none;background:rgba(8,28,48,.94);backdrop-filter:blur(18px)}
+.hrx-unified-shell.is-pwa .quote-steps::-webkit-scrollbar{display:none}
+.hrx-unified-shell.is-pwa .quote-steps button{flex:0 0 auto;min-width:88px;min-height:42px;padding:0 8px;border-radius:11px}
+.hrx-unified-shell.is-pwa .quote-editor-scroll{overflow:visible!important}
+.hrx-unified-shell.is-pwa .quote-editor-main{grid-template-columns:1fr!important;padding:9px!important}
+.hrx-unified-shell.is-pwa .quote-summary{position:static!important;order:-1;margin-bottom:8px}
+.hrx-unified-shell.is-pwa .quote-section{padding:12px!important}
+.hrx-unified-shell.is-pwa .quote-section-title{margin-bottom:12px}
+.hrx-unified-shell.is-pwa .quote-section-title h3{font-size:.88rem}
+.hrx-unified-shell.is-pwa .quote-review-card footer{position:sticky;bottom:94px;z-index:20;display:grid!important;grid-template-columns:1fr;gap:7px;padding:9px;margin:14px -4px -4px;border:1px solid var(--qc-border);border-radius:13px;background:rgba(6,22,39,.94);backdrop-filter:blur(20px)}
+.hrx-unified-shell.is-pwa .quote-review-card footer button{width:100%;min-height:46px}
+.hrx-unified-shell.is-pwa .quote-editor-footer{position:sticky!important;z-index:25;bottom:92px!important;display:flex!important;flex-wrap:wrap;gap:7px;padding:8px 10px!important;background:rgba(6,22,39,.96)!important;backdrop-filter:blur(22px);border-top:1px solid var(--qc-border)!important}
+.hrx-unified-shell.is-pwa .quote-editor-footer>div:last-child{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.hrx-unified-shell.is-pwa .quote-editor-footer button{min-height:42px}
+.hrx-unified-shell.is-pwa .quote-editor-footer .quote-danger{font-size:0}
+.hrx-unified-shell.is-pwa .quote-editor-footer .quote-danger::after{content:'Excluir orçamento';font-size:.7rem;font-weight:800}
+
+@media(max-width:520px){
+  .hrx-unified-content .quote-topbar>div:last-child{display:grid!important;grid-template-columns:1fr 1fr;width:100%;gap:7px}
+  .hrx-unified-content .quote-topbar>div:last-child button{width:100%}
+  .hrx-unified-shell.is-pwa .quote-editor-header{grid-template-columns:minmax(0,1fr) auto!important}
+  .hrx-unified-shell.is-pwa .quote-header-value strong{font-size:.9rem}
+  .hrx-unified-shell.is-pwa .quote-form-grid,.hrx-unified-shell.is-pwa .quote-values-grid{grid-template-columns:1fr!important}
+  .hrx-unified-shell.is-pwa .quote-field.is-wide{grid-column:auto}
+  .hrx-unified-shell.is-pwa .quote-payment-options{grid-template-columns:1fr 1fr}
+  .hrx-unified-shell.is-pwa .quote-review-card dl{grid-template-columns:1fr 1fr!important}
+}
+
+/* Tema claro funcional: troca tokens e também superfícies que estavam hard-coded no modo escuro. */
+html[data-hrx-theme-resolved="light"]{
+  --hrx-bg:#edf3f9;--hrx-bg-2:#f7f9fc;--hrx-surface:rgba(255,255,255,.78);--hrx-surface-strong:rgba(255,255,255,.94);
+  --hrx-surface-hover:rgba(220,232,245,.86);--hrx-border:rgba(40,72,105,.15);--hrx-border-strong:rgba(40,72,105,.24);
+  --hrx-text:#10243a;--hrx-text-2:#425a72;--hrx-muted:#6b7f93;--hrx-shadow:0 18px 48px rgba(35,61,88,.13);
+  color-scheme:light;
+}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell{color:#10243a;background:radial-gradient(80% 90% at 90% 8%,rgba(61,134,224,.10),transparent 68%),linear-gradient(135deg,#eef4fa,#f8fafc)!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-desktop>.hrx-unified-sidebar{background:linear-gradient(180deg,rgba(248,251,254,.98),rgba(237,244,250,.97))!important;border-color:rgba(35,69,105,.12)!important}
+html[data-hrx-theme-resolved="light"] .hrx-glass-sidebar nav button{color:#466079!important}
+html[data-hrx-theme-resolved="light"] .hrx-glass-sidebar nav button:hover{background:rgba(51,113,191,.08)!important;color:#17324e!important}
+html[data-hrx-theme-resolved="light"] .hrx-glass-sidebar nav button.is-active{background:linear-gradient(90deg,rgba(56,126,220,.15),rgba(56,126,220,.07))!important;color:#17324e!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-topbar,
+html[data-hrx-theme-resolved="light"] .hrx-pwa-topbar{background:rgba(247,250,253,.88)!important;border-color:rgba(35,69,105,.12)!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-title>strong,
+html[data-hrx-theme-resolved="light"] .hrx-pwa-brand strong,
+html[data-hrx-theme-resolved="light"] .hrx-unified-profile{color:#17324e!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-actions>.hrx-notifications,
+html[data-hrx-theme-resolved="light"] .hrx-pwa-more{background:rgba(255,255,255,.78)!important;color:#294965!important;border-color:rgba(35,69,105,.16)!important}
+html[data-hrx-theme-resolved="light"] .hrx-pwa-secondary,
+html[data-hrx-theme-resolved="light"] .hrx-notification-panel{background:rgba(248,251,254,.98)!important;color:#17324e!important;border-color:rgba(35,69,105,.16)!important;box-shadow:0 24px 60px rgba(35,61,88,.18)!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{background:rgba(249,252,255,.92)!important;border-color:rgba(35,69,105,.16)!important;box-shadow:0 20px 48px rgba(35,61,88,.18),inset 0 1px 0 #fff!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-mobile-nav button{color:#63788c!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-mobile-nav button.is-active{background:rgba(54,125,220,.12)!important;color:#1c5cae!important}
+
+html[data-hrx-theme-resolved="light"] .hrx-glass-app{color-scheme:light!important;color:#10243a!important}
+html[data-hrx-theme-resolved="light"] .hrx-glass-panel,
+html[data-hrx-theme-resolved="light"] .hrx-data-table,
+html[data-hrx-theme-resolved="light"] .hrx-activity-workspace,
+html[data-hrx-theme-resolved="light"] .hrx-settings-card,
+html[data-hrx-theme-resolved="light"] .hrx-settings-layout>nav{background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(245,249,253,.94))!important;border-color:rgba(35,69,105,.15)!important;box-shadow:0 16px 38px rgba(35,61,88,.10)!important;color:#17324e!important}
+html[data-hrx-theme-resolved="light"] .hrx-glass-metric{background:linear-gradient(150deg,rgba(255,255,255,.94),rgba(240,247,252,.92))!important;border-color:rgba(35,69,105,.15)!important;color:#17324e!important;box-shadow:0 14px 30px rgba(35,61,88,.09)!important}
+html[data-hrx-theme-resolved="light"] .hrx-glass-metric small,
+html[data-hrx-theme-resolved="light"] .hrx-glass-metric p{color:#667b90!important}
+
+html[data-hrx-theme-resolved="light"] .admin-live-shell.quote-commercial-shell{--qc-bg:#edf3f9;--qc-bg-2:#f8fafc;--qc-surface:rgba(255,255,255,.84);--qc-surface-2:rgba(244,248,252,.9);--qc-border:rgba(38,73,108,.15);--qc-border-strong:rgba(38,73,108,.25);--qc-text:#11273e;--qc-text-2:#425a72;--qc-muted:#718398;color:#11273e!important;color-scheme:light!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-topbar.quote-topbar,
+html[data-hrx-theme-resolved="light"] .quote-editor-header,
+html[data-hrx-theme-resolved="light"] .quote-steps,
+html[data-hrx-theme-resolved="light"] .quote-editor-footer{background:rgba(248,251,254,.94)!important;border-color:rgba(38,73,108,.13)!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics article,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-queue,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-detail,
+html[data-hrx-theme-resolved="light"] .quote-section,
+html[data-hrx-theme-resolved="light"] .quote-values-grid>article,
+html[data-hrx-theme-resolved="light"] .quote-send-grid>article,
+html[data-hrx-theme-resolved="light"] .quote-summary{background:rgba(255,255,255,.9)!important;color:#11273e!important;border-color:rgba(38,73,108,.15)!important;box-shadow:0 14px 32px rgba(35,61,88,.09)!important}
+html[data-hrx-theme-resolved="light"] .quote-editor-header h2,
+html[data-hrx-theme-resolved="light"] .quote-section-title h3,
+html[data-hrx-theme-resolved="light"] .quote-values-grid h3,
+html[data-hrx-theme-resolved="light"] .quote-send-grid h3,
+html[data-hrx-theme-resolved="light"] .quote-queue .admin-queue-header strong,
+html[data-hrx-theme-resolved="light"] .quote-queue .admin-lead strong,
+html[data-hrx-theme-resolved="light"] .quote-queue .admin-lead b,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics strong{color:#11273e!important}
+html[data-hrx-theme-resolved="light"] .quote-field input,
+html[data-hrx-theme-resolved="light"] .quote-field select,
+html[data-hrx-theme-resolved="light"] .quote-field textarea,
+html[data-hrx-theme-resolved="light"] .quote-item-row input,
+html[data-hrx-theme-resolved="light"] .quote-queue .admin-search,
+html[data-hrx-theme-resolved="light"] .quote-queue .admin-queue-header>select,
+html[data-hrx-theme-resolved="light"] .quote-catalog-select{background:#fff!important;color:#17324e!important;border-color:rgba(38,73,108,.18)!important}
+html[data-hrx-theme-resolved="light"] .quote-secondary{background:rgba(255,255,255,.76)!important;color:#3f5870!important}
+
+/* Modo escuro explícito evita depender do tema do sistema. */
+html[data-hrx-theme-resolved="dark"]{color-scheme:dark}
