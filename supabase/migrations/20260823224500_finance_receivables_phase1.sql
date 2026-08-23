@@ -88,12 +88,16 @@ begin
   from public.financial_entries
   where id = target_id;
 
+  if settled > gross then
+    raise exception 'settlement_exceeds_entry_balance';
+  end if;
+
   update public.financial_entries
-  set paid_amount = least(settled, gross),
+  set paid_amount = settled,
       status = case
         when settled >= gross and gross > 0 then 'paid'
-        when settled > 0 then 'partial'
         when due < current_date then 'overdue'
+        when settled > 0 then 'partial'
         else 'open'
       end,
       paid_at = case when settled >= gross and gross > 0 then now() else null end,
