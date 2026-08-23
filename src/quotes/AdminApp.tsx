@@ -9,6 +9,7 @@ import './admin-feedback.css'
 import './admin-interactions.css'
 import './admin-executive-intelligence.css'
 import './admin-liquid-glass.css'
+import './admin-personalization.css'
 
 export default function AdminApp() {
   return <>
