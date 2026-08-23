@@ -73,9 +73,9 @@ test('nested legacy shells are explicitly neutralized inside the canonical works
 
   assert.match(css, /\.hrx-unified-shell\{[\s\S]*position:fixed/)
   assert.match(css, /\.hrx-unified-content>\.hrx-glass-app\{[\s\S]*position:relative!important/)
-  assert.match(css, /\.hrx-unified-content>\.hrx-glass-app>\.hrx-glass-sidebar/[\s\S]*display:none!important/)
+  assert.match(css, /\.hrx-unified-content>\.hrx-glass-app>\.hrx-glass-sidebar,[\s\S]*display:none!important/)
   assert.match(css, /\.hrx-unified-content>\.admin-live-shell\.quote-commercial-shell\{[\s\S]*position:relative!important/)
-  assert.match(css, /quote-commercial-shell>\.admin-exec-sidebar/[\s\S]*display:none!important/)
+  assert.match(css, /quote-commercial-shell>\.admin-exec-sidebar,[\s\S]*display:none!important/)
   assert.match(css, /\.hrx-unified-content \.hrx-legacy-shell\{display:none!important\}/)
 })
 
