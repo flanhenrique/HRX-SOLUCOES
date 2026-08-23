@@ -19,17 +19,17 @@ create index if not exists financial_settlements_receipt_document_id_idx
 drop policy if exists financial_accounts_aal2 on public.financial_accounts;
 create policy financial_accounts_aal2 on public.financial_accounts
   as restrictive for all to authenticated
-  using ((select auth.jwt()->>'aal') = 'aal2')
-  with check ((select auth.jwt()->>'aal') = 'aal2');
+  using (((select auth.jwt())->>'aal') = 'aal2')
+  with check (((select auth.jwt())->>'aal') = 'aal2');
 
 drop policy if exists financial_entries_aal2 on public.financial_entries;
 create policy financial_entries_aal2 on public.financial_entries
   as restrictive for all to authenticated
-  using ((select auth.jwt()->>'aal') = 'aal2')
-  with check ((select auth.jwt()->>'aal') = 'aal2');
+  using (((select auth.jwt())->>'aal') = 'aal2')
+  with check (((select auth.jwt())->>'aal') = 'aal2');
 
 drop policy if exists financial_settlements_aal2 on public.financial_settlements;
 create policy financial_settlements_aal2 on public.financial_settlements
   as restrictive for all to authenticated
-  using ((select auth.jwt()->>'aal') = 'aal2')
-  with check ((select auth.jwt()->>'aal') = 'aal2');
+  using (((select auth.jwt())->>'aal') = 'aal2')
+  with check (((select auth.jwt())->>'aal') = 'aal2');
