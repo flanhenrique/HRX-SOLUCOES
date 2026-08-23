@@ -1,0 +1,10 @@
+@media(max-width:760px){
+  html.hrx-admin-pwa .hrx-notification-panel{top:calc(64px + env(safe-area-inset-top))}
+  html.hrx-admin-pwa .hrx-loading{top:calc(64px + env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
+  html.hrx-admin-pwa .hrx-back-to-dashboard{top:max(14px,calc(env(safe-area-inset-top) + 8px));left:max(14px,env(safe-area-inset-left))}
+}
+
+@media(orientation:landscape) and (max-height:520px) and (max-width:932px){
+  html.hrx-admin-pwa .hrx-notification-panel{top:calc(58px + env(safe-area-inset-top))}
+  html.hrx-admin-pwa .hrx-loading{top:calc(58px + env(safe-area-inset-top))}
+}
