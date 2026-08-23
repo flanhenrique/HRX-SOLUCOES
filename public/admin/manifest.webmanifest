@@ -3,19 +3,27 @@
   "name": "HRX Admin",
   "short_name": "HRX Admin",
   "description": "Ambiente administrativo da HRX Solutions para orçamentos, documentos, operações e acompanhamento de projetos.",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/admin/orcamentos",
   "scope": "/admin/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#061a31",
   "theme_color": "#061a31",
   "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/admin/hrx-admin-icon.svg",
-      "sizes": "any",
+      "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/admin/hrx-admin-icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
