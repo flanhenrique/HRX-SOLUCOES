@@ -25,11 +25,10 @@ const navItems: NavItem[] = [
 const coreDestinations = new Set<AdminDestination>(['executive', 'panels', 'activities', 'clients', 'documents', 'settings'])
 const pwaPrimary = new Set<AdminDestination>(['executive', 'quotes', 'panels', 'documents', 'settings'])
 
-function destinationFromHash(): AdminDestination {
+function initialDestination(): AdminDestination {
   const hash = window.location.hash.replace(/^#admin\//, '')
   const map: Record<string, AdminDestination> = {
     'visao-geral': 'executive',
-    painéis: 'panels',
     paineis: 'panels',
     atividades: 'activities',
     orcamentos: 'quotes',
@@ -39,7 +38,10 @@ function destinationFromHash(): AdminDestination {
     documentos: 'documents',
     configuracoes: 'settings',
   }
-  return map[hash] ?? 'executive'
+  if (map[hash]) return map[hash]
+  const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
+  if (pathname === '/admin/orcamentos') return 'quotes'
+  return 'executive'
 }
 
 function useCompactAdmin() {
@@ -111,7 +113,7 @@ function PwaShell({ active, alertCount, children }: { active: AdminDestination; 
 }
 
 export default function AdminUnifiedRoot() {
-  const [active, setActive] = useState<AdminDestination>(destinationFromHash)
+  const [active, setActive] = useState<AdminDestination>(initialDestination)
   const [alertCount, setAlertCount] = useState(0)
   const compact = useCompactAdmin()
 
