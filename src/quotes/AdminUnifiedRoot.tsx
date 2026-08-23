@@ -6,7 +6,6 @@ import AdminQuotes from './AdminQuotes'
 import AdminSuspensionsPage from './AdminSuspensionsPage'
 import { navigateAdmin, onAdminNavigate, type AdminDestination } from './adminNavigation'
 import { hrxSupabase } from './supabaseClient'
-import './admin-unified-shell.css'
 
 type NavItem = { destination: AdminDestination; label: string; shortLabel?: string; icon: string }
 
@@ -72,6 +71,10 @@ function RouteContent({ destination }: { destination: AdminDestination }) {
   return <AdminExperienceLayer />
 }
 
+function NotificationButton({ alertCount }: { alertCount: number }) {
+  return <button className="hrx-notifications" type="button" aria-label={`${alertCount} notificações`}><i aria-hidden="true">♢</i>{alertCount > 0 && <span>{alertCount}</span>}</button>
+}
+
 function DesktopShell({ active, alertCount, children }: { active: AdminDestination; alertCount: number; children: ReactNode }) {
   const current = navItems.find((item) => item.destination === active) ?? navItems[0]
   return <div className="hrx-unified-shell is-desktop" data-admin-shell="desktop">
@@ -82,7 +85,7 @@ function DesktopShell({ active, alertCount, children }: { active: AdminDestinati
     <header className="hrx-glass-topbar hrx-unified-topbar">
       <div className="hrx-unified-title"><span>HRX ADMIN</span><strong>{current.label}</strong></div>
       <div className="hrx-unified-actions">
-        <button className="hrx-notifications" type="button" aria-label={`${alertCount} notificações`}><span aria-hidden="true">♢</span>{alertCount > 0 && <b>{alertCount}</b>}</button>
+        <NotificationButton alertCount={alertCount} />
         <button className="hrx-unified-profile" type="button" onClick={() => navigateAdmin('settings')}><span>HR</span><div><strong>Administrador</strong><small>HRX Solutions</small></div></button>
       </div>
     </header>
@@ -100,7 +103,7 @@ function PwaShell({ active, alertCount, children }: { active: AdminDestination; 
     <header className="hrx-glass-topbar hrx-unified-topbar hrx-pwa-topbar">
       <div className="hrx-pwa-brand"><img src="/hrx-logo.svg" alt="HRX Solutions" /><div><span>HRX ADMIN</span><strong>{current.shortLabel || current.label}</strong></div></div>
       <div className="hrx-unified-actions">
-        <button className="hrx-notifications" type="button" aria-label={`${alertCount} notificações`}><span aria-hidden="true">♢</span>{alertCount > 0 && <b>{alertCount}</b>}</button>
+        <NotificationButton alertCount={alertCount} />
         <button className="hrx-pwa-settings" type="button" aria-label="Abrir configurações" onClick={() => go('settings')}>⚙</button>
         <button className={`hrx-pwa-more${moreOpen ? ' is-open' : ''}`} type="button" aria-expanded={moreOpen} aria-controls="hrx-pwa-secondary" onClick={() => setMoreOpen((value) => !value)}>•••</button>
       </div>
