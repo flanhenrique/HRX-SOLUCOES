@@ -7,7 +7,7 @@
   html.hrx-admin-pwa .hrx-mobile-brand{display:flex;align-items:center;flex:1 1 auto;min-width:0;height:50px;overflow:hidden}
   html.hrx-admin-pwa .hrx-mobile-brand strong,
   html.hrx-admin-pwa .hrx-mobile-brand span{display:none}
-  html.hrx-admin-pwa .hrx-mobile-brand::before{content:"";display:block;flex:0 0 auto;width:84px;height:50px;background:url('/hrx-logo.svg') center/contain no-repeat}
+  html.hrx-admin-pwa .hrx-mobile-brand::before{content:"";display:block;flex:0 0 auto;width:84px;height:50px;background:url('/hrx-logo.svg') center/contain no-repeat;filter:drop-shadow(0 3px 10px rgba(0,0,0,.18))}
 
   /* A tela volta a correr até o rodapé; a navegação deixa de reservar uma faixa fixa. */
   html.hrx-admin-pwa .hrx-glass-main{inset:var(--hrx-topbar) 0 0 0;bottom:0;padding-bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -33,12 +33,14 @@
   html.hrx-admin-pwa .hrx-mobile-nav button.is-active{background:rgba(67,137,255,.12)}
   html.hrx-admin-pwa .hrx-mobile-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   html.hrx-admin-pwa .hrx-detail-drawer{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
+
+  html[data-hrx-theme-resolved="light"].hrx-admin-pwa .hrx-mobile-nav{border-color:rgba(53,82,111,.16);background:rgba(246,250,253,.9);box-shadow:0 16px 40px rgba(57,78,99,.2),inset 0 1px 0 rgba(255,255,255,.72)}
 }
 
 @media(max-width:390px){
   html.hrx-admin-pwa .hrx-mobile-brand{height:46px}
   html.hrx-admin-pwa .hrx-mobile-brand::before{width:76px;height:46px}
-  html.hrx-admin-pwa .hrx-mobile-nav{inset-right:max(10px,env(safe-area-inset-right));inset-left:max(10px,env(safe-area-inset-left));gap:2px;padding-inline:6px}
+  html.hrx-admin-pwa .hrx-mobile-nav{right:max(10px,env(safe-area-inset-right));left:max(10px,env(safe-area-inset-left));gap:2px;padding-inline:6px}
 }
 
 @media(orientation:landscape) and (max-height:520px) and (max-width:932px){
