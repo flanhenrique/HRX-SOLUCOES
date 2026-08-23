@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { navigateAdmin } from './adminNavigation'
 import { hrxSupabase } from './supabaseClient'
-import './admin-personalization.css'
 
 type Appearance = 'system' | 'dark' | 'light'
 type Accent = 'blue' | 'cyan' | 'violet' | 'green'
