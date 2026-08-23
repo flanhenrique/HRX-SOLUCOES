@@ -4,26 +4,29 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('mobile admin separates usable topbar height from iOS safe area', async () => {
-  const css = await read('src/quotes/admin-responsive-hardening.css')
+test('mobile admin separates PWA safe area from the desktop shell', async () => {
+  const [root, css] = await Promise.all([
+    read('src/quotes/AdminUnifiedRoot.tsx'),
+    read('src/quotes/admin-unified-shell.css'),
+  ])
 
-  assert.match(css, /--hrx-topbar:calc\(56px \+ env\(safe-area-inset-top\)\)/)
-  assert.match(css, /--hrx-mobile-nav-height:calc\(56px \+ env\(safe-area-inset-bottom\)\)/)
-  assert.match(css, /\.hrx-glass-main\{inset:var\(--hrx-topbar\) 0 var\(--hrx-mobile-nav-height\) 0/)
-  assert.match(css, /padding-right:max\(13px,env\(safe-area-inset-right\)\)/)
-  assert.match(css, /padding-left:max\(13px,env\(safe-area-inset-left\)\)/)
-  assert.match(css, /\.hrx-filterbar\{width:100%;flex-wrap:wrap/)
-  assert.match(css, /@media\(max-width:350px\)[\s\S]*\.hrx-metric-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
+  assert.match(root, /function DesktopShell/)
+  assert.match(root, /function PwaShell/)
+  assert.match(root, /window\.matchMedia\('\(max-width: 760px\)'\)/)
+  assert.match(css, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding-top:env\(safe-area-inset-top\)/)
+  assert.match(css, /\.hrx-unified-mobile-nav\{[\s\S]*bottom:max\(8px,env\(safe-area-inset-bottom\)\)!important/)
+  assert.match(css, /\.hrx-unified-shell\.is-desktop\{[\s\S]*grid-template-columns:var\(--hrx-shell-sidebar\)/)
 })
 
 test('personalization persists locally and syncs non-sensitive preferences to the signed-in account', async () => {
-  const [bridge, adminApp] = await Promise.all([
+  const [bridge, root, adminApp] = await Promise.all([
     read('src/quotes/AdminPersonalizationBridge.tsx'),
+    read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/AdminApp.tsx'),
   ])
 
-  assert.match(adminApp, /AdminPersonalizationBridge/)
-  assert.match(adminApp, /admin-responsive-hardening\.css/)
+  assert.match(adminApp, /AdminUnifiedRoot/)
+  assert.match(root, /<AdminPersonalizationBridge \/>/)
   assert.match(bridge, /hrx_ui_preferences/)
   assert.match(bridge, /localStorage\.setItem/)
   assert.match(bridge, /auth\.updateUser/)
@@ -34,13 +37,17 @@ test('personalization persists locally and syncs non-sensitive preferences to th
   assert.match(bridge, /Tamanho da interface/)
 })
 
-test('notification bell is actionable and routes to real admin workspaces', async () => {
-  const bridge = await read('src/quotes/AdminPersonalizationBridge.tsx')
+test('notification bell remains actionable in the canonical chrome', async () => {
+  const [bridge, root] = await Promise.all([
+    read('src/quotes/AdminPersonalizationBridge.tsx'),
+    read('src/quotes/AdminUnifiedRoot.tsx'),
+  ])
 
+  assert.match(root, /className="hrx-notifications"/)
+  assert.match(root, /from\('quote_drafts'\)/)
+  assert.match(root, /from\('hrx_documents'\)/)
   assert.match(bridge, /\.hrx-notifications/)
   assert.match(bridge, /aria-haspopup/)
   assert.match(bridge, /Ver atividades e bloqueios/)
   assert.match(bridge, /Revisar documentos/)
-  assert.match(bridge, /clickAdminNavigation\('Atividades'\)/)
-  assert.match(bridge, /clickAdminNavigation\('Central de Documentos'\)/)
 })

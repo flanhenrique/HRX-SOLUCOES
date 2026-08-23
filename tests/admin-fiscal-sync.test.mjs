@@ -5,10 +5,11 @@ import { readFile } from 'node:fs/promises'
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('fiscal page allows manual IE and latest quote keeps the client synchronized', async () => {
-  const [fiscal, migration, adminApp, authRouter] = await Promise.all([
+  const [fiscal, migration, adminApp, root, authRouter] = await Promise.all([
     read('src/quotes/AdminFiscalPage.tsx'),
     read('supabase/migrations/20260817160000_sync_quote_clients_manual_state_registration.sql'),
     read('src/quotes/AdminApp.tsx'),
+    read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/AdminAuthRouter.tsx'),
   ])
 
@@ -21,6 +22,8 @@ test('fiscal page allows manual IE and latest quote keeps the client synchronize
   assert.doesNotMatch(fiscal, /createPortal/)
   assert.match(migration, /before insert or update on public\.quote_requests/i)
   assert.match(migration, /coalesce\(new\.created_at, now\(\)\) >= coalesce\(c\.last_quote_at/i)
-  assert.match(adminApp, /<AdminFiscalPage \/>/)
+  assert.match(adminApp, /<AdminUnifiedRoot \/>/)
+  assert.doesNotMatch(adminApp, /<AdminFiscalPage \/>/)
+  assert.match(root, /destination === 'fiscal'[\s\S]*<AdminFiscalPage \/>/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
 })

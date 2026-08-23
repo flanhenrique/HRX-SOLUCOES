@@ -5,9 +5,10 @@ import { readFile } from 'node:fs/promises'
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('admin PWA locks viewport, orientation and horizontal overflow', async () => {
-  const [shell, css, manifestText, sw, deploy, publicIndex] = await Promise.all([
+  const [shell, legacyCss, unifiedCss, manifestText, sw, deploy, publicIndex] = await Promise.all([
     read('src/quotes/adminAppShell.ts'),
     read('src/quotes/app-shell.css'),
+    read('src/quotes/admin-unified-shell.css'),
     read('public/admin/manifest.webmanifest'),
     read('public/admin/sw.js'),
     read('.github/workflows/deploy-pages.yml'),
@@ -22,13 +23,11 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
   assert.match(shell, /viewport-fit=cover/)
   assert.match(shell, /gesturestart/)
   assert.match(shell, /event\.ctrlKey/)
-  assert.match(css, /html\.hrx-admin-pwa body[\s\S]*position:\s*fixed/)
-  assert.match(css, /\.admin-live-shell[\s\S]*height:\s*100dvh/)
-  assert.match(css, /\.admin-workspace[\s\S]*overflow:\s*hidden/)
-  assert.match(css, /overflow-x:\s*hidden/)
-  assert.match(css, /touch-action:\s*pan-y/)
-  assert.match(css, /font-size:\s*16px\s*!important/)
-  assert.match(css, /resize:\s*none/)
+  assert.match(legacyCss, /html\.hrx-admin-pwa body[\s\S]*position:\s*fixed/)
+  assert.match(unifiedCss, /html\.hrx-admin-pwa:has\(\.hrx-unified-shell\)[\s\S]*overflow:hidden!important/)
+  assert.match(unifiedCss, /\.hrx-unified-shell\{[\s\S]*height:100dvh/)
+  assert.match(unifiedCss, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding-top:env\(safe-area-inset-top\)/)
+  assert.match(unifiedCss, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*overflow-x:hidden/)
   assert.match(sw, /hrx-admin-v4/)
   assert.match(deploy, /user-scalable=no/)
   assert.match(deploy, /maximum-scale=1/)
@@ -44,11 +43,12 @@ test('admin bootstrap recognizes project panel destinations', async () => {
   assert.match(main, /configureAdminAppShell/)
 })
 
-test('authenticated admin changes password through hardened security helper', async () => {
-  const [experience, security, adminApp, authRouter, main] = await Promise.all([
+test('authenticated admin changes password through hardened security helper inside the unified root', async () => {
+  const [experience, security, adminApp, root, authRouter, main] = await Promise.all([
     read('src/quotes/AdminExperienceLayer.tsx'),
     read('src/quotes/passwordSecurity.ts'),
     read('src/quotes/AdminApp.tsx'),
+    read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/AdminAuthRouter.tsx'),
     read('src/main.tsx'),
   ])
@@ -57,7 +57,8 @@ test('authenticated admin changes password through hardened security helper', as
   assert.match(experience, /Alterar senha/)
   assert.match(experience, /minLength=\{12\}/)
   assert.match(security, /admin-password/)
-  assert.match(adminApp, /<AdminExperienceLayer \/>/)
+  assert.match(adminApp, /<AdminUnifiedRoot \/>/)
+  assert.match(root, /<AdminExperienceLayer \/>/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.doesNotMatch(main, /<AdminExperienceLayer \/>|<AdminPasswordControl \/>/)
 })

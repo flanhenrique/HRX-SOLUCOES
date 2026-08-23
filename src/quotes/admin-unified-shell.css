@@ -1,0 +1,282 @@
+/*
+ * HRX Admin — shell canônico.
+ * Um único chrome é montado por vez: DesktopAdminShell OU PwaAdminShell.
+ * As telas funcionais legadas são neutralizadas como views internas, nunca como apps fullscreen concorrentes.
+ */
+html.hrx-admin-pwa:has(.hrx-unified-shell),
+html.hrx-admin-pwa:has(.hrx-unified-shell) body,
+html.hrx-admin-pwa:has(.hrx-unified-shell) #root{
+  width:100%!important;
+  max-width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+  position:relative!important;
+  inset:auto!important;
+  overscroll-behavior:none!important;
+}
+
+.hrx-unified-shell,
+.hrx-unified-shell *{box-sizing:border-box}
+.hrx-unified-shell{
+  --hrx-shell-sidebar:244px;
+  --hrx-shell-topbar:82px;
+  position:fixed;
+  z-index:1800;
+  inset:0;
+  width:100%;
+  height:100dvh;
+  overflow:hidden;
+  color:var(--hrx-text,#f4f8fc);
+  background:radial-gradient(72% 92% at 96% 6%,rgba(29,91,157,.22),transparent 66%),linear-gradient(135deg,#061325,#081b31);
+  font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+/* Desktop shell */
+.hrx-unified-shell.is-desktop{
+  display:grid;
+  grid-template-columns:var(--hrx-shell-sidebar) minmax(0,1fr);
+  grid-template-rows:var(--hrx-shell-topbar) minmax(0,1fr);
+}
+.hrx-unified-shell.is-desktop>.hrx-unified-sidebar{
+  position:relative!important;
+  inset:auto!important;
+  grid-row:1/-1;
+  grid-column:1;
+  width:auto!important;
+  min-width:0;
+  height:auto;
+  z-index:4;
+  overflow-y:auto;
+}
+.hrx-unified-sidebar nav{display:grid;gap:6px}
+.hrx-unified-sidebar nav button i{
+  display:grid;
+  place-items:center;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  color:#7da8dc;
+  font-size:.82rem;
+  font-style:normal;
+  font-weight:900;
+}
+.hrx-unified-shell.is-desktop>.hrx-unified-topbar{
+  position:relative!important;
+  inset:auto!important;
+  grid-column:2;
+  grid-row:1;
+  width:auto;
+  height:auto!important;
+  z-index:5;
+}
+.hrx-unified-title{display:grid;gap:3px;min-width:0}
+.hrx-unified-title>span{color:#6e92b7;font-size:.58rem;font-weight:900;letter-spacing:.15em}
+.hrx-unified-title>strong{color:#f4f8fc;font-size:1rem;letter-spacing:-.015em}
+.hrx-unified-actions{margin-left:auto;display:flex;align-items:center;gap:9px}
+.hrx-unified-actions>.hrx-notifications{
+  position:relative;
+  display:grid;
+  place-items:center;
+  flex:0 0 44px;
+  width:44px;
+  height:44px;
+  margin:0;
+  border:1px solid var(--hrx-border,rgba(183,213,242,.18));
+  border-radius:11px;
+  background:rgba(18,39,64,.55);
+  color:#d8e3ed;
+}
+.hrx-unified-actions>.hrx-notifications>span{position:static;border:0;background:transparent;font-size:1rem;color:inherit}
+.hrx-unified-actions>.hrx-notifications>b{
+  position:absolute;
+  top:-6px;
+  right:-5px;
+  display:grid;
+  place-items:center;
+  min-width:20px;
+  height:20px;
+  padding:0 5px;
+  border:2px solid #09203a;
+  border-radius:999px;
+  background:#357be7;
+  color:#fff;
+  font-size:.62rem;
+}
+.hrx-unified-profile{display:flex;align-items:center;gap:10px;padding:3px 5px 3px 3px;border:0;background:transparent;color:#edf4fb;text-align:left}
+.hrx-unified-profile>span{display:grid;place-items:center;width:38px;height:38px;border:1px solid rgba(130,180,255,.3);border-radius:50%;background:linear-gradient(145deg,#2e6ab6,#183b66);font-size:.67rem;font-weight:900}
+.hrx-unified-profile>div{display:grid;gap:1px}.hrx-unified-profile strong{font-size:.76rem}.hrx-unified-profile small{color:#8295aa;font-size:.62rem}
+
+.hrx-unified-shell.is-desktop>.hrx-unified-content{
+  grid-column:2;
+  grid-row:2;
+  min-width:0;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* PWA shell: é uma experiência própria, não a sidebar desktop comprimida. */
+.hrx-unified-shell.is-pwa{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  padding-top:env(safe-area-inset-top);
+  padding-right:env(safe-area-inset-right);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+}
+.hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
+  position:relative!important;
+  inset:auto!important;
+  width:100%;
+  height:64px!important;
+  min-height:64px;
+  padding:7px 12px;
+  gap:10px;
+  border-bottom:1px solid rgba(179,209,237,.1);
+  background:rgba(7,23,42,.84);
+  backdrop-filter:blur(22px) saturate(1.08);
+  -webkit-backdrop-filter:blur(22px) saturate(1.08);
+}
+.hrx-pwa-brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.hrx-pwa-brand img{display:block;flex:0 0 76px;width:76px;height:42px;object-fit:contain}
+.hrx-pwa-brand>div{display:grid;gap:1px;min-width:0}.hrx-pwa-brand span{color:#7895b0;font-size:.5rem;font-weight:900;letter-spacing:.12em}.hrx-pwa-brand strong{overflow:hidden;color:#f2f7fb;font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}
+.hrx-pwa-settings,.hrx-pwa-more{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;padding:0;border:1px solid var(--hrx-border,rgba(183,213,242,.18));border-radius:11px;background:rgba(18,39,64,.55);color:#dce6ef;font-size:1rem}
+.hrx-pwa-more{font-size:.83rem;letter-spacing:.08em}.hrx-pwa-more.is-open{border-color:rgba(92,154,247,.55);background:rgba(55,119,222,.18)}
+.hrx-unified-shell.is-pwa>.hrx-unified-content{
+  min-width:0;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:78px;
+}
+.hrx-unified-mobile-nav{
+  position:absolute!important;
+  z-index:70!important;
+  top:auto!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  bottom:max(8px,env(safe-area-inset-bottom))!important;
+  left:max(10px,env(safe-area-inset-left))!important;
+  width:auto!important;
+  height:64px!important;
+  min-height:64px!important;
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:3px!important;
+  padding:4px 6px!important;
+  border:1px solid rgba(177,207,235,.2)!important;
+  border-radius:20px!important;
+  background:rgba(8,26,45,.91)!important;
+  box-shadow:0 16px 44px rgba(0,8,20,.4),inset 0 1px 0 rgba(255,255,255,.04)!important;
+  backdrop-filter:blur(24px) saturate(1.12)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(1.12)!important;
+  overflow:hidden!important;
+}
+.hrx-unified-mobile-nav button{min-width:0!important;min-height:54px!important;display:grid!important;place-items:center!important;align-content:center!important;gap:2px!important;padding:2px!important;border:0!important;border-radius:14px!important;background:transparent!important;color:#8297aa!important}
+.hrx-unified-mobile-nav button i{font-style:normal;font-size:.9rem;font-weight:900}.hrx-unified-mobile-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.56rem!important}.hrx-unified-mobile-nav button.is-active{background:rgba(67,137,255,.14)!important;color:#dbe9ff!important}
+.hrx-pwa-secondary{position:absolute;z-index:80;top:calc(64px + env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));width:min(330px,calc(100vw - 24px));padding:10px;border:1px solid rgba(177,207,235,.22);border-radius:17px;background:rgba(7,23,42,.97);box-shadow:0 24px 64px rgba(0,4,12,.5);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.hrx-pwa-secondary>header{display:flex;align-items:center;justify-content:space-between;padding:5px 5px 9px}.hrx-pwa-secondary>header span{color:#7792ac;font-size:.55rem;font-weight:900;letter-spacing:.12em}.hrx-pwa-secondary>header button{width:32px;height:32px;border:0;border-radius:8px;background:rgba(255,255,255,.05);color:#d8e4ed;font-size:1rem}.hrx-pwa-secondary nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.hrx-pwa-secondary nav button{min-height:64px;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(177,207,235,.11);border-radius:11px;background:rgba(255,255,255,.025);color:#b8c8d7;text-align:left}.hrx-pwa-secondary nav button.is-active{border-color:rgba(76,140,255,.46);background:rgba(76,140,255,.12);color:#eef5fb}.hrx-pwa-secondary nav i{display:grid;place-items:center;font-style:normal}.hrx-pwa-secondary nav span{font-size:.67rem;font-weight:750}
+.hrx-unified-programmatic-nav{display:none!important}
+
+/*
+ * Neutralização dos shells internos antigos.
+ * Eles continuam fornecendo lógica/telas enquanto deixam de controlar viewport, sidebar, topbar ou navegação principal.
+ */
+.hrx-unified-content>.hrx-glass-app{
+  position:relative!important;
+  z-index:auto!important;
+  inset:auto!important;
+  width:100%!important;
+  min-height:100%!important;
+  height:auto!important;
+  overflow:visible!important;
+  background:transparent!important;
+}
+.hrx-unified-content>.hrx-glass-app::before{display:none!important}
+.hrx-unified-content>.hrx-glass-app>.hrx-glass-sidebar,
+.hrx-unified-content>.hrx-glass-app>.hrx-glass-topbar,
+.hrx-unified-content>.hrx-glass-app>.hrx-mobile-nav{display:none!important}
+.hrx-unified-content>.hrx-glass-app>.hrx-glass-main{
+  position:relative!important;
+  z-index:auto!important;
+  inset:auto!important;
+  width:100%!important;
+  min-height:100%!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+.hrx-unified-content>.hrx-glass-app>.hrx-glass-main>.hrx-view{min-height:100%!important}
+
+.hrx-unified-content>.admin-live-shell.quote-commercial-shell{
+  position:relative!important;
+  z-index:auto!important;
+  inset:auto!important;
+  width:100%!important;
+  min-height:100%!important;
+  height:100%!important;
+  display:block!important;
+  overflow:visible!important;
+  padding-left:0!important;
+  background:transparent!important;
+}
+.hrx-unified-content>.admin-live-shell.quote-commercial-shell>.admin-exec-sidebar,
+.hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-mobile-nav{display:none!important}
+.hrx-unified-content>.admin-live-shell.quote-commercial-shell>.admin-exec-main{
+  width:100%!important;
+  min-width:0!important;
+  min-height:100%!important;
+  height:auto!important;
+  overflow:visible!important;
+  background:transparent!important;
+}
+.hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-exec-topbar.quote-topbar{
+  position:relative!important;
+  height:auto!important;
+  min-height:76px!important;
+  flex-basis:auto!important;
+  margin:0!important;
+  padding:16px 24px!important;
+  border-bottom:1px solid rgba(164,200,235,.12)!important;
+  background:rgba(8,27,47,.38)!important;
+}
+.hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-workspace.quote-workspace{min-height:560px;height:calc(100dvh - 260px);max-height:calc(100dvh - 220px)}
+
+/* Fiscal e Suspensões são views internas e não controlam viewport. */
+.hrx-unified-content>.hrx-fiscal-page,
+.hrx-unified-content>.hrx-suspensions-page{min-height:100%;width:100%;margin:0!important;position:relative!important;inset:auto!important}
+
+/* O shell antigo de transição deixa de ser parte da experiência final. */
+.hrx-unified-content .hrx-legacy-shell{display:none!important}
+
+/* PWA: densidade e fluxo próprios, sem herdar o desktop comprimido. */
+@media(max-width:760px){
+  .hrx-unified-shell.is-pwa .hrx-unified-content>.hrx-glass-app>.hrx-glass-main>.hrx-view{padding:18px 14px 24px!important}
+  .hrx-unified-shell.is-pwa .hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-exec-topbar.quote-topbar{min-height:72px!important;padding:12px 14px!important;align-items:flex-start!important;gap:10px!important;flex-wrap:wrap!important}
+  .hrx-unified-shell.is-pwa .quote-topbar>div:last-child{width:100%;display:grid!important;grid-template-columns:1fr 1fr;gap:7px!important}
+  .hrx-unified-shell.is-pwa .quote-topbar>div:last-child button{width:100%}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics.quote-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:10px 12px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-workspace.quote-workspace{height:auto!important;max-height:none!important;min-height:calc(100dvh - 260px);grid-template-columns:1fr!important;padding:0 12px 14px!important;overflow:visible!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-queue,.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-detail{min-height:calc(100dvh - 330px);height:auto!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell.is-mobile-detail-open .admin-queue{display:none!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell:not(.is-mobile-detail-open) .admin-detail{display:none!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-back{display:inline-flex!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor{min-height:calc(100dvh - 330px);height:auto!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-scroll{overflow:visible!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-main{grid-template-columns:1fr!important;padding:10px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-summary{position:static!important}
+  .hrx-unified-shell.is-pwa .hrx-fiscal-page,.hrx-unified-shell.is-pwa .hrx-suspensions-page{padding-bottom:16px!important}
+}
+
+@media(max-width:390px){
+  .hrx-pwa-brand img{width:68px;height:38px;flex-basis:68px}
+  .hrx-pwa-settings,.hrx-pwa-more,.hrx-unified-actions>.hrx-notifications{width:39px;height:39px;flex-basis:39px}
+  .hrx-unified-mobile-nav{right:max(8px,env(safe-area-inset-right))!important;left:max(8px,env(safe-area-inset-left))!important;padding-inline:4px!important;gap:1px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .hrx-unified-shell *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
