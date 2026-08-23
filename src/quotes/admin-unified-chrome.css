@@ -37,12 +37,12 @@
 }
 
 @media(max-width:360px){
-  .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{padding-inline:6px;gap:5px}
-  .hrx-unified-actions{gap:4px}
-  .hrx-pwa-brand img{flex-basis:50px;width:50px;height:34px}
+  .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{padding-inline:5px;gap:4px}
+  .hrx-unified-actions{gap:3px}
+  .hrx-pwa-brand{gap:4px}
+  .hrx-pwa-brand img{flex-basis:42px;width:42px;height:30px}
   .hrx-pwa-brand>div>span{display:none}
-  .hrx-pwa-brand strong{font-size:.66rem}
-  .hrx-unified-actions>.hrx-notifications,.hrx-pwa-settings,.hrx-pwa-more{flex-basis:42px;width:42px;height:42px;min-width:42px;min-height:42px}
+  .hrx-pwa-brand strong{font-size:.62rem}
 }
 
 @media(orientation:landscape) and (max-height:520px) and (max-width:1100px){
