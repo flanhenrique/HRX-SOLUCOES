@@ -1,1 +1,56 @@
-.hrx-unified-actions>.hrx-notifications>i{position:static;display:block;border:0;background:transparent;color:inherit;font-size:1rem;font-style:normal;line-height:1}.hrx-unified-actions>.hrx-notifications>span{position:absolute!important;top:-6px!important;right:-5px!important;display:grid!important;place-items:center!important;min-width:20px!important;height:20px!important;padding:0 5px!important;border:2px solid #09203a!important;border-radius:999px!important;background:#357be7!important;color:#fff!important;font-size:.62rem!important;font-weight:800!important;line-height:1!important}
+/* HRX Admin — chrome final do shell canônico. Mantém controles dentro da viewport e da safe area. */
+.hrx-unified-actions{min-width:0;flex:0 0 auto;max-width:100%;gap:8px}
+.hrx-unified-actions>.hrx-notifications,.hrx-pwa-settings,.hrx-pwa-more{position:relative;flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;overflow:visible}
+.hrx-unified-actions>.hrx-notifications>i{position:static;display:block;border:0;background:transparent;color:inherit;font-size:1rem;font-style:normal;line-height:1}
+.hrx-unified-actions>.hrx-notifications>span{position:absolute!important;top:2px!important;right:2px!important;display:grid!important;place-items:center!important;min-width:18px!important;height:18px!important;padding:0 4px!important;border:2px solid #09203a!important;border-radius:999px!important;background:#357be7!important;color:#fff!important;font-size:.56rem!important;font-weight:850!important;line-height:1!important;transform:none!important;white-space:nowrap}
+.hrx-unified-actions>.hrx-notifications[aria-expanded="true"],.hrx-pwa-settings:focus-visible,.hrx-pwa-more:focus-visible{border-color:rgba(92,154,247,.62);box-shadow:0 0 0 3px rgba(78,137,232,.14)}
+.hrx-unified-shell button:focus-visible{outline:2px solid rgba(117,174,255,.9);outline-offset:2px}
+
+.hrx-pwa-topbar{min-width:0;max-width:100%;overflow:visible}
+.hrx-pwa-brand{min-width:0;overflow:hidden}
+.hrx-pwa-brand img{max-width:30vw}
+.hrx-pwa-brand>div{min-width:0;overflow:hidden}
+.hrx-pwa-brand strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.hrx-notification-panel{position:fixed!important;z-index:2050!important;top:max(76px,calc(env(safe-area-inset-top) + 68px))!important;right:max(12px,env(safe-area-inset-right))!important;left:auto!important;width:min(390px,calc(100vw - max(24px,env(safe-area-inset-left) + env(safe-area-inset-right) + 16px)))!important;max-width:none!important;max-height:calc(100dvh - max(96px,calc(env(safe-area-inset-top) + env(safe-area-inset-bottom) + 88px)))!important;overflow:auto!important;overscroll-behavior:contain}
+.hrx-notification-summary.is-unavailable{border-color:rgba(214,154,68,.3);background:rgba(214,154,68,.08)}
+.hrx-notification-list{display:grid;gap:7px;margin-top:10px}
+.hrx-notification-list button{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:46px;padding:9px 11px;border:1px solid rgba(177,207,235,.12);border-radius:11px;background:rgba(255,255,255,.025);color:inherit;text-align:left}
+.hrx-notification-list button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.69rem;font-weight:720}
+.hrx-notification-list button strong{display:grid;place-items:center;min-width:28px;height:24px;padding:0 7px;border-radius:999px;background:rgba(64,132,236,.15);color:#bcd5fa;font-size:.68rem;font-variant-numeric:tabular-nums}
+
+/* Tablet recebe shell compacto próprio, sem desktop comprimido. */
+.hrx-unified-shell.is-pwa[data-viewport="tablet"]>.hrx-pwa-topbar{height:68px!important;min-height:68px;padding:9px 18px}
+.hrx-unified-shell.is-pwa[data-viewport="tablet"] .hrx-pwa-brand img{flex-basis:84px;width:84px;height:46px;max-width:none}
+.hrx-unified-shell.is-pwa[data-viewport="tablet"]>.hrx-unified-content{padding-bottom:84px}
+.hrx-unified-shell.is-pwa[data-viewport="tablet"]>.hrx-unified-mobile-nav{right:auto!important;left:50%!important;width:min(760px,calc(100vw - max(32px,env(safe-area-inset-left) + env(safe-area-inset-right) + 24px)))!important;transform:translateX(-50%);grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.hrx-unified-shell.is-pwa[data-viewport="tablet"] .hrx-pwa-secondary{top:calc(68px + env(safe-area-inset-top));width:min(390px,calc(100vw - 32px))}
+
+@media(max-width:520px){
+  .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{padding-inline:8px;gap:7px}
+  .hrx-unified-actions{gap:5px}
+  .hrx-pwa-brand{gap:6px}
+  .hrx-pwa-brand img{flex-basis:60px;width:60px;height:38px}
+  .hrx-pwa-brand span{font-size:.46rem;letter-spacing:.09em}
+  .hrx-pwa-brand strong{font-size:.7rem}
+  .hrx-pwa-secondary{right:max(8px,env(safe-area-inset-right));width:min(330px,calc(100vw - max(16px,env(safe-area-inset-left) + env(safe-area-inset-right) + 12px)))}
+}
+
+@media(max-width:360px){
+  .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{padding-inline:5px;gap:4px}
+  .hrx-unified-actions{gap:3px}
+  .hrx-pwa-brand{gap:4px}
+  .hrx-pwa-brand img{flex-basis:42px;width:42px;height:30px}
+  .hrx-pwa-brand>div>span{display:none}
+  .hrx-pwa-brand strong{font-size:.62rem}
+}
+
+@media(orientation:landscape) and (max-height:520px) and (max-width:1100px){
+  .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{height:56px!important;min-height:56px;padding-block:5px}
+  .hrx-unified-shell.is-pwa .hrx-pwa-brand img{flex-basis:52px;width:52px;height:34px}
+  .hrx-unified-shell.is-pwa>.hrx-unified-content{padding-bottom:62px}
+  .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{height:54px!important;min-height:54px!important;bottom:max(4px,env(safe-area-inset-bottom))!important}
+  .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav button{min-height:46px!important}
+  .hrx-unified-shell.is-pwa .hrx-pwa-secondary{top:calc(56px + env(safe-area-inset-top));max-height:calc(100dvh - 66px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto}
+  .hrx-notification-panel{top:max(62px,calc(env(safe-area-inset-top) + 58px))!important;max-height:calc(100dvh - max(72px,calc(env(safe-area-inset-top) + env(safe-area-inset-bottom) + 64px)))!important}
+}

@@ -22,7 +22,8 @@ test('authenticated admin mounts exactly one canonical root', async () => {
   assert.match(unifiedRoot, /function PwaShell/)
   assert.match(unifiedRoot, /data-admin-shell="desktop"/)
   assert.match(unifiedRoot, /data-admin-shell="pwa"/)
-  assert.match(unifiedRoot, /compact \? <PwaShell/)
+  assert.match(unifiedRoot, /compactShell/)
+  assert.match(unifiedRoot, /\? <PwaShell/)
   assert.match(unifiedRoot, /: <DesktopShell/)
   assert.match(unifiedRoot, /data-admin-workspace="true"/)
 
@@ -52,12 +53,17 @@ test('business modules are routed as views instead of sibling fullscreen apps', 
   assert.match(fiscal, /hrx_confirm_client_tax_regime/)
 })
 
-test('desktop and PWA are distinct mounted shells, not one responsive chrome', async () => {
+test('desktop and compact shells are selected by viewport while runtime mode remains independent', async () => {
   const root = await read('src/quotes/AdminUnifiedRoot.tsx')
 
   assert.match(root, /const pwaPrimary/)
-  assert.match(root, /function useCompactAdmin/)
-  assert.match(root, /window\.matchMedia\('\(max-width: 760px\)'\)/)
+  assert.match(root, /function useAdminEnvironment/)
+  assert.match(root, /type RuntimeMode = 'standalone' \| 'browser'/)
+  assert.match(root, /type ViewportClass = 'phone' \| 'tablet' \| 'desktop'/)
+  assert.match(root, /display-mode: standalone/)
+  assert.match(root, /window\.innerWidth <= 760/)
+  assert.match(root, /window\.innerWidth <= 1100/)
+  assert.match(root, /environment\.viewport !== 'desktop'/)
   assert.match(root, /<aside className="hrx-glass-sidebar hrx-unified-sidebar"/)
   assert.match(root, /<nav className="hrx-mobile-nav hrx-unified-mobile-nav"/)
   assert.match(root, /hrx-pwa-secondary/)
@@ -89,13 +95,14 @@ test('admin keeps real data, storage and personalization behind the unified shel
 
   assert.match(root, /from\('quote_drafts'\)/)
   assert.match(root, /from\('hrx_documents'\)/)
-  assert.match(root, /<AdminPersonalizationBridge \/>/)
+  assert.match(root, /<AdminPersonalizationBridge settingsActive=\{active === 'settings'\} \/>/)
   assert.match(experience, /from\('clients'\)/)
   assert.match(experience, /from\('quote_requests'\)/)
   assert.match(experience, /from\('hrx_documents'\)/)
   assert.match(experience, /createSignedUrl/)
   assert.match(experience, /hrx_create_manual_quote/)
   assert.match(personalization, /hrx-admin-ui-preferences-v1/)
+  assert.doesNotMatch(personalization, /MutationObserver/)
   assert.match(interactions, /:focus-visible/)
   assert.match(interactions, /prefers-reduced-motion:reduce/)
 })

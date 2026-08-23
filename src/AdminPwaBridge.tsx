@@ -64,8 +64,6 @@ export default function AdminPwaBridge() {
     }
     icon.href = '/admin/hrx-admin-icon.svg'
 
-    if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' })
-
     const beforeInstall = (event: Event) => { event.preventDefault(); setInstallPrompt(event as InstallPromptEvent) }
     const onInstalled = () => { setInstalled(true); setInstallPrompt(null) }
     const onOnline = () => setOnline(true)
@@ -100,7 +98,12 @@ export default function AdminPwaBridge() {
 
   return (
     <div className="admin-pwa-tools" aria-label="Controles do aplicativo HRX Admin">
-      {!online && <span className="admin-pwa-network is-offline"><i /> Sem conexão</span>}
+      {!online && (
+        <div className="admin-pwa-network is-offline" role="status" aria-live="polite">
+          <span><i aria-hidden="true" /> Modo offline</span>
+          <small>Dados em tempo real e alterações administrativas ficam indisponíveis até a conexão ser restabelecida.</small>
+        </div>
+      )}
       {canInstall && <button className="admin-pwa-install" type="button" onClick={install}>Instalar aplicativo</button>}
       {iosHintOpen && <div className="admin-pwa-ios-hint" role="status">No iPhone/iPad, use Compartilhar no Safari e escolha “Adicionar à Tela de Início”.</div>}
     </div>

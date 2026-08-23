@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('admin PWA locks viewport, orientation and horizontal overflow', async () => {
-  const [shell, legacyCss, unifiedCss, manifestText, sw, deploy, publicIndex] = await Promise.all([
+test('admin PWA preserves accessibility while constraining layout through CSS', async () => {
+  const [shell, legacyCss, unifiedCss, manifestText, sw, deploy, publicIndex, bridge, service] = await Promise.all([
     read('src/quotes/adminAppShell.ts'),
     read('src/quotes/app-shell.css'),
     read('src/quotes/admin-unified-shell.css'),
@@ -13,26 +13,32 @@ test('admin PWA locks viewport, orientation and horizontal overflow', async () =
     read('public/admin/sw.js'),
     read('.github/workflows/deploy-pages.yml'),
     read('index.html'),
+    read('src/AdminPwaBridge.tsx'),
+    read('src/adminPwaService.ts'),
   ])
   const manifest = JSON.parse(manifestText)
 
   assert.equal(manifest.display, 'standalone')
-  assert.equal(manifest.orientation, 'portrait-primary')
-  assert.match(shell, /maximum-scale=1/)
-  assert.match(shell, /user-scalable=no/)
-  assert.match(shell, /viewport-fit=cover/)
-  assert.match(shell, /gesturestart/)
-  assert.match(shell, /event\.ctrlKey/)
+  assert.equal(manifest.orientation, undefined)
+  assert.match(shell, /width=device-width, initial-scale=1, viewport-fit=cover/)
+  assert.doesNotMatch(shell, /maximum-scale=1/)
+  assert.doesNotMatch(shell, /user-scalable=no/)
+  assert.doesNotMatch(shell, /gesturestart|gesturechange|gestureend/)
+  assert.doesNotMatch(shell, /event\.ctrlKey|event\.metaKey/)
   assert.match(legacyCss, /html\.hrx-admin-pwa body[\s\S]*position:\s*fixed/)
   assert.match(unifiedCss, /html\.hrx-admin-pwa:has\(\.hrx-unified-shell\)[\s\S]*overflow:hidden!important/)
   assert.match(unifiedCss, /\.hrx-unified-shell\{[\s\S]*height:100dvh/)
   assert.match(unifiedCss, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding-top:env\(safe-area-inset-top\)/)
   assert.match(unifiedCss, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*overflow-x:hidden/)
-  assert.match(sw, /hrx-admin-v4/)
-  assert.match(deploy, /user-scalable=no/)
-  assert.match(deploy, /maximum-scale=1/)
-  assert.match(deploy, /viewport-fit=cover/)
+  assert.match(sw, /AbortController/)
+  assert.match(sw, /INSTALL_CONCURRENCY/)
+  assert.doesNotMatch(deploy, /user-scalable=no/)
+  assert.doesNotMatch(deploy, /maximum-scale=1/)
+  assert.match(deploy, /width=device-width, initial-scale=1, viewport-fit=cover/)
   assert.doesNotMatch(publicIndex, /user-scalable=no/)
+  assert.doesNotMatch(bridge, /serviceWorker\.register/)
+  assert.match(service, /ensureAdminServiceWorker/)
+  assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable'))
 })
 
 test('admin bootstrap recognizes project panel destinations', async () => {

@@ -89,23 +89,15 @@ function applyPreferences(preferences: UiPreferences) {
   if (themeMeta) themeMeta.content = resolved === 'light' ? '#eef4fb' : '#07182a'
 }
 
-function clickAdminNavigation(label: string) {
-  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.hrx-glass-sidebar nav button'))
-  buttons.find((button) => button.textContent?.includes(label))?.click()
-}
-
 function PreferenceButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return <button type="button" className={active ? 'is-active' : ''} aria-pressed={active} onClick={onClick}>{label}</button>
 }
 
-export default function AdminPersonalizationBridge() {
+export default function AdminPersonalizationBridge({ settingsActive }: { settingsActive: boolean }) {
   const [preferences, setPreferences] = useState<UiPreferences>(DEFAULT_PREFERENCES)
   const [remoteReady, setRemoteReady] = useState(false)
   const [syncState, setSyncState] = useState<SyncState>('local')
   const [settingsTarget, setSettingsTarget] = useState<HTMLElement | null>(null)
-  const [notificationButton, setNotificationButton] = useState<HTMLButtonElement | null>(null)
-  const [notificationOpen, setNotificationOpen] = useState(false)
-  const [notificationCount, setNotificationCount] = useState(0)
 
   useEffect(() => {
     try {
@@ -152,45 +144,15 @@ export default function AdminPersonalizationBridge() {
   }, [preferences, remoteReady])
 
   useEffect(() => {
-    const host = document.getElementById('root')
-    if (!host) return
-
-    const syncDomTargets = () => {
+    if (!settingsActive) {
+      setSettingsTarget(null)
+      return
+    }
+    const frame = window.requestAnimationFrame(() => {
       setSettingsTarget(document.querySelector<HTMLElement>('.hrx-settings-view .hrx-settings-layout > div'))
-      const bell = document.querySelector<HTMLButtonElement>('.hrx-notifications')
-      setNotificationButton(bell)
-      const badge = bell?.querySelector<HTMLElement>(':scope > span')
-      const parsed = Number.parseInt(badge?.textContent || '0', 10)
-      setNotificationCount(Number.isFinite(parsed) ? parsed : 0)
-    }
-
-    syncDomTargets()
-    const observer = new MutationObserver(syncDomTargets)
-    observer.observe(host, { childList: true, subtree: true, characterData: true })
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    if (!notificationButton) return
-    const onClick = (event: Event) => {
-      event.preventDefault()
-      setNotificationOpen((current) => !current)
-    }
-    notificationButton.setAttribute('aria-haspopup', 'dialog')
-    notificationButton.addEventListener('click', onClick)
-    return () => notificationButton.removeEventListener('click', onClick)
-  }, [notificationButton])
-
-  useEffect(() => {
-    notificationButton?.setAttribute('aria-expanded', notificationOpen ? 'true' : 'false')
-  }, [notificationButton, notificationOpen])
-
-  useEffect(() => {
-    if (!notificationOpen) return
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setNotificationOpen(false) }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [notificationOpen])
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [settingsActive])
 
   const updatePreference = <K extends keyof UiPreferences>(key: K, value: UiPreferences[K]) => {
     setSyncState('local')
@@ -202,7 +164,7 @@ export default function AdminPersonalizationBridge() {
     setPreferences({ ...DEFAULT_PREFERENCES })
   }
 
-  const settingsPanel = settingsTarget ? createPortal(
+  return settingsTarget ? createPortal(
     <section className="hrx-settings-card hrx-personalization-card" aria-labelledby="hrx-personalization-title">
       <header className="hrx-personalization-header">
         <div>
@@ -242,7 +204,7 @@ export default function AdminPersonalizationBridge() {
 
         <fieldset>
           <legend>Tamanho da interface</legend>
-          <p>Ajusta textos e componentes sem usar zoom do navegador.</p>
+          <p>Ajusta textos e componentes sem bloquear o zoom do navegador.</p>
           <div className="hrx-preference-segment">
             {scaleOptions.map((option) => <PreferenceButton key={option.value} active={preferences.scale === option.value} label={option.label} onClick={() => updatePreference('scale', option.value)} />)}
           </div>
@@ -250,7 +212,7 @@ export default function AdminPersonalizationBridge() {
 
         <fieldset className="hrx-preference-wide">
           <legend>Menu no desktop</legend>
-          <p>No celular o menu continua específico para PWA.</p>
+          <p>Telefone e tablet usam navegação compacta; o modo instalado é detectado separadamente.</p>
           <div className="hrx-preference-segment">
             {navigationOptions.map((option) => <PreferenceButton key={option.value} active={preferences.navigation === option.value} label={option.label} onClick={() => updatePreference('navigation', option.value)} />)}
           </div>
@@ -264,22 +226,4 @@ export default function AdminPersonalizationBridge() {
     </section>,
     settingsTarget,
   ) : null
-
-  return <>
-    {settingsPanel}
-    {notificationOpen && <aside className="hrx-notification-panel" role="dialog" aria-modal="false" aria-labelledby="hrx-notification-title">
-      <header>
-        <div><span>HRX ADMIN</span><h2 id="hrx-notification-title">Notificações</h2></div>
-        <button type="button" aria-label="Fechar notificações" onClick={() => setNotificationOpen(false)}>×</button>
-      </header>
-      <div className="hrx-notification-summary">
-        <strong>{notificationCount > 0 ? `${notificationCount} item${notificationCount === 1 ? '' : 's'} requer${notificationCount === 1 ? '' : 'em'} atenção` : 'Nenhuma pendência sinalizada'}</strong>
-        <p>{notificationCount > 0 ? 'Abra a área correspondente para revisar bloqueios e documentos pendentes.' : 'O painel não indica bloqueios ou documentos vencidos neste momento.'}</p>
-      </div>
-      <div className="hrx-notification-actions">
-        <button type="button" onClick={() => { clickAdminNavigation('Atividades'); setNotificationOpen(false) }}>Ver atividades e bloqueios</button>
-        <button type="button" onClick={() => { clickAdminNavigation('Central de Documentos'); setNotificationOpen(false) }}>Revisar documentos</button>
-      </div>
-    </aside>}
-  </>
 }
