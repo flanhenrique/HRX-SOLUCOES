@@ -37,26 +37,34 @@ export type ProposalPdfData = {
   installments: PlannedInstallment[]
 }
 
+/*
+ * Fonte visual canônica do documento comercial:
+ * Canva — “HRX Solutions — Proposta Comercial — Opção 3 Revisada”.
+ * Estrutura fixa aprovada: 6 páginas.
+ */
 const W = 1240
 const H = 1754
-const M = 74
-const FOOTER_TOP = 1648
-const NAVY = '#061426'
-const NAVY_2 = '#091B31'
-const NAVY_3 = '#102C45'
-const BLUE = '#4389FF'
-const GREEN = '#62C978'
-const GREEN_DARK = '#24B96D'
-const TEXT = '#102235'
-const MUTED = '#667D90'
-const LINE = '#D8E3EE'
-const SOFT = '#EEF4FA'
-const PAPER = '#F7FAFD'
+const M = 76
+const FOOTER_Y = 1638
+const NAVY = '#07182D'
+const NAVY_2 = '#0D2944'
+const BLUE = '#397FE7'
+const GREEN = '#24B96D'
+const GREEN_LIGHT = '#64D78B'
+const PAPER = '#F7F9FC'
+const WHITE = '#FFFFFF'
+const TEXT = '#11263B'
+const BODY = '#526A7E'
+const MUTED = '#74889B'
+const LINE = '#DCE5ED'
+const SOFT = '#EFF4F8'
+const encoder = new TextEncoder()
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const percent = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 const date = (value: string) => new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR')
-const encoder = new TextEncoder()
+const versionLabel = (value: number) => `${Math.max(1, Number(value) || 1)}.0`
+const clientName = (data: ProposalPdfData) => data.client.company || data.client.name
 
 function pageCanvas() {
   const canvas = document.createElement('canvas')
@@ -85,260 +93,309 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width:
   ctx.roundRect(x, y, width, height, radius)
 }
 
-function writeWrapped(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 10) {
+function wrappedLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines = 20) {
   const words = (text || '').trim().split(/\s+/).filter(Boolean)
   const lines: string[] = []
   let line = ''
   for (const word of words) {
-    const next = line ? `${line} ${word}` : word
-    if (ctx.measureText(next).width > maxWidth && line) {
+    const candidate = line ? `${line} ${word}` : word
+    if (line && ctx.measureText(candidate).width > maxWidth) {
       lines.push(line)
       line = word
       if (lines.length >= maxLines) break
-    } else line = next
+    } else line = candidate
   }
   if (line && lines.length < maxLines) lines.push(line)
-  lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight))
-  return y + lines.length * lineHeight
+  return lines
+}
+
+function writeWrapped(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 20) {
+  const lines = wrappedLines(ctx, text, maxWidth, maxLines)
+  lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight))
+  return y + Math.max(1, lines.length) * lineHeight
+}
+
+function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, x: number, y: number, width = 200, height = 110, light = false) {
+  if (logo.complete && logo.naturalWidth) {
+    ctx.drawImage(logo, x, y, width, height)
+    return
+  }
+  ctx.fillStyle = light ? WHITE : NAVY
+  ctx.font = '800 46px Arial'
+  ctx.fillText('HRX', x, y + 64)
+  ctx.fillStyle = GREEN
+  ctx.font = '700 18px Arial'
+  ctx.fillText('SOLUTIONS', x + 104, y + 64)
 }
 
 function drawDraftWatermark(ctx: CanvasRenderingContext2D, data: ProposalPdfData) {
   if (!data.draft) return
   ctx.save()
-  ctx.translate(W / 2, H / 2 + 50)
+  ctx.translate(W / 2, H / 2)
   ctx.rotate(-Math.PI / 5)
-  ctx.globalAlpha = 0.055
-  ctx.fillStyle = NAVY_3
-  ctx.font = '800 154px Arial'
+  ctx.globalAlpha = .045
+  ctx.fillStyle = NAVY
+  ctx.font = '800 148px Arial'
   ctx.textAlign = 'center'
   ctx.fillText('RASCUNHO', 0, 0)
   ctx.restore()
   ctx.textAlign = 'left'
 }
 
-function drawFooter(ctx: CanvasRenderingContext2D, data: ProposalPdfData, page: number, pages: number) {
-  ctx.fillStyle = NAVY
-  ctx.fillRect(0, FOOTER_TOP, W, H - FOOTER_TOP)
-  ctx.fillStyle = '#B7C7D8'
-  ctx.font = '500 15px Arial'
-  ctx.fillText('HRX Solutions • Documento comercial confidencial', M, FOOTER_TOP + 45)
-  ctx.fillStyle = '#7F97AF'
+function drawFooter(ctx: CanvasRenderingContext2D, data: ProposalPdfData, page: number) {
+  ctx.strokeStyle = LINE
+  ctx.lineWidth = 1.2
+  ctx.beginPath(); ctx.moveTo(M, FOOTER_Y); ctx.lineTo(W - M, FOOTER_Y); ctx.stroke()
+  ctx.fillStyle = MUTED
   ctx.font = '500 14px Arial'
-  ctx.fillText(`${data.proposalNumber} • Versão ${data.version}`, M, FOOTER_TOP + 72)
+  ctx.fillText('HRX Solutions • hrxsolutions.com.br', M, FOOTER_Y + 38)
   ctx.textAlign = 'right'
-  ctx.fillStyle = '#D7E4F1'
-  ctx.fillText(`Página ${page} de ${pages}`, W - M, FOOTER_TOP + 58)
+  ctx.fillText(`${data.proposalNumber} • v${versionLabel(data.version)} • ${page}/6`, W - M, FOOTER_Y + 38)
   ctx.textAlign = 'left'
 }
 
-function drawInternalBase(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number, title: string, eyebrow: string) {
+function drawPageBase(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, section: string, title: string) {
   ctx.fillStyle = PAPER
   ctx.fillRect(0, 0, W, H)
-  const gradient = ctx.createLinearGradient(0, 0, W, 0)
-  gradient.addColorStop(0, NAVY)
-  gradient.addColorStop(1, NAVY_2)
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, W, 196)
-  if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, M, 28, 190, 114)
-  else {
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '800 48px Arial'; ctx.fillText('HRX', M, 96)
-    ctx.fillStyle = GREEN; ctx.font = '700 20px Arial'; ctx.fillText('SOLUTIONS', M + 112, 96)
-  }
+  ctx.fillStyle = NAVY
+  ctx.fillRect(0, 0, 18, H)
+  ctx.fillStyle = GREEN
+  ctx.fillRect(18, 0, 6, H)
+  ctx.fillStyle = WHITE
+  ctx.fillRect(24, 0, W - 24, 188)
+  drawLogo(ctx, logo, M, 34, 190, 104)
+
   ctx.textAlign = 'right'
-  ctx.fillStyle = '#D5E2F0'; ctx.font = '600 17px Arial'; ctx.fillText(data.proposalNumber, W - M, 62)
-  ctx.fillStyle = '#92A8C0'; ctx.font = '500 15px Arial'; ctx.fillText(`Versão ${data.version} • ${date(data.createdAt)}`, W - M, 91)
-  ctx.fillText(data.draft ? 'ORÇAMENTO EM ELABORAÇÃO' : 'PROPOSTA COMERCIAL', W - M, 120)
+  ctx.fillStyle = '#708398'
+  ctx.font = '600 14px Arial'
+  ctx.fillText(data.proposalNumber, W - M, 69)
+  ctx.fillText(`v${versionLabel(data.version)} • ${date(data.createdAt)}`, W - M, 98)
   ctx.textAlign = 'left'
-  ctx.fillStyle = GREEN_DARK; ctx.fillRect(M, 196, 102, 6)
-  ctx.fillStyle = BLUE; ctx.font = '700 15px Arial'; ctx.fillText(eyebrow.toUpperCase(), M, 266)
-  ctx.fillStyle = TEXT; ctx.font = '800 34px Arial'; ctx.fillText(title, M, 314)
+
+  ctx.fillStyle = GREEN
+  ctx.font = '800 15px Arial'
+  ctx.fillText(section, M, 248)
+  ctx.fillStyle = TEXT
+  ctx.font = '800 37px Arial'
+  writeWrapped(ctx, title, M, 302, W - M * 2, 44, 2)
+  ctx.fillStyle = BLUE
+  ctx.fillRect(M, 334, 104, 5)
+
   if (mark.complete && mark.naturalWidth) {
-    ctx.save(); ctx.globalAlpha = 0.055; ctx.drawImage(mark, 900, 1360, 350, 150); ctx.restore()
+    ctx.save()
+    ctx.globalAlpha = .035
+    ctx.drawImage(mark, 900, 1350, 280, 120)
+    ctx.restore()
   }
   drawDraftWatermark(ctx, data)
-  drawFooter(ctx, data, page, pages)
+  drawFooter(ctx, data, page)
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number) {
-  const bg = ctx.createLinearGradient(0, 0, W, H)
-  bg.addColorStop(0, NAVY); bg.addColorStop(0.62, NAVY_2); bg.addColorStop(1, '#0D2540')
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
-  ctx.fillStyle = GREEN_DARK; ctx.beginPath(); ctx.moveTo(W, 0); ctx.lineTo(W, 390); ctx.lineTo(1010, 0); ctx.closePath(); ctx.fill()
-  ctx.save(); ctx.globalAlpha = 0.09; ctx.fillStyle = BLUE; ctx.beginPath(); ctx.moveTo(W, 300); ctx.lineTo(W, 790); ctx.lineTo(890, 470); ctx.closePath(); ctx.fill(); ctx.restore()
-  if (mark.complete && mark.naturalWidth) { ctx.save(); ctx.globalAlpha = 0.055; ctx.drawImage(mark, 670, 1040, 610, 260); ctx.restore() }
-  if (logo.complete && logo.naturalWidth) ctx.drawImage(logo, M, 52, 240, 144)
-  else { ctx.fillStyle = '#FFFFFF'; ctx.font = '800 56px Arial'; ctx.fillText('HRX', M, 125) }
-  ctx.textAlign = 'right'; ctx.fillStyle = '#D9E6F2'; ctx.font = '600 18px Arial'; ctx.fillText(data.proposalNumber, W - M, 82)
-  ctx.fillStyle = '#8FA7C0'; ctx.font = '500 16px Arial'; ctx.fillText(`Versão ${data.version} • ${date(data.createdAt)}`, W - M, 114); ctx.textAlign = 'left'
-  ctx.fillStyle = GREEN; ctx.font = '700 17px Arial'; ctx.fillText(data.draft ? 'ORÇAMENTO EM ELABORAÇÃO' : 'PROPOSTA COMERCIAL', M, 356)
-  ctx.fillStyle = '#FFFFFF'; ctx.font = '800 48px Arial'
-  const titleBottom = writeWrapped(ctx, data.title || 'Proposta Comercial', M, 422, 850, 58, 4)
-  ctx.fillStyle = '#A9BDD1'; ctx.font = '400 20px Arial'
-  writeWrapped(ctx, data.description || 'Solução proposta pela HRX Solutions conforme escopo e condições comerciais deste documento.', M, titleBottom + 22, 830, 31, 5)
+function drawCover(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement) {
+  const gradient = ctx.createLinearGradient(0, 0, W, H)
+  gradient.addColorStop(0, '#061426')
+  gradient.addColorStop(.68, '#081C32')
+  gradient.addColorStop(1, '#0B2946')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = GREEN
+  ctx.fillRect(0, 0, 14, H)
+  ctx.fillStyle = 'rgba(36,185,109,.13)'
+  ctx.beginPath(); ctx.moveTo(W, 0); ctx.lineTo(W, 430); ctx.lineTo(925, 0); ctx.closePath(); ctx.fill()
+  if (mark.complete && mark.naturalWidth) { ctx.save(); ctx.globalAlpha = .065; ctx.drawImage(mark, 680, 1150, 590, 250); ctx.restore() }
 
-  const cardY = 760
-  roundedRect(ctx, M, cardY, W - M * 2, 380, 28); ctx.fillStyle = 'rgba(255,255,255,0.075)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2; ctx.stroke()
-  ctx.fillStyle = '#B8CBE0'; ctx.font = '700 14px Arial'; ctx.fillText('CLIENTE', M + 34, cardY + 46)
-  ctx.fillStyle = '#FFFFFF'; ctx.font = '800 29px Arial'; ctx.fillText(data.client.company || data.client.name, M + 34, cardY + 88)
-  ctx.fillStyle = '#A8BCD1'; ctx.font = '500 17px Arial'; ctx.fillText(data.client.company ? data.client.name : 'Contato principal', M + 34, cardY + 122)
-  ctx.fillText([data.client.document, data.client.email, data.client.phone].filter(Boolean).join('  •  '), M + 34, cardY + 154)
-  const stats = [
-    ['Valor final', brl.format(data.finalAmount)],
-    ['Pagamento', data.paymentMode === 'cash' ? 'À vista' : `${data.installments.length} parcelas`],
-    ['Validade', date(data.validUntil)],
+  drawLogo(ctx, logo, M, 54, 244, 140, true)
+  ctx.fillStyle = '#A0B3C5'
+  ctx.font = '700 15px Arial'
+  ctx.fillText('DOCUMENTO COMERCIAL OFICIAL', M, 318)
+  ctx.fillStyle = WHITE
+  ctx.font = '900 54px Arial'
+  ctx.fillText(data.draft ? 'ORÇAMENTO' : 'PROPOSTA', M, 401)
+  ctx.fillText('COMERCIAL', M, 466)
+  ctx.fillStyle = GREEN_LIGHT
+  ctx.fillRect(M, 508, 108, 6)
+
+  const cardY = 710
+  roundedRect(ctx, M, cardY, W - M * 2, 500, 26)
+  ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fill()
+  ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 1.5; ctx.stroke()
+  const rows = [
+    ['CLIENTE', clientName(data)],
+    ['PROPOSTA', data.proposalNumber],
+    ['VERSÃO', versionLabel(data.version)],
+    ['EMISSÃO', date(data.createdAt)],
   ]
-  stats.forEach(([label, value], index) => {
-    const x = M + 34 + index * 350; const y = cardY + 226
-    roundedRect(ctx, x, y, 320, 108, 18); ctx.fillStyle = 'rgba(255,255,255,0.055)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.11)'; ctx.stroke()
-    ctx.fillStyle = '#8FA8C2'; ctx.font = '700 13px Arial'; ctx.fillText(label.toUpperCase(), x + 20, y + 32)
-    ctx.fillStyle = label === 'Valor final' ? GREEN : '#FFFFFF'; ctx.font = label === 'Valor final' ? '800 24px Arial' : '700 20px Arial'; ctx.fillText(value, x + 20, y + 70)
+  rows.forEach(([label, value], index) => {
+    const y = cardY + 62 + index * 92
+    ctx.fillStyle = '#8FA7BD'; ctx.font = '800 13px Arial'; ctx.fillText(label, M + 34, y)
+    ctx.fillStyle = WHITE; ctx.font = '700 24px Arial'; ctx.fillText(value, M + 34, y + 34)
+    if (index < rows.length - 1) { ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.beginPath(); ctx.moveTo(M + 34, y + 58); ctx.lineTo(W - M - 34, y + 58); ctx.stroke() }
   })
+
+  ctx.fillStyle = '#B9C8D7'
+  ctx.font = '400 21px Arial'
+  writeWrapped(ctx, 'Soluções profissionais, escopo claro e condições comerciais transparentes.', M, 1334, 820, 32, 3)
+  ctx.fillStyle = '#7E96AB'; ctx.font = '500 14px Arial'; ctx.fillText('HRX Solutions • hrxsolutions.com.br', M, 1658)
+  ctx.textAlign = 'right'; ctx.fillText(`${data.proposalNumber} • v${versionLabel(data.version)} • 1/6`, W - M, 1658); ctx.textAlign = 'left'
   drawDraftWatermark(ctx, data)
-  drawFooter(ctx, data, page, pages)
 }
 
-function drawObjectPage(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number) {
-  drawInternalBase(ctx, data, logo, mark, page, pages, 'Objeto da proposta', 'Escopo e entregas')
-  const top = 360
-  roundedRect(ctx, M, top, 520, 410, 24); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-  ctx.fillStyle = BLUE; ctx.font = '700 14px Arial'; ctx.fillText('PROJETO / SERVIÇO', M + 28, top + 46)
-  ctx.fillStyle = TEXT; ctx.font = '800 25px Arial'; writeWrapped(ctx, data.title || 'Proposta Comercial', M + 28, top + 86, 460, 32, 3)
-  ctx.fillStyle = '#74889C'; ctx.font = '700 14px Arial'; ctx.fillText('DESCRIÇÃO', M + 28, top + 178)
-  ctx.fillStyle = MUTED; ctx.font = '400 17px Arial'; writeWrapped(ctx, data.description || 'Escopo conforme composição comercial apresentada.', M + 28, top + 216, 460, 27, 6)
+function drawPresentation(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement) {
+  drawPageBase(ctx, data, logo, mark, 2, '01 — APRESENTAÇÃO', 'Uma proposta feita para ser clara, executiva e rastreável.')
+  const top = 402
+  roundedRect(ctx, M, top, W - M * 2, 318, 20); ctx.fillStyle = WHITE; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+  ctx.fillStyle = TEXT; ctx.font = '700 20px Arial'
+  writeWrapped(ctx, 'A HRX Solutions apresenta esta proposta comercial para o desenvolvimento e execução dos serviços descritos a seguir. O documento consolida escopo, investimento, condições e prazos de forma objetiva.', M + 30, top + 60, W - M * 2 - 60, 33, 6)
+  roundedRect(ctx, M + 30, top + 178, W - M * 2 - 60, 100, 14); ctx.fillStyle = SOFT; ctx.fill()
+  ctx.fillStyle = NAVY_2; ctx.font = '700 17px Arial'
+  writeWrapped(ctx, '“A proposta aprovada passa a ser a referência comercial oficial da entrega, preservando número, versão e histórico.”', M + 52, top + 218, W - M * 2 - 104, 27, 3)
 
-  roundedRect(ctx, 626, top, 540, 410, 24); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-  ctx.fillStyle = BLUE; ctx.font = '700 14px Arial'; ctx.fillText('ESCOPO CONTEMPLADO', 654, top + 46)
-  let y = top + 92
-  const scopeItems = data.items.slice(0, 7)
+  const y = 786
+  const info = [
+    ['CLIENTE', clientName(data)],
+    ['CNPJ / CPF', data.client.document || 'Não informado'],
+    ['RESPONSÁVEL', data.client.name || 'Não informado'],
+    ['E-MAIL / WHATSAPP', [data.client.email, data.client.phone].filter(Boolean).join(' • ') || 'Não informado'],
+  ]
+  info.forEach(([label, value], index) => {
+    const col = index % 2; const row = Math.floor(index / 2); const x = M + col * 548; const yy = y + row * 174
+    roundedRect(ctx, x, yy, 516, 144, 18); ctx.fillStyle = WHITE; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+    ctx.fillStyle = BLUE; ctx.font = '800 13px Arial'; ctx.fillText(label, x + 24, yy + 42)
+    ctx.fillStyle = TEXT; ctx.font = '700 18px Arial'; writeWrapped(ctx, value, x + 24, yy + 76, 462, 25, 2)
+  })
+}
+
+function drawScope(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement) {
+  drawPageBase(ctx, data, logo, mark, 3, '02 — OBJETO E ESCOPO', data.title || 'Projeto / serviço')
+  let y = 405
+  roundedRect(ctx, M, y, W - M * 2, 238, 20); ctx.fillStyle = WHITE; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+  ctx.fillStyle = TEXT; ctx.font = '700 19px Arial'
+  writeWrapped(ctx, data.description || 'Descrição executiva do projeto, problema a resolver, resultado esperado e contexto da contratação.', M + 28, y + 58, W - M * 2 - 56, 30, 6)
+
+  y = 686
+  roundedRect(ctx, M, y, W - M * 2, 472, 20); ctx.fillStyle = WHITE; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+  ctx.fillStyle = BLUE; ctx.font = '800 14px Arial'; ctx.fillText('ENTREGAS CONTEMPLADAS', M + 28, y + 46)
+  let itemY = y + 98
+  const scopeItems = data.items.slice(0, 8)
   if (!scopeItems.length) scopeItems.push({ serviceName: 'Escopo conforme proposta', unitLabel: 'un.', quantity: 1, unitAmount: 0, totalAmount: 0 })
-  for (const item of scopeItems) {
-    ctx.fillStyle = GREEN_DARK; ctx.beginPath(); ctx.arc(666, y - 5, 6, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = TEXT; ctx.font = '700 17px Arial'; ctx.fillText(item.serviceName, 686, y)
-    if (item.description) { ctx.fillStyle = MUTED; ctx.font = '400 14px Arial'; writeWrapped(ctx, item.description, 686, y + 23, 430, 20, 2); y += 64 } else y += 42
-  }
+  scopeItems.forEach((item) => {
+    ctx.fillStyle = GREEN; ctx.beginPath(); ctx.arc(M + 36, itemY - 6, 6, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = TEXT; ctx.font = '700 17px Arial'; ctx.fillText(item.serviceName, M + 58, itemY)
+    if (item.description) { ctx.fillStyle = BODY; ctx.font = '400 14px Arial'; writeWrapped(ctx, item.description, M + 58, itemY + 23, W - M * 2 - 90, 21, 2); itemY += 64 } else itemY += 45
+  })
 
-  const noteY = 824
-  roundedRect(ctx, M, noteY, W - M * 2, 250, 24); ctx.fillStyle = '#F0F5FB'; ctx.fill(); ctx.strokeStyle = '#D7E3EF'; ctx.stroke()
-  ctx.fillStyle = TEXT; ctx.font = '800 20px Arial'; ctx.fillText('Premissas da proposta', M + 28, noteY + 46)
-  ctx.fillStyle = MUTED; ctx.font = '400 17px Arial'
-  writeWrapped(ctx, 'Os serviços descritos neste documento compõem o escopo comercial desta versão. Qualquer necessidade adicional, alteração relevante de premissa ou ampliação de escopo poderá exigir revisão da proposta e nova versão para aprovação.', M + 28, noteY + 84, W - M * 2 - 56, 29, 6)
+  y = 1192
+  roundedRect(ctx, M, y, W - M * 2, 316, 20); ctx.fillStyle = SOFT; ctx.fill()
+  ctx.fillStyle = TEXT; ctx.font = '800 18px Arial'; ctx.fillText('Fora do escopo', M + 28, y + 48)
+  ctx.fillStyle = BODY; ctx.font = '400 16px Arial'; writeWrapped(ctx, 'Itens, atividades ou entregas não descritos nesta proposta não estão incluídos, salvo registro expresso em nova versão.', M + 28, y + 86, W - M * 2 - 56, 25, 3)
+  ctx.fillStyle = TEXT; ctx.font = '800 18px Arial'; ctx.fillText('Premissas', M + 28, y + 180)
+  ctx.fillStyle = BODY; ctx.font = '400 16px Arial'; writeWrapped(ctx, 'Alterações fora do escopo deverão ser avaliadas e poderão gerar uma nova versão desta proposta.', M + 28, y + 218, W - M * 2 - 56, 25, 3)
 }
 
-function drawInvestmentPage(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number, items: ProposalPdfItem[], first: boolean) {
-  drawInternalBase(ctx, data, logo, mark, page, pages, first ? 'Investimento' : 'Investimento — continuação', 'Composição comercial')
-  const tableX = M; let y = 360; const tableW = W - M * 2
-  ctx.fillStyle = SOFT; ctx.fillRect(tableX, y, tableW, 54)
-  ctx.fillStyle = '#496176'; ctx.font = '700 14px Arial'; ctx.fillText('ITEM / DESCRIÇÃO', tableX + 18, y + 34); ctx.fillText('QTD.', 770, y + 34); ctx.fillText('UNITÁRIO', 880, y + 34); ctx.fillText('TOTAL', 1050, y + 34)
-  y += 54
-  for (const item of items) {
-    const rowH = 88
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(tableX, y, tableW, rowH); ctx.strokeStyle = '#E2EAF2'; ctx.beginPath(); ctx.moveTo(tableX, y + rowH); ctx.lineTo(tableX + tableW, y + rowH); ctx.stroke()
-    ctx.fillStyle = TEXT; ctx.font = '700 17px Arial'; ctx.fillText(item.serviceName, tableX + 18, y + 30)
-    if (item.description) { ctx.fillStyle = MUTED; ctx.font = '400 14px Arial'; writeWrapped(ctx, item.description, tableX + 18, y + 55, 610, 19, 2) }
-    ctx.fillStyle = '#40586C'; ctx.font = '500 16px Arial'; ctx.fillText(`${item.quantity.toLocaleString('pt-BR')} ${item.unitLabel}`, 770, y + 45); ctx.fillText(brl.format(item.unitAmount), 880, y + 45); ctx.fillText(brl.format(item.totalAmount), 1050, y + 45)
+function drawInvestment(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement) {
+  drawPageBase(ctx, data, logo, mark, 4, '03 — INVESTIMENTO', 'Composição comercial')
+  let y = 396
+  const tableW = W - M * 2
+  const shown = data.items.slice(0, 16)
+  const rowH = shown.length > 11 ? 48 : 60
+  ctx.fillStyle = NAVY_2; ctx.fillRect(M, y, tableW, 52)
+  ctx.fillStyle = WHITE; ctx.font = '800 13px Arial'
+  ctx.fillText('ITEM / DESCRIÇÃO', M + 18, y + 33); ctx.fillText('QTD.', 770, y + 33); ctx.fillText('UNITÁRIO', 886, y + 33); ctx.fillText('TOTAL', 1050, y + 33)
+  y += 52
+  shown.forEach((item, index) => {
+    ctx.fillStyle = index % 2 ? '#F8FAFC' : WHITE; ctx.fillRect(M, y, tableW, rowH)
+    ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(M, y + rowH); ctx.lineTo(W - M, y + rowH); ctx.stroke()
+    ctx.fillStyle = TEXT; ctx.font = '700 14px Arial'; ctx.fillText(`${String(index + 1).padStart(2, '0')}  ${item.serviceName}`, M + 18, y + 27)
+    if (item.description && rowH >= 60) { ctx.fillStyle = MUTED; ctx.font = '400 12px Arial'; ctx.fillText(item.description.slice(0, 66), M + 42, y + 48) }
+    ctx.fillStyle = TEXT; ctx.font = '600 14px Arial'; ctx.fillText(String(item.quantity), 770, y + 29); ctx.fillText(brl.format(item.unitAmount), 886, y + 29); ctx.fillText(brl.format(item.totalAmount), 1050, y + 29)
     y += rowH
-  }
-  if (!first) return
-  const summaryY = Math.max(y + 28, 1090)
-  roundedRect(ctx, 672, summaryY, 494, 310, 22); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+  })
+  if (data.items.length > shown.length) { ctx.fillStyle = MUTED; ctx.font = '600 13px Arial'; ctx.fillText(`+ ${data.items.length - shown.length} item(ns) adicionais compõem o valor total.`, M + 18, y + 27); y += 42 }
+
+  y = Math.max(y + 30, 1050)
+  const summaryX = 650; const summaryW = W - M - summaryX
   const rows = [
     ['Subtotal', brl.format(data.subtotal)],
-    [`Desconto (${percent.format(data.discountPercent)}%)`, `− ${brl.format(data.discountAmount)}`],
-    [`Impostos (${percent.format(data.taxPercent)}%)`, `+ ${brl.format(data.taxAmount)}`],
+    ['Desconto', `${percent.format(data.discountPercent)}% — ${brl.format(data.discountAmount)}`],
+    ['Impostos', `${percent.format(data.taxPercent)}% — ${brl.format(data.taxAmount)}`],
   ]
   rows.forEach(([label, value], index) => {
-    const yy = summaryY + 48 + index * 52
-    ctx.fillStyle = MUTED; ctx.font = '600 17px Arial'; ctx.fillText(label, 704, yy)
-    ctx.fillStyle = TEXT; ctx.textAlign = 'right'; ctx.fillText(value, 1134, yy); ctx.textAlign = 'left'
+    const yy = y + index * 52
+    ctx.fillStyle = MUTED; ctx.font = '700 14px Arial'; ctx.fillText(label, summaryX, yy + 30)
+    ctx.textAlign = 'right'; ctx.fillStyle = TEXT; ctx.font = '700 15px Arial'; ctx.fillText(value, summaryX + summaryW, yy + 30); ctx.textAlign = 'left'
   })
-  ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(704, summaryY + 205); ctx.lineTo(1134, summaryY + 205); ctx.stroke()
-  ctx.fillStyle = TEXT; ctx.font = '800 20px Arial'; ctx.fillText('Valor final', 704, summaryY + 260)
-  ctx.fillStyle = GREEN_DARK; ctx.font = '800 28px Arial'; ctx.textAlign = 'right'; ctx.fillText(brl.format(data.finalAmount), 1134, summaryY + 262); ctx.textAlign = 'left'
+  y += rows.length * 52 + 18
+  roundedRect(ctx, summaryX - 18, y, summaryW + 18, 92, 16); ctx.fillStyle = NAVY; ctx.fill()
+  ctx.fillStyle = '#B9C9D9'; ctx.font = '800 13px Arial'; ctx.fillText('VALOR FINAL', summaryX, y + 32)
+  ctx.textAlign = 'right'; ctx.fillStyle = GREEN_LIGHT; ctx.font = '900 29px Arial'; ctx.fillText(brl.format(data.finalAmount), summaryX + summaryW, y + 61); ctx.textAlign = 'left'
 }
 
-function drawPaymentPage(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number) {
-  drawInternalBase(ctx, data, logo, mark, page, pages, 'Condições de pagamento', 'Prazos e vencimentos')
-  const top = 360; const cardW = 340
+function drawConditions(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement) {
+  drawPageBase(ctx, data, logo, mark, 5, '04 — CONDIÇÕES COMERCIAIS', 'Pagamento, prazo e validade')
+  const top = 405
   const cards = [
-    ['Forma de pagamento', data.paymentMode === 'cash' ? 'À vista' : 'Parcelado'],
-    ['Parcelas previstas', String(Math.max(1, data.installments.length))],
-    ['Validade', date(data.validUntil)],
+    ['CONDIÇÃO', data.paymentMode === 'cash' ? 'À vista' : `${Math.max(1, data.installments.length)} parcelas`],
+    ['FORMA', 'Conforme negociação registrada'],
+    ['VALIDADE', `Até ${date(data.validUntil)}`],
+    ['PRAZO ESTIMADO', 'Conforme escopo e cronograma acordados'],
   ]
   cards.forEach(([label, value], index) => {
-    const x = M + index * (cardW + 36)
-    roundedRect(ctx, x, top, cardW, 138, 20); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-    ctx.fillStyle = '#71879B'; ctx.font = '700 13px Arial'; ctx.fillText(label.toUpperCase(), x + 22, top + 38)
-    ctx.fillStyle = TEXT; ctx.font = '800 22px Arial'; ctx.fillText(value, x + 22, top + 83)
+    const col = index % 2; const row = Math.floor(index / 2); const x = M + col * 548; const y = top + row * 152
+    roundedRect(ctx, x, y, 516, 124, 18); ctx.fillStyle = WHITE; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+    ctx.fillStyle = BLUE; ctx.font = '800 13px Arial'; ctx.fillText(label, x + 24, y + 38)
+    ctx.fillStyle = TEXT; ctx.font = '700 17px Arial'; writeWrapped(ctx, value, x + 24, y + 72, 464, 23, 2)
   })
-  ctx.fillStyle = TEXT; ctx.font = '800 22px Arial'; ctx.fillText('Cronograma previsto', M, 560)
-  ctx.fillStyle = MUTED; ctx.font = '400 16px Arial'; ctx.fillText('Os vencimentos abaixo refletem a condição comercial registrada nesta versão.', M, 590)
-  const schedule = data.installments.length ? data.installments : [{ installmentNumber: 1, amount: data.finalAmount, dueDate: data.validUntil }]
-  const columns = schedule.length > 12 ? [schedule.slice(0, 12), schedule.slice(12)] : [schedule]
-  columns.forEach((column, colIndex) => {
-    const x = M + colIndex * 548; let y = 638; const width = columns.length === 1 ? W - M * 2 : 516
-    ctx.fillStyle = SOFT; ctx.fillRect(x, y, width, 44); ctx.fillStyle = '#526A7F'; ctx.font = '700 13px Arial'; ctx.fillText('PARCELA', x + 16, y + 28); ctx.fillText('VENCIMENTO', x + 144, y + 28); ctx.textAlign = 'right'; ctx.fillText('VALOR', x + width - 16, y + 28); ctx.textAlign = 'left'; y += 44
-    column.forEach((installment) => {
-      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x, y, width, 58); ctx.strokeStyle = '#E2EAF2'; ctx.beginPath(); ctx.moveTo(x, y + 58); ctx.lineTo(x + width, y + 58); ctx.stroke()
-      ctx.fillStyle = TEXT; ctx.font = '700 15px Arial'; ctx.fillText(`${installment.installmentNumber}/${schedule.length}`, x + 16, y + 36)
-      ctx.fillStyle = MUTED; ctx.font = '500 15px Arial'; ctx.fillText(date(installment.dueDate), x + 144, y + 36)
-      ctx.textAlign = 'right'; ctx.fillStyle = TEXT; ctx.font = '700 15px Arial'; ctx.fillText(brl.format(installment.amount), x + width - 16, y + 36); ctx.textAlign = 'left'; y += 58
-    })
+
+  let y = 758
+  ctx.fillStyle = TEXT; ctx.font = '800 19px Arial'; ctx.fillText('Parcelamento previsto', M, y)
+  y += 28
+  const schedule = data.installments.length ? data.installments.slice(0, 10) : [{ installmentNumber: 1, amount: data.finalAmount, dueDate: data.validUntil }]
+  ctx.fillStyle = NAVY_2; ctx.fillRect(M, y, W - M * 2, 48)
+  ctx.fillStyle = WHITE; ctx.font = '800 12px Arial'; ctx.fillText('PARCELA', M + 18, y + 31); ctx.fillText('VALOR', M + 310, y + 31); ctx.fillText('VENCIMENTO', M + 700, y + 31)
+  y += 48
+  schedule.forEach((installment, index) => {
+    ctx.fillStyle = index % 2 ? '#F8FAFC' : WHITE; ctx.fillRect(M, y, W - M * 2, 48)
+    ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(M, y + 48); ctx.lineTo(W - M, y + 48); ctx.stroke()
+    ctx.fillStyle = TEXT; ctx.font = '700 14px Arial'; ctx.fillText(`${installment.installmentNumber}/${schedule.length}`, M + 18, y + 30); ctx.fillText(brl.format(installment.amount), M + 310, y + 30); ctx.fillText(date(installment.dueDate), M + 700, y + 30)
+    y += 48
   })
+
+  y = Math.max(y + 38, 1320)
+  roundedRect(ctx, M, y, W - M * 2, 220, 18); ctx.fillStyle = SOFT; ctx.fill()
+  ctx.fillStyle = TEXT; ctx.font = '800 17px Arial'; ctx.fillText('Observações comerciais', M + 26, y + 44)
+  ctx.fillStyle = BODY; ctx.font = '400 15px Arial'; writeWrapped(ctx, data.customerNotes || 'Sem observações comerciais adicionais registradas.', M + 26, y + 80, W - M * 2 - 52, 24, 5)
 }
 
-function drawValidityPage(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number) {
-  drawInternalBase(ctx, data, logo, mark, page, pages, 'Validade e observações', 'Condições gerais')
-  let y = 360
-  roundedRect(ctx, M, y, W - M * 2, 210, 24); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-  ctx.fillStyle = GREEN_DARK; ctx.font = '700 14px Arial'; ctx.fillText('VALIDADE DA PROPOSTA', M + 28, y + 48)
-  ctx.fillStyle = TEXT; ctx.font = '800 29px Arial'; ctx.fillText(`Válida até ${date(data.validUntil)}`, M + 28, y + 93)
-  ctx.fillStyle = MUTED; ctx.font = '400 17px Arial'; writeWrapped(ctx, 'Após esta data, valores, disponibilidade, prazos e demais condições poderão ser revistos antes de uma nova aprovação.', M + 28, y + 132, W - M * 2 - 56, 27, 3)
-  y += 252
-  roundedRect(ctx, M, y, W - M * 2, 380, 24); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-  ctx.fillStyle = BLUE; ctx.font = '700 14px Arial'; ctx.fillText('OBSERVAÇÕES', M + 28, y + 48)
-  ctx.fillStyle = MUTED; ctx.font = '400 17px Arial'; writeWrapped(ctx, data.customerNotes || 'Sem observações adicionais registradas para esta proposta.', M + 28, y + 88, W - M * 2 - 56, 29, 8)
-  y += 422
-  roundedRect(ctx, M, y, W - M * 2, 300, 24); ctx.fillStyle = '#F1F6FB'; ctx.fill(); ctx.strokeStyle = '#D7E3EF'; ctx.stroke()
-  ctx.fillStyle = TEXT; ctx.font = '800 20px Arial'; ctx.fillText('Condições gerais', M + 28, y + 48)
-  const conditions = [
-    'Atividades adicionais ou mudanças de escopo serão previamente avaliadas.',
-    'A execução considera as premissas e dependências descritas nesta versão.',
-    'Aprovações, acessos e informações sob responsabilidade do cliente podem impactar o cronograma.',
-  ]
-  conditions.forEach((condition, index) => {
-    const yy = y + 96 + index * 58
-    ctx.fillStyle = GREEN_DARK; ctx.beginPath(); ctx.arc(M + 36, yy - 6, 5, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = MUTED; ctx.font = '400 16px Arial'; writeWrapped(ctx, condition, M + 56, yy, W - M * 2 - 92, 23, 2)
-  })
-}
+function drawAcceptance(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement) {
+  drawPageBase(ctx, data, logo, mark, 6, '05 — ACEITE', 'Confirmação da proposta')
+  let y = 408
+  roundedRect(ctx, M, y, W - M * 2, 250, 20); ctx.fillStyle = WHITE; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
+  ctx.fillStyle = TEXT; ctx.font = '700 19px Arial'
+  writeWrapped(ctx, 'Ao aprovar esta proposta, o cliente declara estar de acordo com o escopo, investimento, condições de pagamento, prazos e demais condições registradas nesta versão.', M + 28, y + 58, W - M * 2 - 56, 31, 5)
 
-function drawAcceptancePage(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logo: HTMLImageElement, mark: HTMLImageElement, page: number, pages: number) {
-  drawInternalBase(ctx, data, logo, mark, page, pages, 'Aceite', 'Confirmação comercial')
-  let y = 368
-  roundedRect(ctx, M, y, W - M * 2, 270, 24); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-  ctx.fillStyle = TEXT; ctx.font = '800 22px Arial'; ctx.fillText('Declaração de aceite', M + 28, y + 48)
-  ctx.fillStyle = MUTED; ctx.font = '400 17px Arial'
-  writeWrapped(ctx, 'Ao aprovar esta proposta, o cliente declara estar de acordo com o escopo, os valores, as condições de pagamento, os prazos e as demais condições descritas neste documento, referentes à versão identificada abaixo.', M + 28, y + 90, W - M * 2 - 56, 29, 6)
-  y += 322
-  roundedRect(ctx, M, y, W - M * 2, 500, 24); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = LINE; ctx.stroke()
-  const rows = [
-    ['Cliente', data.client.company || data.client.name],
-    ['Responsável', data.client.name],
-    ['Documento', data.client.document || '—'],
-    ['Proposta', `${data.proposalNumber} • Versão ${data.version}`],
+  y = 720
+  const fields = [
+    ['CLIENTE', clientName(data)],
+    ['PROPOSTA APROVADA', `${data.proposalNumber} • Versão ${versionLabel(data.version)}`],
   ]
-  rows.forEach(([label, value], index) => {
-    const yy = y + 50 + index * 70
-    ctx.fillStyle = '#74899D'; ctx.font = '700 13px Arial'; ctx.fillText(label.toUpperCase(), M + 30, yy)
-    ctx.fillStyle = TEXT; ctx.font = '700 18px Arial'; ctx.fillText(value, M + 30, yy + 28)
+  fields.forEach(([label, value], index) => {
+    const yy = y + index * 142
+    ctx.fillStyle = BLUE; ctx.font = '800 13px Arial'; ctx.fillText(label, M, yy)
+    ctx.fillStyle = TEXT; ctx.font = '700 22px Arial'; ctx.fillText(value, M, yy + 38)
+    ctx.strokeStyle = LINE; ctx.beginPath(); ctx.moveTo(M, yy + 72); ctx.lineTo(W - M, yy + 72); ctx.stroke()
   })
-  const signatureY = y + 350
-  ctx.strokeStyle = '#AFC0D0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(M + 30, signatureY); ctx.lineTo(M + 500, signatureY); ctx.moveTo(670, signatureY); ctx.lineTo(W - M - 30, signatureY); ctx.stroke()
-  ctx.fillStyle = MUTED; ctx.font = '500 14px Arial'; ctx.fillText('Assinatura / aceite do responsável', M + 30, signatureY + 30); ctx.fillText('Data', 670, signatureY + 30)
-  roundedRect(ctx, M, 1270, W - M * 2, 220, 24); ctx.fillStyle = NAVY_2; ctx.fill()
-  ctx.fillStyle = '#FFFFFF'; ctx.font = '800 22px Arial'; ctx.fillText('HRX Solutions', M + 28, 1324)
-  ctx.fillStyle = '#A9BED2'; ctx.font = '400 16px Arial'; ctx.fillText('Proposta comercial emitida e versionada pelo ambiente administrativo HRX.', M + 28, 1364); ctx.fillText(`Protocolo ${data.protocol} • ${data.proposalNumber}`, M + 28, 1398)
-  ctx.fillStyle = GREEN; ctx.font = '700 16px Arial'; ctx.fillText('Documento oficial gerado pelo PWA HRX Solutions', M + 28, 1442)
+
+  y = 1068
+  ctx.strokeStyle = '#9AAABD'; ctx.lineWidth = 1.5
+  ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(610, y); ctx.moveTo(680, y); ctx.lineTo(W - M, y); ctx.stroke()
+  ctx.fillStyle = MUTED; ctx.font = '500 14px Arial'; ctx.fillText('Responsável pelo cliente — nome / assinatura', M, y + 34); ctx.fillText('Data do aceite', 680, y + 34)
+  ctx.fillStyle = '#8194A7'; ctx.font = '500 15px Arial'; ctx.fillText('____ / ____ / ______', 680, y + 72)
+
+  roundedRect(ctx, M, 1268, W - M * 2, 232, 20); ctx.fillStyle = NAVY; ctx.fill()
+  ctx.fillStyle = WHITE; ctx.font = '800 22px Arial'; ctx.fillText('HRX Solutions', M + 28, 1324)
+  ctx.fillStyle = '#ACC0D3'; ctx.font = '400 16px Arial'; ctx.fillText('Documento comercial HRX Solutions', M + 28, 1362)
+  ctx.fillText(`Protocolo ${data.protocol} • ${data.proposalNumber} • v${versionLabel(data.version)}`, M + 28, 1396)
+  ctx.fillStyle = GREEN_LIGHT; ctx.font = '700 15px Arial'; ctx.fillText('Referência comercial oficial da entrega após aprovação.', M + 28, 1440)
 }
 
 function base64Bytes(dataUrl: string) {
@@ -357,7 +414,7 @@ function concat(parts: Uint8Array[]) {
 }
 
 function canvasesToPdf(canvases: HTMLCanvasElement[]) {
-  const images = canvases.map((canvas) => base64Bytes(canvas.toDataURL('image/jpeg', 0.94)))
+  const images = canvases.map((canvas) => base64Bytes(canvas.toDataURL('image/jpeg', .95)))
   const objectCount = 2 + canvases.length * 3
   const objects = new Map<number, Uint8Array>()
   objects.set(1, encoder.encode('<< /Type /Catalog /Pages 2 0 R >>'))
@@ -388,22 +445,12 @@ function canvasesToPdf(canvases: HTMLCanvasElement[]) {
 
 export async function generateProposalPdf(data: ProposalPdfData) {
   const { logo, mark } = await loadBrandAssets()
-  const itemChunks: ProposalPdfItem[][] = []
-  for (let index = 0; index < data.items.length; index += 9) itemChunks.push(data.items.slice(index, index + 9))
-  if (!itemChunks.length) itemChunks.push([])
-  const totalPages = 6 + Math.max(0, itemChunks.length - 1)
   const canvases: HTMLCanvasElement[] = []
-
-  const cover = pageCanvas(); drawCover(cover.getContext('2d')!, data, logo, mark, 1, totalPages); canvases.push(cover)
-  const object = pageCanvas(); drawObjectPage(object.getContext('2d')!, data, logo, mark, 2, totalPages); canvases.push(object)
-  itemChunks.forEach((items, index) => {
-    const canvas = pageCanvas(); drawInvestmentPage(canvas.getContext('2d')!, data, logo, mark, 3 + index, totalPages, items, index === 0); canvases.push(canvas)
+  const pages = [drawCover, drawPresentation, drawScope, drawInvestment, drawConditions, drawAcceptance]
+  pages.forEach((draw) => {
+    const canvas = pageCanvas()
+    draw(canvas.getContext('2d')!, data, logo, mark)
+    canvases.push(canvas)
   })
-  let page = 3 + itemChunks.length
-  const payment = pageCanvas(); drawPaymentPage(payment.getContext('2d')!, data, logo, mark, page, totalPages); canvases.push(payment)
-  page += 1
-  const validity = pageCanvas(); drawValidityPage(validity.getContext('2d')!, data, logo, mark, page, totalPages); canvases.push(validity)
-  page += 1
-  const acceptance = pageCanvas(); drawAcceptancePage(acceptance.getContext('2d')!, data, logo, mark, page, totalPages); canvases.push(acceptance)
   return canvasesToPdf(canvases)
 }

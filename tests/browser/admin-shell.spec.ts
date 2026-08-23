@@ -80,7 +80,7 @@ function desktopShell() {
 async function mountFixture(page: Page, width: number) {
   const kind = viewportClass(width)
   const shell = kind === 'desktop' ? desktopShell() : compactShell(kind)
-  await page.setContent(`<!doctype html><html lang="pt-BR" class="hrx-admin-pwa"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>HRX Admin — QA responsivo</title><style>html,body,#root{margin:0;width:100%;height:100%;background:#061325}${css}</style></head><body class="hrx-admin-pwa"><div id="root">${shell}</div></body></html>`)
+  await page.setContent(`<!doctype html><html lang="pt-BR" data-hrx-theme-resolved="dark" class="hrx-admin-pwa"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>HRX Admin — QA responsivo</title><style>html,body,#root{margin:0;width:100%;height:100%;background:#061325}${css}</style></head><body class="hrx-admin-pwa"><div id="root">${shell}</div></body></html>`)
 }
 
 for (const viewport of viewports) {
@@ -100,27 +100,42 @@ for (const viewport of viewports) {
     const shellBox = await page.locator('[data-admin-shell]').boundingBox()
     expect(shellBox).not.toBeNull()
     expect(shellBox!.x).toBeGreaterThanOrEqual(0)
-    expect(shellBox!.x + shellBox!.width).toBeLessThanOrEqual(viewport.width + 0.5)
+    expect(shellBox!.x + shellBox!.width).toBeLessThanOrEqual(viewport.width + .5)
 
     const bellBox = await page.locator('.hrx-notifications').boundingBox()
     expect(bellBox).not.toBeNull()
     expect(bellBox!.x).toBeGreaterThanOrEqual(0)
-    expect(bellBox!.x + bellBox!.width).toBeLessThanOrEqual(viewport.width + 0.5)
+    expect(bellBox!.x + bellBox!.width).toBeLessThanOrEqual(viewport.width + .5)
 
     if (viewport.width <= 1100) {
-      for (const selector of ['.hrx-pwa-settings', '.hrx-pwa-more', '.hrx-unified-mobile-nav']) {
+      await expect(page.locator('.hrx-pwa-settings')).toBeHidden()
+      for (const selector of ['.hrx-pwa-more', '.hrx-unified-mobile-nav']) {
         const box = await page.locator(selector).boundingBox()
         expect(box, selector).not.toBeNull()
         expect(box!.x, selector).toBeGreaterThanOrEqual(0)
-        expect(box!.x + box!.width, selector).toBeLessThanOrEqual(viewport.width + 0.5)
-        expect(box!.y + box!.height, selector).toBeLessThanOrEqual(viewport.height + 0.5)
+        expect(box!.x + box!.width, selector).toBeLessThanOrEqual(viewport.width + .5)
+        expect(box!.y + box!.height, selector).toBeLessThanOrEqual(viewport.height + .5)
       }
+      const nav = await page.locator('.hrx-unified-mobile-nav').boundingBox()
+      expect(nav!.width).toBeLessThan(viewport.width)
+      expect(viewport.height - (nav!.y + nav!.height)).toBeGreaterThanOrEqual(4)
     } else {
       await expect(page.locator('.hrx-unified-sidebar')).toBeVisible()
       await expect(page.locator('.hrx-unified-topbar')).toBeVisible()
     }
   })
 }
+
+test('light and dark themes produce different canonical shell surfaces', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mountFixture(page, 390)
+  const shell = page.locator('.hrx-unified-shell')
+  const darkBackground = await shell.evaluate((element) => getComputedStyle(element).backgroundImage)
+  await page.locator('html').evaluate((element) => { (element as HTMLElement).dataset.hrxThemeResolved = 'light' })
+  const lightBackground = await shell.evaluate((element) => getComputedStyle(element).backgroundImage)
+  expect(lightBackground).not.toEqual(darkBackground)
+  await expect(page.locator('.hrx-pwa-settings')).toBeHidden()
+})
 
 test('canonical shell fixture has no serious or critical axe violations', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
