@@ -22,6 +22,7 @@ type UpdateState = 'idle' | 'available' | 'checking' | 'downloading' | 'installi
 
 const VERSION_URL = '/admin/version.json'
 const CHECK_COOLDOWN_MS = 30_000
+const UPDATE_POLL_MS = 30_000
 const ACTIVATION_TIMEOUT_MS = 20_000
 
 function installedBuild() {
@@ -55,6 +56,7 @@ export default function AdminPwaUpdater() {
     let applyingUpdate = false
     let reloadScheduled = false
     let activationTimeout = 0
+    let updatePollTimer = 0
     let disposed = false
 
     const transition = (nextState: UpdateState, percent = progressValue, nextStatus = messageForState(nextState)) => {
@@ -159,6 +161,11 @@ export default function AdminPwaUpdater() {
       } catch {
         // Checagem em background não derruba a versão instalada.
       }
+    }
+
+    const pollForUpdate = () => {
+      if (applyingUpdate || document.visibilityState !== 'visible' || !navigator.onLine) return
+      void checkForUpdate(true)
     }
 
     const observeRegistration = (activeRegistration: ServiceWorkerRegistration) => {
@@ -273,11 +280,13 @@ export default function AdminPwaUpdater() {
     }
 
     window.setTimeout(() => void initialize(), 600)
+    updatePollTimer = window.setInterval(pollForUpdate, UPDATE_POLL_MS)
 
     return () => {
       disposed = true
       applyingUpdate = false
       if (activationTimeout) window.clearTimeout(activationTimeout)
+      if (updatePollTimer) window.clearInterval(updatePollTimer)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('focus', onFocus)
