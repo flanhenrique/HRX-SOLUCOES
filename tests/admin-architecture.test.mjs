@@ -32,19 +32,22 @@ test('authenticated admin mounts exactly one canonical root', async () => {
 })
 
 test('business modules are routed as pure views instead of sibling fullscreen apps', async () => {
-  const [root, quotes, suspensions, fiscal, activities, settings] = await Promise.all([
+  const [root, quotes, suspensions, fiscal, activities, settings, panels, panelsCss] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/AdminQuotes.tsx'),
     read('src/quotes/AdminSuspensionsPage.tsx'),
     read('src/quotes/AdminFiscalPage.tsx'),
     read('src/quotes/AdminActivitiesPage.tsx'),
     read('src/quotes/AdminSettingsPage.tsx'),
+    read('src/quotes/AdminProjectPanelsPage.tsx'),
+    read('src/quotes/admin-project-panels.css'),
   ])
 
   assert.match(root, /destination === 'quotes'.*<AdminQuotes \/>/s)
   assert.match(root, /destination === 'suspensions'.*<AdminSuspensionsPage \/>/s)
   assert.match(root, /destination === 'fiscal'.*<AdminFiscalPage \/>/s)
   assert.match(root, /destination === 'activities'.*<AdminActivitiesPage \/>/s)
+  assert.match(root, /destination === 'panels'.*<AdminProjectPanelsPage \/>/s)
   assert.match(root, /<AdminSettingsPage \/>/)
   assert.doesNotMatch(root, /AdminExperienceLayer/)
 
@@ -55,6 +58,8 @@ test('business modules are routed as pure views instead of sibling fullscreen ap
   assert.doesNotMatch(quotes, /className="admin-mobile-nav"/)
   assert.doesNotMatch(activities, /hrx-glass-sidebar/)
   assert.doesNotMatch(settings, /hrx-glass-sidebar/)
+  assert.doesNotMatch(panels, /role="dialog"|aria-modal|admin-projects-close|onAdminNavigate|PANELS_HASH/)
+  assert.doesNotMatch(panelsCss, /\.admin-projects-shell\{[^}]*position:fixed/)
   assert.match(suspensions, /hrx_suspend_quote/)
   assert.match(suspensions, /hrx_resume_quote/)
   assert.match(fiscal, /cnpj-lookup/)
