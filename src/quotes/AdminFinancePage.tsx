@@ -31,7 +31,8 @@ type Request = { id: string; client_id?: string | null; proposal_number: string;
 type Client = { id: string; name: string; company?: string | null; document?: string | null; email?: string | null; phone?: string | null }
 type PlannedInstallment = { id: string; draft_id: string; installment_number: number; amount: number; due_date: string; status: string }
 type Version = { id: string; request_id: string; version_number: number; commercial_status: string; document_id?: string | null; pdf_object_path?: string | null }
-type FinanceResponse = { entries: FinancialEntry[]; accounts: FinancialAccount[]; settlements: Settlement[]; drafts: Draft[]; requests: Request[]; clients: Client[]; installments: PlannedInstallment[]; versions: Version[] }
+type FinanceMetrics = { outstanding: number; payable: number; projected: number; overdueReceivable: number; overduePayable: number; reserve: number; receivedMonth: number }
+type FinanceResponse = { entries: FinancialEntry[]; accounts: FinancialAccount[]; settlements: Settlement[]; drafts: Draft[]; requests: Request[]; clients: Client[]; installments: PlannedInstallment[]; versions: Version[]; metrics?: FinanceMetrics }
 type View = 'billing' | 'receivables' | 'received' | 'payables' | 'paidPayables' | 'cashflow'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -93,7 +94,7 @@ export default function AdminFinancePage() {
   const openPayables = useMemo(() => payables.filter((item) => item.status !== 'paid'), [payables])
   const paidPayables = useMemo(() => payables.filter((item) => item.status === 'paid'), [payables])
 
-  const metrics = useMemo(() => {
+  const fallbackMetrics = useMemo<FinanceMetrics>(() => {
     const outstanding = openReceivables.reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
     const payable = openPayables.reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
     const projected = outstanding - payable
@@ -104,6 +105,7 @@ export default function AdminFinancePage() {
     const receivedMonth = data.settlements.filter((item) => item.settled_at.startsWith(month) && entryById.get(item.entry_id)?.entry_type === 'receivable').reduce((sum, item) => sum + Number(item.amount), 0)
     return { outstanding, payable, projected, overdueReceivable, overduePayable, reserve, receivedMonth }
   }, [data.settlements, entryById, openPayables, openReceivables])
+  const metrics = data.metrics ?? fallbackMetrics
 
   if (checking || !session) return <section className="finance-loading">Validando acesso financeiro…</section>
 
