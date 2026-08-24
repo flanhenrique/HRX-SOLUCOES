@@ -3,10 +3,10 @@
  * Este arquivo é carregado por último e atua apenas sobre o shell canônico do PWA.
  */
 
-/* O conteúdo deve terminar antes do dock flutuante e não expor o fundo do body. */
+/* O conteúdo termina antes do dock flutuante e não expõe o fundo do body. */
 .hrx-unified-shell.is-pwa>.hrx-unified-content{
   background:transparent!important;
-  padding-bottom:calc(112px + env(safe-area-inset-bottom))!important;
+  padding-bottom:104px!important;
   scrollbar-width:none;
 }
 .hrx-unified-shell.is-pwa>.hrx-unified-content::-webkit-scrollbar{display:none}
@@ -16,7 +16,7 @@
   min-height:0!important;
 }
 
-/* A view de Orçamentos não deve manter a altura/padding do shell legado. */
+/* A view de Orçamentos não mantém altura/padding do shell legado. */
 .hrx-unified-shell.is-pwa .quote-commercial-shell{
   min-height:0!important;
   height:auto!important;
@@ -25,7 +25,7 @@
   padding-bottom:0!important;
 }
 
-/* CTA compacto logo após o header: remove a faixa vazia que aparecia acima do botão. */
+/* CTA compacto logo após o header: elimina a faixa vazia que aparecia acima do botão. */
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-topbar.quote-topbar{
   min-height:0!important;
   height:auto!important;
@@ -92,7 +92,7 @@
   min-height:0!important;
   height:auto!important;
   max-height:none!important;
-  padding:0 12px calc(108px + env(safe-area-inset-bottom))!important;
+  padding:0 12px 12px!important;
   overflow:visible!important;
 }
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-queue,
@@ -104,11 +104,11 @@
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-queue-list{
   overflow:visible!important;
   padding:7px 7px 18px!important;
-  scroll-padding-bottom:108px;
+  scroll-padding-bottom:104px;
 }
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-lead:last-child{margin-bottom:6px}
 
-/* O editor também reserva espaço real para o dock sem esconder ações. */
+/* O editor reserva espaço real para o dock sem esconder ações. */
 .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor{
   min-height:0!important;
   height:auto!important;
@@ -118,10 +118,12 @@
   scroll-padding-bottom:180px!important;
 }
 
-/* Tema claro: todos os textos que eram hard-coded para o tema escuro recebem contraste explícito. */
+/* Tema claro: todos os textos antes hard-coded para o tema escuro recebem contraste explícito. */
 html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-unified-content{
   background:linear-gradient(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%)!important;
 }
+
+/* O logo oficial é prata/branco; mantemos o chrome superior navy no tema claro para preservar contraste da marca. */
 html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
   background:linear-gradient(135deg,rgba(7,24,45,.98),rgba(15,43,70,.97))!important;
   border-bottom-color:rgba(255,255,255,.08)!important;
