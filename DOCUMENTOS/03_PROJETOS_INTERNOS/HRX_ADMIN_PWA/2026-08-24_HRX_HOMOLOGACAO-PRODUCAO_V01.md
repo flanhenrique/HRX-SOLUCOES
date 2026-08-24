@@ -3,8 +3,8 @@
 **Data**: 2026-08-24  
 **Versão**: V01  
 **Status**: HOMOLOGAÇÃO EXTERNA PENDENTE — SESSÃO ADMINISTRATIVA REAL NÃO DISPONÍVEL  
-**Ambiente**: Produção (https://hrxsolutions.com.br)  
-**Repositório Canônico**: flanhenrique/HRX-SOLUCOES  
+**Ambiente**: Produção (`https://hrxsolutions.com.br`)  
+**Repositório Canônico**: `flanhenrique/HRX-SOLUCOES`  
 
 ---
 
@@ -18,13 +18,10 @@ Este documento estabelece o protocolo de homologação operacional e registra os
 
 | Tipo de Teste | Ferramenta / Comando | Quantidade | Resultado |
 |---|---|---|---|
-| **Unitários e Regressão PWA** | 
-pm run test:pwa | 67 testes | **67 PASS (100%)** |
-| **Compilação e Bundle** | 
-pm run build | 124 módulos | **PASS (450ms)** |
-| **Navegador Real E2E** | 
-px playwright test | 24 testes em 17 viewports | **24 PASS (100%)** |
-| **Acessibilidade WCAG** | @axe-core/playwright | Matriz responsiva | **0 violações críticas** |
+| **Unitários e Regressão PWA** | `npm run test:pwa` | 67 testes | **67 PASS (100%)** |
+| **Compilação e Bundle** | `npm run build` | 124 módulos | **PASS (450ms)** |
+| **Navegador Real E2E** | `npx playwright test` | 24 testes em 17 viewports | **24 PASS (100%)** |
+| **Acessibilidade WCAG** | `@axe-core/playwright` | Matriz responsiva | **0 violações críticas** |
 
 ---
 
@@ -33,7 +30,7 @@ px playwright test | 24 testes em 17 viewports | **24 PASS (100%)** |
 Para a realização da homologação com operador humano, o seguinte roteiro deve ser executado no ambiente de produção:
 
 1. **Autenticação e AAL2**:
-   - [ ] Acessar https://hrxsolutions.com.br/admin/
+   - [ ] Acessar `https://hrxsolutions.com.br/admin/`
    - [ ] Inserir e-mail e senha administrativa cadastrada
    - [ ] Inserir código TOTP de 6 dígitos gerado no autenticador
    - [ ] Confirmar redirecionamento para o shell administrativo sem recarregamento em loop
