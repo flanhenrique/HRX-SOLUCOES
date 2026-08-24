@@ -41,6 +41,7 @@ const defaultOrigins = ['http://localhost:5173', 'https://flanhenrique.github.io
 const allowedDiscounts: DiscountLevel[] = [0, 5, 10, 15, 20]
 const immutableStatuses: CommercialStatus[] = ['approved', 'invoiced', 'received', 'lost', 'cancelled']
 const deliveryEvents = new Set(['email_prepared', 'email_shared', 'whatsapp_prepared', 'whatsapp_shared', 'proposal_copied', 'pdf_downloaded'])
+const KPI_PAGE_SIZE = 1000
 
 function allowedOrigins() {
   const configured = (Deno.env.get('HRX_ALLOWED_ORIGINS') ?? '').split(',').map((item) => item.trim()).filter(Boolean)
@@ -71,6 +72,41 @@ const normalizeRetentions = (value?: Retentions): Required<Retentions> => ({
   csll: Math.max(0, Number(value?.csll ?? 0)),
   inss: Math.max(0, Number(value?.inss ?? 0)),
 })
+
+async function loadCommercialMetrics(db: any) {
+  let offset = 0
+  let pipelineCents = 0
+  let drafts = 0
+  let negotiation = 0
+  let approved = 0
+  let total = 0
+
+  while (true) {
+    const { data, error } = await db.from('quote_drafts')
+      .select('final_amount,commercial_status,status')
+      .order('id', { ascending: true })
+      .range(offset, offset + KPI_PAGE_SIZE - 1)
+    if (error) throw error
+
+    const rows = data ?? []
+    for (const row of rows) {
+      total += 1
+      const commercialStatus = row.commercial_status as CommercialStatus
+      const operationalStatus = String(row.status || '')
+      if (!['rejected', 'suspended'].includes(operationalStatus) && !['lost', 'cancelled', 'received'].includes(commercialStatus)) {
+        pipelineCents += toCents(row.final_amount)
+      }
+      if (commercialStatus === 'draft') drafts += 1
+      if (['reviewed', 'sent', 'negotiating'].includes(commercialStatus)) negotiation += 1
+      if (['approved', 'invoiced', 'received'].includes(commercialStatus)) approved += 1
+    }
+
+    if (rows.length < KPI_PAGE_SIZE) break
+    offset += KPI_PAGE_SIZE
+  }
+
+  return { pipeline: fromCents(pipelineCents), drafts, negotiation, approved, total }
+}
 
 async function resolveItems(db: any, draftId: string, items: ItemInput[]) {
   if (!Array.isArray(items) || items.length > 100) throw new Error('invalid_items')
@@ -227,6 +263,7 @@ Deno.serve(async (req) => {
   if (!admin) return json({ error: 'forbidden' }, 403, headers)
 
   if (req.method === 'GET') {
+    const metricsPromise = loadCommercialMetrics(db)
     const { data: requests, error } = await db.from('quote_requests')
       .select('id,client_id,protocol,proposal_number,created_at,updated_at,name,email,phone,company,request_text,desired_deadline,preferred_contact,status')
       .order('created_at', { ascending: false }).limit(200)
@@ -255,10 +292,13 @@ Deno.serve(async (req) => {
     const versionsByRequest = group(versions, 'request_id')
     const auditsByRequest = group(audits, 'request_id')
     const draftByRequest = new Map((drafts ?? []).map((draft: any) => [draft.request_id, { ...draft, items: itemsByDraft.get(draft.id) ?? [], paymentInstallments: installmentsByDraft.get(draft.id) ?? [] }]))
+    let metrics
+    try { metrics = await metricsPromise } catch { return json({ error: 'metrics_query_failed' }, 500, headers) }
     return json({
       clients: clients ?? [],
       providers: providers ?? [],
       pricingRules: pricingRules ?? [],
+      metrics,
       requests: (requests ?? []).map((request: any) => ({
         ...request,
         draft: draftByRequest.get(request.id) ?? null,
@@ -561,9 +601,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, status: body.status }, 200, headers)
   }
 
-  // Compatibilidade temporária com o painel publicado antes do fluxo versionado.
-  // A aprovação legada mantém o status operacional antigo, sem fingir que existe
-  // uma versão comercial oficial ou alterar o novo commercial_status.
   if (body.action === 'approve') {
     if (draft.status === 'suspended') return json({ error: 'quote_is_suspended' }, 409, headers)
     if (draft.status === 'needs_scope' || Number(draft.final_amount) <= 0) return json({ error: 'scope_not_ready' }, 409, headers)
