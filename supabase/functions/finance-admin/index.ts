@@ -10,6 +10,8 @@ type ReceiptInput = {
 
 type ActionPayload =
   | { action: 'create_receivables'; requestId: string; invoiceNumber: string; invoiceIssuedAt: string }
+  | { action: 'create_payable'; counterpartyName: string; description: string; category: string; amount: number; dueDate: string; competenceDate?: string; referenceNumber?: string; notes?: string }
+  | { action: 'cancel_entry'; entryId: string }
   | { action: 'add_account'; name: string }
   | { action: 'record_settlement'; entryId: string; amount: number; accountId: string; settledAt?: string; paymentMethod?: string; note?: string; receipt?: ReceiptInput | null }
 
@@ -98,15 +100,14 @@ Deno.serve(async (req) => {
     const currentDate = new Date().toISOString().slice(0, 10)
     await db.from('financial_entries')
       .update({ status: 'overdue', updated_at: new Date().toISOString() })
-      .eq('entry_type', 'receivable')
       .lt('due_date', currentDate)
       .in('status', ['open', 'partial'])
 
     const [{ data: entries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }] = await Promise.all([
-      db.from('financial_entries').select('*').order('due_date', { ascending: true }).limit(600),
+      db.from('financial_entries').select('*').order('due_date', { ascending: true }).limit(800),
       db.from('financial_accounts').select('id,name,active,sort_order,created_at').order('sort_order').order('name'),
       db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_percent,tax_amount,approved_version,current_version,payment_mode,installments,first_due_date,valid_until,updated_at').in('commercial_status', ['approved', 'invoiced', 'received']).order('updated_at', { ascending: false }).limit(300),
-      db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).limit(1200),
+      db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).limit(1600),
     ])
     if (entriesError) return json({ error: 'query_failed' }, 500, headers)
 
@@ -170,6 +171,52 @@ Deno.serve(async (req) => {
     if (error?.code === '23505') return json({ error: 'account_already_exists' }, 409, headers)
     if (error) return json({ error: 'account_create_failed' }, 500, headers)
     return json({ account: data }, 201, headers)
+  }
+
+  if (body.action === 'create_payable') {
+    const counterpartyName = clean(body.counterpartyName, 160)
+    const description = clean(body.description, 240)
+    const category = clean(body.category, 120)
+    const amountCents = cents(body.amount)
+    const dueDate = isoDate(body.dueDate)
+    const competenceDate = isoDate(body.competenceDate) || dueDate
+    const referenceNumber = clean(body.referenceNumber, 120) || null
+    const notes = clean(body.notes, 1200) || null
+    if (counterpartyName.length < 2 || description.length < 2 || category.length < 2 || amountCents <= 0 || !dueDate) {
+      return json({ error: 'payable_data_required' }, 400, headers)
+    }
+    const status = dueDate < new Date().toISOString().slice(0, 10) ? 'overdue' : 'open'
+    const { data: entry, error } = await db.from('financial_entries').insert({
+      entry_type: 'payable',
+      status,
+      description,
+      counterparty_name: counterpartyName,
+      gross_amount: money(amountCents),
+      paid_amount: 0,
+      due_date: dueDate,
+      competence_date: competenceDate,
+      category,
+      notes,
+      source: 'manual',
+      invoice_number: referenceNumber,
+      tax_reserve_amount: 0,
+      created_by: user.id,
+    }).select('*').single()
+    if (error || !entry) return json({ error: 'payable_create_failed' }, 500, headers)
+    return json({ entry }, 201, headers)
+  }
+
+  if (body.action === 'cancel_entry') {
+    const entryId = clean(body.entryId, 80)
+    if (!entryId) return json({ error: 'entry_required' }, 400, headers)
+    const { data: entry } = await db.from('financial_entries').select('id,entry_type,source,status').eq('id', entryId).maybeSingle()
+    if (!entry) return json({ error: 'entry_not_found' }, 404, headers)
+    if (entry.entry_type !== 'payable' || entry.source !== 'manual' || ['paid', 'cancelled'].includes(entry.status)) return json({ error: 'entry_not_cancellable' }, 409, headers)
+    const { count } = await db.from('financial_settlements').select('id', { count: 'exact', head: true }).eq('entry_id', entryId)
+    if ((count ?? 0) > 0) return json({ error: 'entry_has_settlements' }, 409, headers)
+    const { data: cancelled, error } = await db.from('financial_entries').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', entryId).select('*').single()
+    if (error || !cancelled) return json({ error: 'entry_cancel_failed' }, 500, headers)
+    return json({ entry: cancelled }, 200, headers)
   }
 
   if (body.action === 'create_receivables') {
@@ -313,12 +360,15 @@ Deno.serve(async (req) => {
         const client = entry.client_id
           ? (await db.from('clients').select('id,name,company').eq('id', entry.client_id).maybeSingle()).data
           : null
+        const isPayable = entry.entry_type === 'payable'
+        const documentType = isPayable ? 'Comprovante de Pagamento' : 'Comprovante de Recebimento'
+        const counterparty = isPayable ? entry.counterparty_name : (client?.company || client?.name || request?.company || request?.name || null)
         const { data: document, error: documentError } = await db.from('hrx_documents').insert({
           object_path: objectPath,
           area_key: 'financeiro',
           folder: 'Comprovantes',
-          client_name: client?.company || client?.name || request?.company || request?.name || null,
-          document_type: 'Comprovante de Recebimento',
+          client_name: counterparty,
+          document_type: documentType,
           title: `${fileName} • ${request?.proposal_number || entry.description}`,
           version: 1,
           status: 'active',
@@ -352,7 +402,7 @@ Deno.serve(async (req) => {
     if (settlementError) return json({ error: String(settlementError.message).includes('settlement_exceeds_entry_balance') ? 'settlement_above_balance' : 'settlement_create_failed' }, 409, headers)
 
     const { data: refreshed } = await db.from('financial_entries').select('*').eq('id', entry.id).single()
-    if (entry.quote_request_id) {
+    if (entry.entry_type === 'receivable' && entry.quote_request_id) {
       await db.from('quote_audit_log').insert({
         request_id: entry.quote_request_id,
         actor_user_id: user.id,
