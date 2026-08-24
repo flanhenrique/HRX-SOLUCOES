@@ -1,7 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import AdminClientForm from './AdminClientForm'
-import { navigateAdmin } from './adminNavigation'
 import { generateProposalPdf, type ProposalPdfData } from './proposalPdf'
 import { buildInstallmentSchedule, calculateQuotePreview, toCents } from './quoteMath'
 import type { CommercialStatus, DiscountLevel, PaymentMode, RetentionInput } from './types'
@@ -74,7 +73,8 @@ type Request = {
   versions: Version[]
   audit: Audit[]
 }
-type AdminResponse = { requests: Request[]; clients: Client[]; providers: ProviderRule[]; pricingRules: PricingRule[] }
+type CommercialMetrics = { pipeline: number; drafts: number; negotiation: number; approved: number; total?: number }
+type AdminResponse = { requests: Request[]; clients: Client[]; providers: ProviderRule[]; pricingRules: PricingRule[]; metrics?: CommercialMetrics }
 type ItemState = { key: string; serviceKey?: string | null; serviceName: string; description: string; unitLabel: string; quantity: number; unitAmount: number }
 type EditorState = {
   proposalTitle: string
@@ -254,12 +254,13 @@ export default function AdminQuotes() {
       return match && (filter === 'all' || item.draft.commercial_status === filter)
     })
   }, [data.requests, query, filter])
-  const metrics = useMemo(() => ({
+  const fallbackMetrics = useMemo<CommercialMetrics>(() => ({
     pipeline: data.requests.filter((item) => !(item.draft?.status === 'rejected' || item.draft?.status === 'suspended') && !['lost', 'cancelled', 'received'].includes(item.draft.commercial_status)).reduce((sum, item) => sum + Number(item.draft.final_amount || 0), 0),
     drafts: data.requests.filter((item) => item.draft.commercial_status === 'draft').length,
     negotiation: data.requests.filter((item) => ['reviewed', 'sent', 'negotiating'].includes(item.draft.commercial_status)).length,
     approved: data.requests.filter((item) => ['approved', 'invoiced', 'received'].includes(item.draft.commercial_status)).length,
   }), [data.requests])
+  const metrics = data.metrics ?? fallbackMetrics
   const mutate = async <T,>(body: Record<string, unknown>, select?: string) => {
     if (!session) throw new Error('unauthorized')
     const result = await adminFetch<T>(session, body)
@@ -267,9 +268,8 @@ export default function AdminQuotes() {
     await load(session, select || createdId)
     return result
   }
-  if (checking || !session) return <main className="admin-login-shell"><div className="admin-login-card"><p>Validando acesso administrativo…</p></div></main>
-  return <main className={`admin-live-shell quote-commercial-shell${mobileDetail ? ' is-mobile-detail-open' : ''}`}>
-    <aside className="admin-exec-sidebar"><div className="admin-exec-brand"><span>HRX</span><small>SOLUTIONS</small></div><nav><button className="is-active">{icons.file}Orçamentos</button></nav></aside>
+  if (checking || !session) return <section className="quote-module-loading" role="status">Validando acesso administrativo…</section>
+  return <section className={`admin-live-shell quote-commercial-shell${mobileDetail ? ' is-mobile-detail-open' : ''}`}>
     <section className="admin-exec-main">
       <header className="admin-exec-topbar quote-topbar"><div><span className="admin-section-kicker">OPERAÇÃO COMERCIAL</span><h1>Orçamentos e propostas</h1></div><div><button className="quote-secondary" onClick={() => void load()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar'}</button><button className="quote-primary" onClick={() => setNewOpen(true)}>{icons.plus}Novo orçamento</button></div></header>
       {error && <div className="admin-global-error" role="alert">{error}</div>}
@@ -281,10 +281,9 @@ export default function AdminQuotes() {
         </aside>
         <section className="admin-detail quote-detail">{selected ? <QuoteEditor key={selected.id} request={selected} clients={data.clients} providers={data.providers} pricingRules={data.pricingRules} session={session} onMutate={mutate} onError={setError} onBack={() => setMobileDetail(false)} /> : <div className="quote-empty">{icons.file}<strong>Selecione uma proposta</strong><span>Abra um orçamento para continuar o fluxo comercial.</span></div>}</section>
       </div>
-      <nav className="admin-mobile-nav"><button className={!mobileDetail ? 'is-active' : ''} onClick={() => setMobileDetail(false)}>{icons.file}<span>Orçamentos</span></button><button className={mobileDetail ? 'is-active' : ''} disabled={!selected} onClick={() => setMobileDetail(true)}>{icons.check}<span>Editar</span></button><button onClick={() => setNewOpen(true)}>{icons.plus}<span>Novo</span></button><button onClick={() => navigateAdmin('documents')}>{icons.download}<span>Docs</span></button><button onClick={() => navigateAdmin('executive')}>{icons.back}<span>Início</span></button></nav>
     </section>
-    {newOpen && <NewQuoteModal clients={data.clients} onClose={() => setNewOpen(false)} onCreate={async (payload) => { const result = await mutate<{ request: { id: string } }>({ action: 'create_quote', ...payload }); setNewOpen(false); setSelectedId(result.request.id); setMobileDetail(true) }} onClientCreated={async () => { await load(session) }}/>}
-  </main>
+    {newOpen && <NewQuoteModal clients={data.clients} onClose={() => setNewOpen(false)} onCreate={async (payload) => { const result = await mutate<{ request: { id: string } }>({ action: 'create_quote', ...payload }); setNewOpen(false); setSelectedId(result.request.id); setMobileDetail(true) }} onClientCreated={async () => { await load(session) }}/>} 
+  </section>
 }
 
 function NewQuoteModal({ clients, onClose, onCreate, onClientCreated }: { clients: Client[]; onClose: () => void; onCreate: (payload: { clientId: string; proposalTitle: string; scope: string }) => Promise<void>; onClientCreated: (id?: string) => Promise<void> }) {
