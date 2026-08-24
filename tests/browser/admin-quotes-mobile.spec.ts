@@ -124,3 +124,37 @@ test('quote list is compact, legible and clears the floating dock on iPhone-size
   const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }))
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.width)
 })
+
+test('short quote list keeps the light surface painted to the physical bottom of the PWA', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 })
+  await mountQuoteScreen(page)
+  await page.locator('.admin-lead').nth(1).evaluate((element) => {
+    let current = element
+    while (current) {
+      const next = current.nextElementSibling
+      current.remove()
+      current = next as HTMLElement | null
+    }
+  })
+
+  const shell = page.locator('.hrx-unified-shell.is-pwa')
+  const content = page.locator('.hrx-unified-content')
+  const shellBox = await shell.boundingBox()
+  const contentBox = await content.boundingBox()
+  expect(shellBox).not.toBeNull()
+  expect(contentBox).not.toBeNull()
+  expect(contentBox!.y + contentBox!.height).toBeGreaterThanOrEqual(shellBox!.y + shellBox!.height - 1)
+
+  const surfaces = await page.evaluate(() => {
+    const shellElement = document.querySelector('.hrx-unified-shell.is-pwa') as HTMLElement
+    const contentElement = document.querySelector('.hrx-unified-content') as HTMLElement
+    return {
+      display: getComputedStyle(shellElement).display,
+      shellBackground: getComputedStyle(shellElement).backgroundImage,
+      contentBackground: getComputedStyle(contentElement).backgroundImage,
+    }
+  })
+  expect(surfaces.display).toBe('flex')
+  expect(surfaces.shellBackground).toContain('rgb(238, 244, 250)')
+  expect(surfaces.contentBackground).toContain('rgb(238, 244, 250)')
+})
