@@ -8,17 +8,21 @@ type FinancialEntry = {
   entry_type: 'receivable' | 'payable'
   status: 'open' | 'partial' | 'paid' | 'cancelled' | 'overdue'
   description: string
+  counterparty_name?: string | null
   client_id?: string | null
   quote_request_id?: string | null
   quote_version_id?: string | null
   installment_number?: number | null
   invoice_number?: string | null
   invoice_issued_at?: string | null
+  competence_date?: string | null
   gross_amount: number
   paid_amount: number
   tax_reserve_amount?: number | null
   due_date: string
   category?: string | null
+  notes?: string | null
+  source?: string | null
 }
 type FinancialAccount = { id: string; name: string; active: boolean; sort_order: number }
 type Settlement = { id: string; entry_id: string; amount: number; settled_at: string; account_id: string; payment_method?: string | null; note?: string | null; receipt_document_id?: string | null; receipt_object_path?: string | null }
@@ -28,12 +32,13 @@ type Client = { id: string; name: string; company?: string | null; document?: st
 type PlannedInstallment = { id: string; draft_id: string; installment_number: number; amount: number; due_date: string; status: string }
 type Version = { id: string; request_id: string; version_number: number; commercial_status: string; document_id?: string | null; pdf_object_path?: string | null }
 type FinanceResponse = { entries: FinancialEntry[]; accounts: FinancialAccount[]; settlements: Settlement[]; drafts: Draft[]; requests: Request[]; clients: Client[]; installments: PlannedInstallment[]; versions: Version[] }
-type View = 'billing' | 'receivables' | 'received'
+type View = 'billing' | 'receivables' | 'received' | 'payables' | 'paidPayables'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const date = (value?: string | null) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : '—'
 const today = () => new Date().toISOString().slice(0, 10)
 const safeFileName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 120)
+const expenseCategories = ['Software e assinaturas', 'Serviços profissionais', 'Marketing', 'Infraestrutura', 'Impostos e taxas', 'Operacional', 'Reembolso', 'Outros']
 
 async function financeFetch<T>(session: Session, body?: Record<string, unknown>): Promise<T> {
   const response = await fetch(financeAdminEndpoint, {
@@ -55,6 +60,8 @@ export default function AdminFinancePage() {
   const [data, setData] = useState<FinanceResponse>({ entries: [], accounts: [], settlements: [], drafts: [], requests: [], clients: [], installments: [], versions: [] })
   const [invoiceDraft, setInvoiceDraft] = useState<Draft | null>(null)
   const [settlementEntry, setSettlementEntry] = useState<FinancialEntry | null>(null)
+  const [payableOpen, setPayableOpen] = useState(false)
+  const [cancelEntry, setCancelEntry] = useState<FinancialEntry | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
 
   useEffect(() => {
@@ -76,54 +83,67 @@ export default function AdminFinancePage() {
 
   const requestById = useMemo(() => new Map(data.requests.map((item) => [item.id, item])), [data.requests])
   const clientById = useMemo(() => new Map(data.clients.map((item) => [item.id, item])), [data.clients])
+  const entryById = useMemo(() => new Map(data.entries.map((item) => [item.id, item])), [data.entries])
   const entryRequestIds = useMemo(() => new Set(data.entries.filter((item) => item.entry_type === 'receivable' && item.quote_request_id).map((item) => item.quote_request_id as string)), [data.entries])
   const billingCandidates = useMemo(() => data.drafts.filter((draft) => draft.commercial_status === 'approved' && !entryRequestIds.has(draft.request_id)), [data.drafts, entryRequestIds])
   const receivables = useMemo(() => data.entries.filter((item) => item.entry_type === 'receivable' && item.status !== 'cancelled'), [data.entries])
   const openReceivables = useMemo(() => receivables.filter((item) => item.status !== 'paid'), [receivables])
   const paidReceivables = useMemo(() => receivables.filter((item) => item.status === 'paid'), [receivables])
+  const payables = useMemo(() => data.entries.filter((item) => item.entry_type === 'payable' && item.status !== 'cancelled'), [data.entries])
+  const openPayables = useMemo(() => payables.filter((item) => item.status !== 'paid'), [payables])
+  const paidPayables = useMemo(() => payables.filter((item) => item.status === 'paid'), [payables])
 
   const metrics = useMemo(() => {
     const outstanding = openReceivables.reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
-    const overdue = openReceivables.filter((item) => item.status === 'overdue').reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
-    const payable = data.entries.filter((item) => item.entry_type === 'payable' && !['paid', 'cancelled'].includes(item.status)).reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
+    const payable = openPayables.reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
+    const projected = outstanding - payable
+    const overdueReceivable = openReceivables.filter((item) => item.status === 'overdue').reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
+    const overduePayable = openPayables.filter((item) => item.status === 'overdue').reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
     const reserve = openReceivables.reduce((sum, item) => sum + Number(item.tax_reserve_amount || 0), 0)
     const month = new Date().toISOString().slice(0, 7)
-    const receivedMonth = data.settlements.filter((item) => item.settled_at.startsWith(month)).reduce((sum, item) => sum + Number(item.amount), 0)
-    return { outstanding, overdue, payable, reserve, receivedMonth }
-  }, [data.entries, data.settlements, openReceivables])
+    const receivedMonth = data.settlements.filter((item) => item.settled_at.startsWith(month) && entryById.get(item.entry_id)?.entry_type === 'receivable').reduce((sum, item) => sum + Number(item.amount), 0)
+    return { outstanding, payable, projected, overdueReceivable, overduePayable, reserve, receivedMonth }
+  }, [data.settlements, entryById, openPayables, openReceivables])
 
   if (checking || !session) return <section className="finance-loading">Validando acesso financeiro…</section>
 
   return <section className="finance-page">
     <header className="finance-page-header">
-      <div><span>FINANCEIRO • FASE 1</span><h1>Recebíveis e faturamento</h1><p>Proposta aprovada vira previsão. Somente após registrar a nota/fatura ela entra oficialmente em Contas a Receber.</p></div>
-      <button type="button" onClick={() => void load()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar'}</button>
+      <div><span>FINANCEIRO • CONTROLE OPERACIONAL</span><h1>Receitas, despesas e fluxo previsto</h1><p>Propostas aprovadas alimentam o faturamento e as contas a receber. Despesas entram no mesmo ledger oficial, com baixa, conta financeira e comprovante.</p></div>
+      <div className="finance-header-actions"><button type="button" onClick={() => void load()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar'}</button><button type="button" className="is-primary" onClick={() => setPayableOpen(true)}>+ Nova despesa</button></div>
     </header>
 
     {error && <div className="finance-error" role="alert">{error}</div>}
 
     <div className="finance-metrics">
       <article><span>A receber</span><strong>{currency.format(metrics.outstanding)}</strong><small>Saldo dos recebíveis abertos</small></article>
-      <article><span>Vencidos</span><strong>{currency.format(metrics.overdue)}</strong><small>Saldo após o vencimento</small></article>
-      <article><span>Recebido no mês</span><strong>{currency.format(metrics.receivedMonth)}</strong><small>Baixas registradas no período</small></article>
-      <article><span>Impostos a reservar</span><strong>{currency.format(metrics.reserve)}</strong><small>Baseada nas propostas faturadas</small></article>
-      <article><span>A pagar</span><strong>{currency.format(metrics.payable)}</strong><small>Ledger de despesas existente</small></article>
+      <article><span>A pagar</span><strong>{currency.format(metrics.payable)}</strong><small>Despesas ainda não liquidadas</small></article>
+      <article><span>Saldo previsto</span><strong>{currency.format(metrics.projected)}</strong><small>A receber menos A pagar</small></article>
+      <article><span>Impostos a reservar</span><strong>{currency.format(metrics.reserve)}</strong><small>Reserva das propostas faturadas</small></article>
+      <article><span>Recebido no mês</span><strong>{currency.format(metrics.receivedMonth)}</strong><small>Baixas de recebíveis no período</small></article>
+      <article><span>Vencidos</span><strong>{currency.format(metrics.overdueReceivable + metrics.overduePayable)}</strong><small>Receber {currency.format(metrics.overdueReceivable)} • pagar {currency.format(metrics.overduePayable)}</small></article>
     </div>
 
     <nav className="finance-tabs" aria-label="Áreas do financeiro">
       <button className={view === 'billing' ? 'is-active' : ''} onClick={() => setView('billing')}>Aguardando faturamento <span>{billingCandidates.length}</span></button>
       <button className={view === 'receivables' ? 'is-active' : ''} onClick={() => setView('receivables')}>Contas a receber <span>{openReceivables.length}</span></button>
       <button className={view === 'received' ? 'is-active' : ''} onClick={() => setView('received')}>Recebidos <span>{paidReceivables.length}</span></button>
+      <button className={view === 'payables' ? 'is-active' : ''} onClick={() => setView('payables')}>Contas a pagar <span>{openPayables.length}</span></button>
+      <button className={view === 'paidPayables' ? 'is-active' : ''} onClick={() => setView('paidPayables')}>Pagos <span>{paidPayables.length}</span></button>
     </nav>
 
     {view === 'billing' && <BillingList drafts={billingCandidates} requestById={requestById} clientById={clientById} installments={data.installments} onInvoice={setInvoiceDraft} />}
     {view === 'receivables' && <ReceivablesList entries={openReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} />}
     {view === 'received' && <ReceivablesList entries={paidReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
+    {view === 'payables' && <PayablesList entries={openPayables} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onCancel={setCancelEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} />}
+    {view === 'paidPayables' && <PayablesList entries={paidPayables} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onCancel={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
 
-    <footer className="finance-page-footer"><span>Recebíveis vinculados a proposta, versão, parcela e documento.</span><button type="button" onClick={() => setAccountOpen(true)}>Configurar contas de recebimento</button></footer>
+    <footer className="finance-page-footer"><span>Todos os lançamentos usam o ledger financeiro oficial da HRX e exigem sessão administrativa com MFA/AAL2.</span><button type="button" onClick={() => setAccountOpen(true)}>Configurar contas financeiras</button></footer>
 
     {invoiceDraft && <InvoiceModal session={session} draft={invoiceDraft} request={requestById.get(invoiceDraft.request_id)} installments={data.installments.filter((item) => item.draft_id === invoiceDraft.id)} onClose={() => setInvoiceDraft(null)} onDone={async () => { setInvoiceDraft(null); await load(session); setView('receivables') }} onError={setError} />}
-    {settlementEntry && <SettlementModal session={session} entry={settlementEntry} accounts={data.accounts.filter((item) => item.active)} onClose={() => setSettlementEntry(null)} onNeedAccount={() => setAccountOpen(true)} onDone={async () => { setSettlementEntry(null); await load(session) }} onError={setError} />}
+    {payableOpen && <PayableModal session={session} onClose={() => setPayableOpen(false)} onDone={async () => { setPayableOpen(false); await load(session); setView('payables') }} onError={setError} />}
+    {settlementEntry && <SettlementModal session={session} entry={settlementEntry} accounts={data.accounts.filter((item) => item.active)} onClose={() => setSettlementEntry(null)} onNeedAccount={() => setAccountOpen(true)} onDone={async () => { const type = settlementEntry.entry_type; setSettlementEntry(null); await load(session); setView(type === 'payable' ? 'payables' : 'receivables') }} onError={setError} />}
+    {cancelEntry && <CancelPayableModal session={session} entry={cancelEntry} onClose={() => setCancelEntry(null)} onDone={async () => { setCancelEntry(null); await load(session); setView('payables') }} onError={setError} />}
     {accountOpen && <AccountModal session={session} onClose={() => setAccountOpen(false)} onDone={async () => { setAccountOpen(false); await load(session) }} onError={setError} />}
   </section>
 }
@@ -155,6 +175,18 @@ function ReceivablesList({ entries, requestById, clientById, settlements, accoun
   })}</tbody></table></div>
 }
 
+function PayablesList({ entries, settlements, accounts, onSettle, onCancel, onOpenReceipt, readOnly = false }: { entries: FinancialEntry[]; settlements: Settlement[]; accounts: FinancialAccount[]; onSettle: (entry: FinancialEntry) => void; onCancel: (entry: FinancialEntry) => void; onOpenReceipt: (path: string) => void; readOnly?: boolean }) {
+  const accountById = new Map(accounts.map((item) => [item.id, item]))
+  if (!entries.length) return <EmptyState title={readOnly ? 'Nenhuma despesa paga' : 'Nenhuma conta a pagar'} text={readOnly ? 'As despesas quitadas aparecerão aqui.' : 'Use “Nova despesa” para registrar compromissos, fornecedores e vencimentos.'} />
+  return <div className="finance-table-wrap"><table className="finance-table"><thead><tr><th>Favorecido / despesa</th><th>Vencimento</th><th>Categoria</th><th>Documento</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead><tbody>{entries.map((entry) => {
+    const entrySettlements = settlements.filter((item) => item.entry_id === entry.id)
+    const latest = entrySettlements[0]
+    const remaining = Math.max(0, Number(entry.gross_amount) - Number(entry.paid_amount))
+    const statusLabel = entry.status === 'paid' ? 'Pago' : entry.status === 'partial' ? 'Pago parcial' : entry.status === 'overdue' ? (Number(entry.paid_amount) > 0 ? 'Vencido • parcial' : 'Vencido') : 'A pagar'
+    return <tr key={entry.id}><td data-label="Favorecido / despesa"><strong>{entry.counterparty_name || 'Favorecido'}</strong><small>{entry.description}</small></td><td data-label="Vencimento">{date(entry.due_date)}</td><td data-label="Categoria"><strong>{entry.category || '—'}</strong><small>Competência {date(entry.competence_date)}</small></td><td data-label="Documento">{entry.invoice_number || '—'}</td><td data-label="Valor"><strong>{currency.format(Number(entry.gross_amount))}</strong><small>Saldo {currency.format(remaining)}</small></td><td data-label="Pago"><strong>{currency.format(Number(entry.paid_amount))}</strong>{latest && <small>{accountById.get(latest.account_id)?.name || 'Conta'} • {new Date(latest.settled_at).toLocaleDateString('pt-BR')}</small>}</td><td data-label="Status"><span className={`finance-status is-${entry.status}`}>{statusLabel}</span></td><td data-label="Ações"><div className="finance-row-actions">{!readOnly && <button type="button" onClick={() => onSettle(entry)}>Registrar pagamento</button>}{!readOnly && Number(entry.paid_amount) === 0 && <button type="button" className="is-danger" onClick={() => onCancel(entry)}>Cancelar</button>}{latest?.receipt_object_path && <button type="button" className="is-secondary" onClick={() => onOpenReceipt(latest.receipt_object_path!)}>Comprovante</button>}</div></td></tr>
+  })}</tbody></table></div>
+}
+
 function InvoiceModal({ session, draft, request, installments, onClose, onDone, onError }: { session: Session; draft: Draft; request?: Request; installments: PlannedInstallment[]; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(today())
@@ -165,14 +197,41 @@ function InvoiceModal({ session, draft, request, installments, onClose, onDone, 
     try { await financeFetch(session, { action: 'create_receivables', requestId: draft.request_id, invoiceNumber: invoiceNumber.trim(), invoiceIssuedAt: invoiceDate }); await onDone() }
     catch (cause) {
       const code = cause instanceof Error ? cause.message : ''
-      const messages: Record<string, string> = { receivables_already_exist: 'Esta proposta já possui recebíveis vinculados.', payment_schedule_mismatch: 'O cronograma de parcelas não fecha com o valor aprovado.', invoice_data_required: 'Informe o número e a data da nota/fatura.' }
+      const messages: Record<string, string> = { receivables_already_exist: 'Esta proposta já possui recebíveis vinculados.', payment_schedule_mismatch: 'O cronograma de parcelas não fecha com o valor aprovado.', approved_payment_schedule_mismatch: 'A versão aprovada e o cronograma de parcelas estão divergentes. O faturamento foi bloqueado para evitar valor incorreto.', invoice_data_required: 'Informe o número e a data da nota/fatura.' }
       onError(messages[code] || 'Não foi possível registrar o faturamento.')
     } finally { setBusy(false) }
   }
   return <div className="finance-modal-backdrop"><form className="finance-modal" onSubmit={submit}><header><div><span>FATURAMENTO</span><h2>{request?.proposal_number || 'Proposta aprovada'}</h2><p>O HRX não emite nota fiscal nesta fase. Informe o documento já emitido para criar oficialmente as contas a receber.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Número da nota/fatura<input autoFocus value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} placeholder="Ex.: NFS-e 1234" /></label><label>Data de emissão<input type="date" value={invoiceDate} onChange={(event) => setInvoiceDate(event.target.value)} /></label><div className="finance-modal-summary"><span>Valor aprovado <strong>{currency.format(Number(draft.final_amount))}</strong></span><span>Parcelas <strong>{installments.length}</strong></span><span>Reserva tributária <strong>{currency.format(Number(draft.tax_amount || 0))}</strong></span></div></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy || !invoiceNumber.trim()}>{busy ? 'Registrando…' : 'Criar contas a receber'}</button></footer></form></div>
 }
 
+function PayableModal({ session, onClose, onDone, onError }: { session: Session; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {
+  const [counterpartyName, setCounterpartyName] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState(expenseCategories[0])
+  const [amount, setAmount] = useState('')
+  const [dueDate, setDueDate] = useState(today())
+  const [competenceDate, setCompetenceDate] = useState(today())
+  const [referenceNumber, setReferenceNumber] = useState('')
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    const numericAmount = Number(amount.replace(/\./g, '').replace(',', '.'))
+    if (counterpartyName.trim().length < 2 || description.trim().length < 2 || !category.trim() || !numericAmount || numericAmount <= 0 || !dueDate) { onError('Preencha favorecido, descrição, categoria, valor e vencimento.'); return }
+    setBusy(true)
+    try {
+      await financeFetch(session, { action: 'create_payable', counterpartyName: counterpartyName.trim(), description: description.trim(), category: category.trim(), amount: numericAmount, dueDate, competenceDate, referenceNumber: referenceNumber.trim() || null, notes: notes.trim() || null })
+      await onDone()
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : ''
+      onError(code === 'payable_data_required' ? 'Revise os dados obrigatórios da despesa.' : 'Não foi possível criar a conta a pagar.')
+    } finally { setBusy(false) }
+  }
+  return <div className="finance-modal-backdrop"><form className="finance-modal" onSubmit={submit}><header><div><span>CONTAS A PAGAR</span><h2>Nova despesa</h2><p>O lançamento entra no ledger oficial da HRX e poderá ser liquidado parcial ou integralmente com conta financeira e comprovante.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Favorecido / fornecedor<input autoFocus value={counterpartyName} onChange={(event) => setCounterpartyName(event.target.value)} placeholder="Ex.: fornecedor ou prestador" /></label><label>Categoria<select value={category} onChange={(event) => setCategory(event.target.value)}>{expenseCategories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><label className="is-wide">Descrição<input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ex.: Assinatura mensal da ferramenta" /></label><label>Valor<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0,00" /></label><label>Vencimento<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label><label>Competência<input type="date" value={competenceDate} onChange={(event) => setCompetenceDate(event.target.value)} /></label><label>Documento / referência<input value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} placeholder="Opcional" /></label><label className="is-wide">Observações<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Informação interna opcional." /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy}>{busy ? 'Salvando…' : 'Criar conta a pagar'}</button></footer></form></div>
+}
+
 function SettlementModal({ session, entry, accounts, onClose, onNeedAccount, onDone, onError }: { session: Session; entry: FinancialEntry; accounts: FinancialAccount[]; onClose: () => void; onNeedAccount: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {
+  const isPayable = entry.entry_type === 'payable'
   const remaining = Math.max(0, Number(entry.gross_amount) - Number(entry.paid_amount))
   const [amount, setAmount] = useState(String(remaining.toFixed(2)).replace('.', ','))
   const [accountId, setAccountId] = useState(accounts[0]?.id || '')
@@ -187,8 +246,8 @@ function SettlementModal({ session, entry, accounts, onClose, onNeedAccount, onD
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     const numericAmount = Number(amount.replace(/\./g, '').replace(',', '.'))
-    if (!numericAmount || numericAmount <= 0 || numericAmount > remaining + .001) { onError('Informe um valor de recebimento válido, limitado ao saldo da parcela.'); return }
-    if (!accountId) { onError('Cadastre e selecione a conta de recebimento.'); return }
+    if (!numericAmount || numericAmount <= 0 || numericAmount > remaining + .001) { onError(`Informe um valor de ${isPayable ? 'pagamento' : 'recebimento'} válido, limitado ao saldo do lançamento.`); return }
+    if (!accountId) { onError(`Cadastre e selecione a conta de ${isPayable ? 'pagamento' : 'recebimento'}.`); return }
     if (file && file.size > 15 * 1024 * 1024) { onError('O comprovante deve ter no máximo 15 MB.'); return }
     setBusy(true)
     let uploadedPath = ''
@@ -207,19 +266,33 @@ function SettlementModal({ session, entry, accounts, onClose, onNeedAccount, onD
     } catch (cause) {
       if (uploadedPath) await hrxSupabase.storage.from('hrx-documents').remove([uploadedPath]).catch(() => undefined)
       const code = cause instanceof Error ? cause.message : ''
-      const messages: Record<string, string> = { receipt_upload_failed: 'Não foi possível enviar o comprovante.', settlement_above_balance: 'O valor informado ultrapassa o saldo atual.', account_required: 'A conta de recebimento não está disponível.' }
-      onError(messages[code] || 'Não foi possível registrar o recebimento.')
+      const messages: Record<string, string> = { receipt_upload_failed: 'Não foi possível enviar o comprovante.', settlement_above_balance: 'O valor informado ultrapassa o saldo atual.', account_required: 'A conta financeira não está disponível.' }
+      onError(messages[code] || `Não foi possível registrar o ${isPayable ? 'pagamento' : 'recebimento'}.`)
     } finally { setBusy(false) }
   }
 
-  return <div className="finance-modal-backdrop"><form className="finance-modal" onSubmit={submit}><header><div><span>BAIXA FINANCEIRA</span><h2>Registrar recebimento</h2><p>O comprovante é recomendado, mas não bloqueia a baixa. Toda movimentação fica vinculada à parcela.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><div className="finance-modal-summary"><span>Valor da parcela <strong>{currency.format(Number(entry.gross_amount))}</strong></span><span>Já recebido <strong>{currency.format(Number(entry.paid_amount))}</strong></span><span>Saldo <strong>{currency.format(remaining)}</strong></span></div><label>Valor recebido<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><label>Data do recebimento<input type="date" value={settledAt} onChange={(event) => setSettledAt(event.target.value)} /></label><label>Conta de recebimento<select value={accountId} onChange={(event) => setAccountId(event.target.value)}><option value="">Selecione…</option>{accounts.map((account) => <option value={account.id} key={account.id}>{account.name}</option>)}</select></label>{!accounts.length && <button type="button" className="finance-inline-action" onClick={onNeedAccount}>+ Cadastrar conta de recebimento</button>}<label>Forma<select value={method} onChange={(event) => setMethod(event.target.value)}><option value="pix">PIX</option><option value="transferencia">Transferência</option><option value="boleto">Boleto</option><option value="cartao">Cartão</option><option value="dinheiro">Dinheiro</option><option value="outro">Outro</option></select></label><label className="is-wide">Comprovante<input type="file" accept="application/pdf,image/*" onChange={(event) => setFile(event.target.files?.[0] || null)} /><small>{file ? `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Opcional. PDF ou imagem, até 15 MB.'}</small></label><label className="is-wide">Observação<textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Ex.: Recebimento confirmado via extrato." /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy}>{busy ? 'Registrando…' : 'Confirmar recebimento'}</button></footer></form></div>
+  return <div className="finance-modal-backdrop"><form className="finance-modal" onSubmit={submit}><header><div><span>BAIXA FINANCEIRA</span><h2>Registrar {isPayable ? 'pagamento' : 'recebimento'}</h2><p>O comprovante é recomendado, mas não bloqueia a baixa. Toda movimentação fica vinculada ao lançamento e à conta financeira selecionada.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><div className="finance-modal-summary"><span>Valor do lançamento <strong>{currency.format(Number(entry.gross_amount))}</strong></span><span>Já {isPayable ? 'pago' : 'recebido'} <strong>{currency.format(Number(entry.paid_amount))}</strong></span><span>Saldo <strong>{currency.format(remaining)}</strong></span></div><label>Valor {isPayable ? 'pago' : 'recebido'}<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><label>Data do {isPayable ? 'pagamento' : 'recebimento'}<input type="date" value={settledAt} onChange={(event) => setSettledAt(event.target.value)} /></label><label>Conta de {isPayable ? 'pagamento' : 'recebimento'}<select value={accountId} onChange={(event) => setAccountId(event.target.value)}><option value="">Selecione…</option>{accounts.map((account) => <option value={account.id} key={account.id}>{account.name}</option>)}</select></label>{!accounts.length && <button type="button" className="finance-inline-action" onClick={onNeedAccount}>+ Cadastrar conta financeira</button>}<label>Forma<select value={method} onChange={(event) => setMethod(event.target.value)}><option value="pix">PIX</option><option value="transferencia">Transferência</option><option value="boleto">Boleto</option><option value="cartao">Cartão</option><option value="dinheiro">Dinheiro</option><option value="outro">Outro</option></select></label><label className="is-wide">Comprovante<input type="file" accept="application/pdf,image/*" onChange={(event) => setFile(event.target.files?.[0] || null)} /><small>{file ? `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB` : 'Opcional. PDF ou imagem, até 15 MB.'}</small></label><label className="is-wide">Observação<textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder={isPayable ? 'Ex.: Pagamento confirmado no extrato.' : 'Ex.: Recebimento confirmado via extrato.'} /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy}>{busy ? 'Registrando…' : `Confirmar ${isPayable ? 'pagamento' : 'recebimento'}`}</button></footer></form></div>
+}
+
+function CancelPayableModal({ session, entry, onClose, onDone, onError }: { session: Session; entry: FinancialEntry; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const confirm = async () => {
+    setBusy(true)
+    try { await financeFetch(session, { action: 'cancel_entry', entryId: entry.id }); await onDone() }
+    catch (cause) {
+      const code = cause instanceof Error ? cause.message : ''
+      const messages: Record<string, string> = { entry_has_settlements: 'Esta despesa já possui pagamento registrado e não pode ser cancelada por este fluxo.', entry_not_cancellable: 'Este lançamento não pode ser cancelado.' }
+      onError(messages[code] || 'Não foi possível cancelar a despesa.')
+    } finally { setBusy(false) }
+  }
+  return <div className="finance-modal-backdrop"><div className="finance-modal is-small"><header><div><span>CONTAS A PAGAR</span><h2>Cancelar despesa?</h2><p>{entry.counterparty_name || 'Favorecido'} • {entry.description}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><div className="finance-cancel-warning">O lançamento será mantido no histórico com status cancelado. Despesas com pagamentos já registrados não podem ser canceladas por este fluxo.</div></div><footer><button type="button" className="is-secondary" onClick={onClose}>Manter</button><button type="button" className="is-danger" disabled={busy} onClick={() => void confirm()}>{busy ? 'Cancelando…' : 'Cancelar despesa'}</button></footer></div></div>
 }
 
 function AccountModal({ session, onClose, onDone, onError }: { session: Session; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const submit = async (event: FormEvent) => { event.preventDefault(); if (name.trim().length < 2) return; setBusy(true); try { await financeFetch(session, { action: 'add_account', name: name.trim() }); await onDone() } catch (cause) { onError(cause instanceof Error && cause.message === 'account_already_exists' ? 'Essa conta já está cadastrada.' : 'Não foi possível cadastrar a conta.'); } finally { setBusy(false) } }
-  return <div className="finance-modal-backdrop"><form className="finance-modal is-small" onSubmit={submit}><header><div><span>CONFIGURAÇÃO</span><h2>Nova conta de recebimento</h2><p>Use o nome que você reconhece no dia a dia. Ex.: banco, carteira ou conta interna.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Nome da conta<input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Conta PJ principal" /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy || name.trim().length < 2}>{busy ? 'Salvando…' : 'Cadastrar'}</button></footer></form></div>
+  return <div className="finance-modal-backdrop"><form className="finance-modal is-small" onSubmit={submit}><header><div><span>CONFIGURAÇÃO</span><h2>Nova conta financeira</h2><p>Use o nome que você reconhece no dia a dia. A mesma conta pode ser usada em recebimentos ou pagamentos.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Nome da conta<input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Conta PJ principal" /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy || name.trim().length < 2}>{busy ? 'Salvando…' : 'Cadastrar'}</button></footer></form></div>
 }
 
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="finance-empty"><strong>{title}</strong><span>{text}</span></div> }
