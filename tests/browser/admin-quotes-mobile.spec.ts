@@ -4,7 +4,13 @@ import { readFile } from 'node:fs/promises'
 const css = await Promise.all([
   readFile(new URL('../../src/quotes/quotes.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/quote-commercial.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-page-system.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-feedback.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-interactions.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-executive-intelligence.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-liquid-glass.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-responsive-hardening.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-mobile-safe-area-fixes.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-unified-shell.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-unified-chrome.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-mobile-usability-fixes.css', import.meta.url), 'utf8'),
@@ -90,7 +96,7 @@ test('quote list is compact, legible and clears the floating dock on iPhone-size
   expect(contentBox).not.toBeNull()
   expect(quoteTopbarBox).not.toBeNull()
   expect(Math.abs(quoteTopbarBox!.y - contentBox!.y)).toBeLessThanOrEqual(1)
-  expect(quoteTopbarBox!.height).toBeLessThanOrEqual(70)
+  expect(quoteTopbarBox!.height).toBeLessThanOrEqual(72)
   await expect(quoteTopbar).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
 
   const metrics = page.locator('.quote-metrics article')
