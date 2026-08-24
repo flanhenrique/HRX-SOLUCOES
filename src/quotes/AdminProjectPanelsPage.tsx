@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
-import { onAdminNavigate } from './adminNavigation'
+import { useMemo, useState } from 'react'
 import './admin-project-panels.css'
 
 type ProjectId = 'somma' | 'volt' | 'hortifruti'
@@ -55,42 +54,15 @@ const projects: ProjectPanel[] = [
   },
 ]
 
-const PANELS_HASH = '#admin/painels'
-
 export default function AdminProjectPanelsPage() {
-  const [open, setOpen] = useState(() => window.location.hash === PANELS_HASH)
   const [selectedId, setSelectedId] = useState<ProjectId>('hortifruti')
-
-  useEffect(() => {
-    const syncHash = () => setOpen(window.location.hash === PANELS_HASH)
-    window.addEventListener('hashchange', syncHash)
-    return () => window.removeEventListener('hashchange', syncHash)
-  }, [])
-
-  useEffect(() => onAdminNavigate((destination) => {
-    if (destination === 'panels') {
-      if (window.location.hash !== PANELS_HASH) window.location.hash = PANELS_HASH
-      else setOpen(true)
-      return
-    }
-    if (destination !== 'settings') setOpen(false)
-  }), [])
-
   const selected = useMemo(() => projects.find((project) => project.id === selectedId) ?? projects[0], [selectedId])
   const overallProgress = Math.round(projects.reduce((total, project) => total + project.progress, 0) / projects.length)
   const pendingTotal = projects.reduce((total, project) => total + project.pending.length, 0)
 
-  const closePanel = () => {
-    setOpen(false)
-    if (window.location.hash === PANELS_HASH) history.replaceState(null, '', window.location.pathname)
-  }
-
-  if (!open) return null
-
-  return <section className="admin-projects-shell" role="dialog" aria-modal="true" aria-label="Painéis de projetos da HRX Solutions">
+  return <section className="admin-projects-shell" aria-labelledby="admin-projects-title">
     <header className="admin-projects-header">
-      <div><span>HRX SOLUTIONS · GESTÃO DE PROJETOS</span><h2>Painéis</h2><p>Visão central de status, prioridades e próximos passos.</p></div>
-      <button type="button" className="admin-projects-close" aria-label="Fechar painéis" onClick={closePanel}>×</button>
+      <div><span>HRX SOLUTIONS · GESTÃO DE PROJETOS</span><h1 id="admin-projects-title">Painéis</h1><p>Visão central de status, prioridades e próximos passos.</p></div>
     </header>
 
     <div className="admin-projects-overview">
@@ -110,7 +82,7 @@ export default function AdminProjectPanelsPage() {
       </aside>
 
       <main className="admin-project-detail">
-        <div className="admin-project-title"><div><span>{selected.category.toUpperCase()}</span><h3>{selected.name}</h3><p>{selected.summary}</p></div><strong>{selected.progress}%</strong></div>
+        <div className="admin-project-title"><div><span>{selected.category.toUpperCase()}</span><h2>{selected.name}</h2><p>{selected.summary}</p></div><strong>{selected.progress}%</strong></div>
         <section className="admin-project-priority"><span>PRIORIDADE ATUAL</span><strong>{selected.currentPriority}</strong></section>
         <div className="admin-project-columns">
           <section><header><span>CONCLUÍDO</span><strong>{selected.completed.length}</strong></header>{selected.completed.map((item) => <p key={item}><i>✓</i>{item}</p>)}</section>
