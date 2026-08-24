@@ -185,17 +185,63 @@ function NotificationPanel({ alerts, onClose, onNavigate }: { alerts: AlertSnaps
 }
 
 function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { active: AdminDestination; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
   const current = navItems.find((item) => item.destination === active) ?? navItems[0]
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setProfileOpen(false) }
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target || profileRef.current?.contains(target)) return
+      setProfileOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    setProfileOpen(false)
+    await hrxSupabase.auth.signOut()
+    window.location.href = '/admin/orcamentos'
+  }
+
   return <div className="hrx-unified-shell is-desktop" data-admin-shell="desktop" data-runtime={runtime} data-viewport={viewport}>
     <aside className="hrx-glass-sidebar hrx-unified-sidebar" aria-label="Navegação principal do HRX Admin">
-      <div className="hrx-glass-brand"><strong>HRX</strong><span>Solutions</span></div>
+      <div className="hrx-glass-brand">
+        <img src="/hrx-mark.svg" alt="HRX" className="hrx-brand-mark-svg" />
+        <div className="hrx-brand-copy"><strong>HRX</strong><span>Solutions</span></div>
+      </div>
       <nav>{navItems.map((item) => <button type="button" key={item.destination} className={active === item.destination ? 'is-active' : ''} aria-current={active === item.destination ? 'page' : undefined} onClick={() => navigateAdmin(item.destination)}><i aria-hidden="true">{item.icon}</i><span>{item.label}</span></button>)}</nav>
     </aside>
     <header className="hrx-glass-topbar hrx-unified-topbar">
       <div className="hrx-unified-title"><span>HRX ADMIN</span><strong>{current.label}</strong></div>
       <div className="hrx-unified-actions">
         <NotificationButton buttonRef={notificationButtonRef} alerts={alerts} open={notificationOpen} onClick={onToggleNotifications} />
-        <button className="hrx-unified-profile" type="button" onClick={() => navigateAdmin('settings')}><span>HR</span><div><strong>Administrador</strong><small>HRX Solutions</small></div></button>
+        <div ref={profileRef} className="hrx-profile-wrapper">
+          <button className="hrx-unified-profile" type="button" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen((val) => !val)}>
+            <span>HR</span>
+            <div><strong>Administrador</strong><small>HRX Solutions</small></div>
+          </button>
+          {profileOpen && (
+            <div className="hrx-profile-popover" role="menu">
+              <div className="hrx-profile-popover-head">
+                <strong>Administrador</strong>
+                <span>Sessão AAL2 ativa</span>
+              </div>
+              <button type="button" role="menuitem" onClick={() => { setProfileOpen(false); navigateAdmin('settings') }}>
+                Configurações da conta
+              </button>
+              <button type="button" role="menuitem" className="is-danger" onClick={handleLogout}>
+                Encerrar sessão
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
     <main className="hrx-unified-content" data-admin-workspace="true">{children}</main>

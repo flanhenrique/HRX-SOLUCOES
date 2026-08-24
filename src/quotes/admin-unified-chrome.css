@@ -21,16 +21,54 @@
 
 /* PWA: um único acesso às configurações. A navegação inferior é o ponto canônico. */
 .hrx-unified-shell.is-pwa .hrx-pwa-settings{display:none!important}
-.hrx-unified-shell.is-pwa .hrx-pwa-brand strong{display:none!important}
 
-/* Títulos de página redundantes são removidos; títulos de cards e etapas permanecem. */
-.hrx-unified-content .hrx-view-title h1,
-.hrx-unified-content .hrx-view-title p,
-.hrx-unified-content .hrx-mobile-page-title,
-.hrx-unified-content .quote-topbar>div:first-child,
-.hrx-unified-content .hrx-fiscal-page h1,
-.hrx-unified-content .hrx-suspensions-page h1,
-.hrx-unified-content .hrx-finance-page h1{display:none!important}
+/* Popover do perfil no Desktop Shell */
+.hrx-profile-wrapper{position:relative}
+.hrx-brand-mark-svg{width:28px;height:28px;object-fit:contain}
+.hrx-brand-copy{display:inline-flex;align-items:baseline;gap:4px;line-height:1}
+.hrx-profile-popover{
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  z-index:var(--z-dropdown,500);
+  min-width:220px;
+  padding:8px;
+  border:1px solid var(--hrx-border-strong);
+  border-radius:14px;
+  background:rgba(8,23,41,.96);
+  backdrop-filter:blur(20px);
+  box-shadow:0 18px 48px rgba(0,0,0,.45);
+  display:grid;
+  gap:4px;
+}
+.hrx-profile-popover-head{
+  padding:8px 10px 10px;
+  border-bottom:1px solid var(--hrx-border);
+  margin-bottom:4px;
+}
+.hrx-profile-popover-head strong{display:block;font-size:.84rem;color:var(--hrx-text)}
+.hrx-profile-popover-head span{display:block;font-size:.65rem;color:#8ef0a0;font-weight:700}
+.hrx-profile-popover button{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  padding:9px 10px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--hrx-text);
+  font:inherit;
+  font-size:.76rem;
+  font-weight:750;
+  text-align:left;
+  cursor:pointer;
+}
+.hrx-profile-popover button:hover{background:rgba(255,255,255,.07)}
+.hrx-profile-popover button.is-danger{color:#ff8a93}
+.hrx-profile-popover button.is-danger:hover{background:rgba(240,103,113,.15)}
+
+/* Títulos de página redundantes são harmonizados */
 .hrx-unified-content .hrx-view-title{min-height:0;margin-bottom:12px;justify-content:flex-end}
 .hrx-unified-content .quote-topbar{justify-content:flex-end!important;min-height:58px!important}
 .hrx-unified-content .quote-topbar>div:last-child{margin-left:auto}

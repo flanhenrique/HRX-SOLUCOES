@@ -16,8 +16,8 @@ import './portfolio-corrections.css'
 
 const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
 const adminHashes = new Set(['#admin/orcamentos', '#admin/painels'])
-const isAdminPath = pathname === '/admin/orcamentos' || pathname.startsWith('/admin/')
-const isAdminRoute = isAdminPath || adminHashes.has(window.location.hash)
+const isAdminPath = pathname === '/admin' || pathname === '/admin/orcamentos' || pathname.startsWith('/admin/')
+const isAdminRoute = isAdminPath || adminHashes.has(window.location.hash) || window.location.hash.startsWith('#admin')
 
 if (isAdminRoute) configureAdminAppShell()
 

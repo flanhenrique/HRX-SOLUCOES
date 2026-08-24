@@ -63,10 +63,9 @@ function formatBytes(value?: number | null) {
 }
 
 export default function AdminDocumentsPage() {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
   const [area, setArea] = useState<Area | null>(null)
   const [folder, setFolder] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
   const [documents, setDocuments] = useState<DocumentRow[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -75,16 +74,6 @@ export default function AdminDocumentsPage() {
 
   const clearMessage = () => { setMessage(''); setMessageTone('success') }
   const showMessage = (tone: MessageTone, text: string) => { setMessageTone(tone); setMessage(text) }
-
-  useEffect(() => onAdminNavigate((destination) => {
-    setOpen(destination === 'documents')
-    if (destination !== 'documents') {
-      setArea(null)
-      setFolder(null)
-      setDocuments([])
-      clearMessage()
-    }
-  }), [])
 
   const filteredAreas = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('pt-BR')
@@ -181,7 +170,6 @@ export default function AdminDocumentsPage() {
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
   }
 
-  if (!open) return null
   const isVolt = area?.key === 'internal' && folder === 'VOLT'
 
   return <section className="hrx-documents-page" aria-label="Central de Documentos HRX">

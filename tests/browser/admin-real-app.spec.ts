@@ -63,3 +63,65 @@ test('trocar para Orçamentos não monta outro shell mesmo sem sessão de teste'
   await expect(page.locator('.admin-exec-sidebar')).toHaveCount(0)
   await expect(page.locator('.admin-mobile-nav')).toHaveCount(0)
 })
+
+test('views administrativas operam em fluxo normal dentro de hrx-unified-content sem position fixed', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/admin/?hrx-preview=1#admin/clientes')
+
+  const content = page.locator('.hrx-unified-content')
+  await expect(content).toHaveCount(1)
+
+  // Testa Clientes
+  const clientsPage = page.locator('.hrx-clients-page')
+  await expect(clientsPage).toHaveCount(1)
+  const clientsPosition = await clientsPage.evaluate((el) => getComputedStyle(el).position)
+  expect(clientsPosition).toBe('relative')
+
+  // Testa Fiscal
+  await page.goto('/admin/?hrx-preview=1#admin/fiscal')
+  const fiscalPage = page.locator('.hrx-fiscal-page')
+  await expect(fiscalPage).toHaveCount(1)
+  const fiscalPosition = await fiscalPage.evaluate((el) => getComputedStyle(el).position)
+  expect(fiscalPosition).toBe('relative')
+
+  // Testa Documentos
+  await page.goto('/admin/?hrx-preview=1#admin/documentos')
+  const docsPage = page.locator('.hrx-documents-page')
+  await expect(docsPage).toHaveCount(1)
+  const docsPosition = await docsPage.evaluate((el) => getComputedStyle(el).position)
+  expect(docsPosition).toBe('relative')
+
+  // Testa Suspensões
+  await page.goto('/admin/?hrx-preview=1#admin/suspensoes')
+  const suspPage = page.locator('.hrx-suspensions-page')
+  await expect(suspPage).toHaveCount(1)
+  const suspPosition = await suspPage.evaluate((el) => getComputedStyle(el).position)
+  expect(suspPosition).toBe('relative')
+})
+
+test('topbar mobile exibe título canônico e popover de perfil desktop opera com acessibilidade', async ({ page }) => {
+  // 1. Mobile PWA topbar title check
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/?hrx-preview=1#admin/clientes')
+  const pwaBrand = page.locator('.hrx-pwa-brand strong')
+  await expect(pwaBrand).toBeVisible()
+  await expect(pwaBrand).toHaveText('Clientes')
+
+  // 2. Desktop profile popover
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/admin/?hrx-preview=1#admin/clientes')
+  const profileButton = page.locator('.hrx-unified-profile')
+  await expect(profileButton).toBeVisible()
+  await profileButton.click()
+
+  const popover = page.locator('.hrx-profile-popover')
+  await expect(popover).toBeVisible()
+  await expect(popover).toContainText('Administrador')
+  await expect(popover).toContainText('Configurações da conta')
+  await expect(popover).toContainText('Encerrar sessão')
+
+  // Fecha via Escape
+  await page.keyboard.press('Escape')
+  await expect(popover).toHaveCount(0)
+})
+

@@ -45,8 +45,6 @@ export default function AdminSuspensionsPage() {
   const clearMessage = () => { setMessage(''); setMessageTone('success') }
   const showMessage = (tone: MessageTone, text: string) => { setMessageTone(tone); setMessage(text) }
 
-  useEffect(() => onAdminNavigate((destination) => setOpen(destination === 'suspensions')), [])
-
   const load = async (preserveMessage = false) => {
     setLoading(true)
     if (!preserveMessage) clearMessage()
@@ -58,15 +56,16 @@ export default function AdminSuspensionsPage() {
       if (requestsResult.error) throw requestsResult.error
       if (draftsResult.error) throw draftsResult.error
       const draftMap = new Map((draftsResult.data ?? []).map((item) => [item.request_id, item]))
-      setQuotes(((requestsResult.data ?? []) as Omit<QuoteRow, 'draft'>[]).map((item) => ({ ...item, draft: draftMap.get(item.id) ?? null })))
+      const requestRows = (requestsResult.data ?? []) as Omit<QuoteRow, 'draft'>[]
+      setQuotes(requestRows.map((item) => ({ ...item, draft: draftMap.get(item.id) ?? null })))
       return true
     } catch {
-      showMessage('error', 'Não foi possível carregar os orçamentos agora.')
+      showMessage('error', 'Não foi possível carregar a lista de suspensões.')
       return false
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { if (open) void load() }, [open])
+  useEffect(() => { void load() }, [])
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('pt-BR')
@@ -116,8 +115,6 @@ export default function AdminSuspensionsPage() {
     const refreshed = await load(true)
     if (refreshed) showMessage('success', `${protocol} foi excluído definitivamente.`)
   }
-
-  if (!open) return null
 
   return <section className="hrx-suspensions-page" aria-label="Suspensões de orçamentos">
     <header className="hrx-suspensions-header"><div><span>HRX SOLUTIONS · CONTROLE DE FLUXO</span><h1>Suspensões</h1><p>Orçamentos interrompidos, pendências e condições de retomada.</p></div><button type="button" onClick={() => navigateAdmin('quotes')}>Abrir orçamentos</button></header>

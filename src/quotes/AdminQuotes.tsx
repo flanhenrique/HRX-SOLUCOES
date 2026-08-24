@@ -376,7 +376,13 @@ function QuoteEditor({ request, clients, providers, pricingRules, session, onMut
   const downloadBlob = (blob: Blob, suffix: string) => { const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = safeFileName(`${request.proposal_number}_${suffix}.pdf`); anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) }
   const downloadDraft = async () => { setBusy('pdf'); try { downloadBlob(await generateProposalPdf(pdfData(true)), 'RASCUNHO') } finally { setBusy('') } }
   const finalize = async () => {
-    if (validation.length) { setStep('review'); return }
+    if (validation.length) {
+      setStep('review')
+      window.requestAnimationFrame(() => {
+        document.querySelector('.quote-validation')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      return
+    }
     setBusy('finalize')
     try {
       if (saveState !== 'saved') await save()

@@ -44,6 +44,9 @@
 }
 
 /* CTA compacto logo após o header: elimina a faixa vazia que aparecia acima do botão. */
+.hrx-unified-shell.is-pwa .quote-commercial-shell .quote-topbar>div:first-child{
+  display:none!important;
+}
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-topbar.quote-topbar{
   min-height:0!important;
   height:auto!important;

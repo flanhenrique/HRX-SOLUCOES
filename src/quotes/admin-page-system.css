@@ -1,64 +1,100 @@
-:root{--hrx-admin-sidebar-width:244px;--hrx-page-bg:#f4f6f8;--hrx-page-surface:#fff;--hrx-page-border:#dde5ea;--hrx-page-text:#17354d;--hrx-page-muted:#7b8d9a;--hrx-page-accent:#4da52f;--hrx-page-radius:14px;--hrx-page-header-x:clamp(24px,3vw,40px);--hrx-page-content-x:clamp(24px,3vw,40px)}
+:root{--hrx-admin-sidebar-width:244px;--hrx-page-bg:transparent;--hrx-page-surface:var(--hrx-surface,rgba(20,41,66,.72));--hrx-page-border:var(--hrx-border,rgba(183,213,242,.18));--hrx-page-text:var(--hrx-text,#f4f8fc);--hrx-page-muted:var(--hrx-muted,#9bb0c4);--hrx-page-accent:var(--hrx-primary,#4389ff);--hrx-page-radius:14px;--hrx-page-header-x:clamp(24px,3vw,40px);--hrx-page-content-x:clamp(24px,3vw,40px)}
 
-@media(min-width:761px){
-  .admin-live-shell{grid-template-columns:minmax(0,1fr)!important;padding-left:var(--hrx-admin-sidebar-width)!important}
-  .admin-live-shell>.admin-exec-sidebar{display:none!important}
-  .admin-exec-topbar{height:88px!important;flex-basis:88px!important;padding:0 var(--hrx-page-header-x)!important}
-  .admin-exec-metrics{padding:14px var(--hrx-page-content-x)!important}
-  .admin-workspace{padding:0 var(--hrx-page-content-x) 24px!important}
-  .hrx-executive-page,.hrx-clients-page,.hrx-suspensions-page,.hrx-documents-page,.hrx-fiscal-page,.admin-projects-shell{left:var(--hrx-admin-sidebar-width)!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;box-sizing:border-box}
+.hrx-executive-page,.hrx-clients-page,.hrx-suspensions-page,.hrx-documents-page,.hrx-fiscal-page,.admin-projects-shell{
+  position:relative;
+  width:100%;
+  min-width:0;
+  min-height:0;
+  box-sizing:border-box;
+  background:transparent;
+  color:var(--hrx-page-text);
 }
 
-.hrx-executive-page,.hrx-clients-page,.hrx-suspensions-page,.hrx-documents-page,.hrx-fiscal-page,.admin-projects-shell{background:var(--hrx-page-bg)!important;color:var(--hrx-page-text)!important}
+.hrx-executive-header,.hrx-clients-header,.hrx-suspensions-header,.hrx-documents-page-header,.hrx-fiscal-header,.admin-projects-header{
+  box-sizing:border-box;
+  border-bottom:1px solid var(--hrx-page-border);
+  background:rgba(7,23,42,.64);
+  backdrop-filter:blur(20px);
+  color:var(--hrx-page-text);
+  min-height:76px;
+  padding:16px var(--hrx-page-header-x);
+}
+.hrx-executive-header h1,.hrx-clients-header h1,.hrx-suspensions-header h1,.hrx-documents-page-header h1,.hrx-fiscal-header h2,.admin-projects-header h2{
+  color:var(--hrx-page-text);
+  font-size:1.55rem;
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+.hrx-executive-header p,.hrx-clients-header p,.hrx-suspensions-header p,.hrx-documents-page-header p,.hrx-fiscal-header p,.admin-projects-header p{
+  color:var(--hrx-page-muted);
+  font-size:.78rem;
+}
+.hrx-executive-header>div:first-child>span,.hrx-clients-header>div:first-child>span,.hrx-suspensions-header>div:first-child>span,.hrx-documents-page-header>div:first-child>span,.hrx-fiscal-header>div:first-child>span,.admin-projects-header>div:first-child>span{
+  color:var(--hrx-page-accent);
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.13em;
+}
 
-.hrx-executive-header,.hrx-clients-header,.hrx-suspensions-header,.hrx-documents-page-header,.hrx-fiscal-header,.admin-projects-header{box-sizing:border-box;border-bottom:1px solid var(--hrx-page-border)!important;background:rgba(255,255,255,.97)!important;color:var(--hrx-page-text)!important}
-.hrx-executive-header,.hrx-clients-header,.hrx-suspensions-header,.hrx-documents-page-header,.hrx-fiscal-header{min-height:88px;padding:20px var(--hrx-page-header-x)!important}
-.hrx-executive-header h1,.hrx-clients-header h1,.hrx-suspensions-header h1,.hrx-documents-page-header h1,.hrx-fiscal-header h2,.admin-projects-header h2{color:#102d46!important;font-size:1.55rem!important;line-height:1.12!important;letter-spacing:-.035em!important}
-.hrx-executive-header p,.hrx-clients-header p,.hrx-suspensions-header p,.hrx-documents-page-header p,.hrx-fiscal-header p,.admin-projects-header p{color:var(--hrx-page-muted)!important;font-size:.78rem!important}
-.hrx-executive-header>div:first-child>span,.hrx-clients-header>div:first-child>span,.hrx-suspensions-header>div:first-child>span,.hrx-documents-page-header>div:first-child>span,.hrx-fiscal-header>div:first-child>span,.admin-projects-header>div:first-child>span{color:var(--hrx-page-accent)!important;font-size:.62rem!important;font-weight:900!important;letter-spacing:.13em!important}
-
-.admin-exec-topbar{border-bottom:1px solid var(--hrx-page-border)!important;background:rgba(255,255,255,.97)!important}.admin-exec-topbar h1{color:#102d46!important;font-size:1.55rem!important}.admin-section-kicker{color:var(--hrx-page-accent)!important}.admin-exec-metrics article,.admin-queue,.admin-detail,.admin-panel{border-color:var(--hrx-page-border)!important;box-shadow:none!important}.admin-exec-metrics article,.admin-queue,.admin-detail{border-radius:var(--hrx-page-radius)!important}
+.admin-exec-topbar{border-bottom:1px solid var(--hrx-page-border);background:rgba(7,23,42,.64);backdrop-filter:blur(20px)}
+.admin-exec-topbar h1{color:var(--hrx-page-text);font-size:1.55rem}
+.admin-section-kicker{color:var(--hrx-page-accent)}
+.admin-exec-metrics article,.admin-queue,.admin-detail,.admin-panel{border-color:var(--hrx-page-border);box-shadow:none}
+.admin-exec-metrics article,.admin-queue,.admin-detail{border-radius:var(--hrx-page-radius)}
 
 .hrx-executive-content,.hrx-client-detail,.hrx-suspensions-content,.hrx-documents-page-content,.hrx-fiscal-content{box-sizing:border-box}
-.hrx-executive-content{padding:24px var(--hrx-page-content-x) 48px!important}
-.hrx-suspensions-content{max-width:1280px!important;padding:24px var(--hrx-page-content-x) 52px!important}
-.hrx-documents-page-content{max-width:1360px!important;padding:24px var(--hrx-page-content-x) 52px!important}
-.hrx-fiscal-content{padding:24px var(--hrx-page-content-x) 52px!important}
+.hrx-executive-content{padding:24px var(--hrx-page-content-x) 48px}
+.hrx-suspensions-content{max-width:1280px;padding:24px var(--hrx-page-content-x) 52px}
+.hrx-documents-page-content{max-width:1360px;padding:24px var(--hrx-page-content-x) 52px}
+.hrx-fiscal-content{padding:24px var(--hrx-page-content-x) 52px}
 
-.hrx-executive-kpis article,.hrx-executive-panel,.hrx-executive-quick-actions>button,.hrx-clients-list,.hrx-client-title,.hrx-client-kpis article,.hrx-client-info article,.hrx-client-notes,.hrx-client-history,.hrx-suspensions-summary article,.hrx-suspensions-list>article,.hrx-documents-page-summary article,.hrx-documents-page-grid>button,.hrx-documents-folder-grid>button,.hrx-documents-page-context,.hrx-documents-contract-check,.hrx-documents-storage-bar,.hrx-documents-file-list>button,.hrx-fiscal-list,.hrx-fiscal-metrics article,.hrx-fiscal-card,.hrx-fiscal-empty{border-color:var(--hrx-page-border)!important;background:var(--hrx-page-surface)!important;box-shadow:none!important}
+.hrx-executive-kpis article,.hrx-executive-panel,.hrx-executive-quick-actions>button,.hrx-clients-list,.hrx-client-title,.hrx-client-kpis article,.hrx-client-info article,.hrx-client-notes,.hrx-client-history,.hrx-suspensions-summary article,.hrx-suspensions-list>article,.hrx-documents-page-summary article,.hrx-documents-page-grid>button,.hrx-documents-folder-grid>button,.hrx-documents-page-context,.hrx-documents-contract-check,.hrx-documents-storage-bar,.hrx-documents-file-list>button,.hrx-fiscal-list,.hrx-fiscal-metrics article,.hrx-fiscal-card,.hrx-fiscal-empty{
+  border-color:var(--hrx-page-border);
+  background:var(--hrx-page-surface);
+  box-shadow:none;
+}
 
-.hrx-executive-panel,.hrx-client-title,.hrx-client-kpis article,.hrx-client-info article,.hrx-client-notes,.hrx-client-history,.hrx-suspensions-summary article,.hrx-suspensions-list>article,.hrx-documents-page-summary article,.hrx-documents-page-grid>button,.hrx-documents-folder-grid>button,.hrx-documents-page-context,.hrx-documents-contract-check,.hrx-documents-storage-bar,.hrx-documents-file-list>button,.hrx-fiscal-metrics article,.hrx-fiscal-card,.hrx-fiscal-empty{border-radius:var(--hrx-page-radius)!important}
+.hrx-executive-panel,.hrx-client-title,.hrx-client-kpis article,.hrx-client-info article,.hrx-client-notes,.hrx-client-history,.hrx-suspensions-summary article,.hrx-suspensions-list>article,.hrx-documents-page-summary article,.hrx-documents-page-grid>button,.hrx-documents-folder-grid>button,.hrx-documents-page-context,.hrx-documents-contract-check,.hrx-documents-storage-bar,.hrx-documents-file-list>button,.hrx-fiscal-metrics article,.hrx-fiscal-card,.hrx-fiscal-empty{
+  border-radius:var(--hrx-page-radius);
+}
 
-.hrx-clients-header button,.hrx-suspensions-header button,.hrx-suspensions-toolbar button,.hrx-documents-page-actions button,.hrx-fiscal-header button,.hrx-fiscal-title button,.hrx-fiscal-form button{border-radius:9px!important;font-size:.72rem!important;font-weight:850!important}
+.hrx-clients-header button,.hrx-suspensions-header button,.hrx-suspensions-toolbar button,.hrx-documents-page-actions button,.hrx-fiscal-header button,.hrx-fiscal-title button,.hrx-fiscal-form button{
+  border-radius:9px;
+  font-size:.72rem;
+  font-weight:850;
+}
 
-/* Painéis deixa de funcionar como um miniapp dark e passa a usar a mesma gramática visual do Admin. */
-.admin-projects-shell{z-index:1240!important;padding:0!important;overflow:auto!important}
-.admin-projects-header{position:sticky!important;z-index:2!important;top:0!important;max-width:none!important;margin:0!important;min-height:88px!important;padding:20px var(--hrx-page-header-x)!important;align-items:center!important}
-.admin-projects-close{display:none!important}
-.admin-projects-overview,.admin-projects-layout{max-width:1360px!important;margin-left:auto!important;margin-right:auto!important}
-.admin-projects-overview{padding:24px var(--hrx-page-content-x) 0!important;margin-bottom:14px!important;box-sizing:border-box}
-.admin-projects-layout{padding:0 var(--hrx-page-content-x) 52px!important;box-sizing:border-box;grid-template-columns:300px minmax(0,1fr)!important;gap:14px!important}
-.admin-projects-overview article,.admin-project-detail,.admin-projects-list>button,.admin-project-columns section{border:1px solid var(--hrx-page-border)!important;background:#fff!important;color:var(--hrx-page-text)!important;border-radius:var(--hrx-page-radius)!important}
-.admin-projects-overview strong,.admin-projects-list strong,.admin-project-title h3,.admin-project-priority strong,.admin-project-columns p,.admin-project-links a{color:var(--hrx-page-text)!important}
-.admin-projects-overview span,.admin-project-priority span,.admin-project-title span,.admin-project-columns header span{color:#71828e!important}
-.admin-projects-overview small,.admin-projects-list small,.admin-projects-list em,.admin-project-title p{color:var(--hrx-page-muted)!important}
-.admin-projects-list>button.is-active{border-color:#bcd9b0!important;background:#f2f8ef!important}
-.admin-project-progress{background:#edf1f3!important}.admin-project-progress i{background:var(--hrx-page-accent)!important}
-.admin-project-priority{border-color:#d7e7d1!important;background:#f3f8f1!important}
-.admin-project-columns p i{background:#eef3f5!important;color:#456174!important}
-.admin-project-links a{border-color:#dce4e8!important;background:#f8fafb!important}
+/* Painéis segue a gramática visual unificada do Admin. */
+.admin-projects-shell{padding:0;overflow:visible}
+.admin-projects-header{position:sticky;z-index:2;top:0;max-width:none;margin:0;min-height:76px;padding:16px var(--hrx-page-header-x);align-items:center}
+.admin-projects-close{display:none}
+.admin-projects-overview,.admin-projects-layout{max-width:1360px;margin-left:auto;margin-right:auto}
+.admin-projects-overview{padding:24px var(--hrx-page-content-x) 0;margin-bottom:14px;box-sizing:border-box}
+.admin-projects-layout{padding:0 var(--hrx-page-content-x) 52px;box-sizing:border-box;grid-template-columns:300px minmax(0,1fr);gap:14px}
+.admin-projects-overview article,.admin-project-detail,.admin-projects-list>button,.admin-project-columns section{
+  border:1px solid var(--hrx-page-border);
+  background:var(--hrx-page-surface);
+  color:var(--hrx-page-text);
+  border-radius:var(--hrx-page-radius);
+}
+.admin-projects-overview strong,.admin-projects-list strong,.admin-project-title h3,.admin-project-priority strong,.admin-project-columns p,.admin-project-links a{color:var(--hrx-page-text)}
+.admin-projects-overview span,.admin-project-priority span,.admin-project-title span,.admin-project-columns header span{color:var(--hrx-page-muted)}
+.admin-projects-overview small,.admin-projects-list small,.admin-projects-list em,.admin-project-title p{color:var(--hrx-page-muted)}
+.admin-projects-list>button.is-active{border-color:rgba(67,137,255,.45);background:rgba(67,137,255,.12)}
+.admin-project-progress{background:rgba(255,255,255,.08)}.admin-project-progress i{background:var(--hrx-page-accent)}
+.admin-project-priority{border-color:var(--hrx-page-border);background:rgba(67,137,255,.08)}
+.admin-project-columns p i{background:rgba(255,255,255,.08);color:var(--hrx-page-text)}
+.admin-project-links a{border-color:var(--hrx-page-border);background:rgba(255,255,255,.04)}
 
-/* Páginas do shell não precisam de controles de fechamento redundantes. */
-.hrx-fiscal-header button[aria-label="Fechar"]{display:none!important}
-.hrx-documents-page-actions button:last-child{display:none!important}
+.hrx-fiscal-header button[aria-label="Fechar"]{display:none}
+.hrx-documents-page-actions button:last-child{display:none}
 
 @media(max-width:760px){
   :root{--hrx-page-header-x:16px;--hrx-page-content-x:14px}
-  .admin-live-shell{grid-template-columns:1fr!important;padding-left:0!important}
-  .hrx-executive-page,.hrx-clients-page,.hrx-suspensions-page,.hrx-documents-page,.hrx-fiscal-page,.admin-projects-shell{left:0!important;right:0!important;bottom:calc(68px + env(safe-area-inset-bottom))!important;padding-bottom:0!important}
-  .hrx-executive-header,.hrx-clients-header,.hrx-suspensions-header,.hrx-documents-page-header,.hrx-fiscal-header,.admin-projects-header{min-height:72px!important;padding:max(14px,env(safe-area-inset-top)) 16px 12px!important}
-  .hrx-executive-header h1,.hrx-clients-header h1,.hrx-suspensions-header h1,.hrx-documents-page-header h1,.hrx-fiscal-header h2,.admin-projects-header h2{font-size:1.28rem!important}
-  .hrx-executive-content,.hrx-suspensions-content,.hrx-documents-page-content,.hrx-fiscal-content{padding:14px 12px 24px!important}
-  .admin-projects-overview{padding:14px 12px 0!important}.admin-projects-layout{padding:0 12px 24px!important;grid-template-columns:1fr!important}
-  .admin-projects-list{grid-template-columns:repeat(3,78vw)!important}
+  .admin-live-shell{grid-template-columns:1fr;padding-left:0}
+  .hrx-executive-header,.hrx-clients-header,.hrx-suspensions-header,.hrx-documents-page-header,.hrx-fiscal-header,.admin-projects-header{min-height:60px;padding:max(12px,env(safe-area-inset-top)) 16px 10px}
+  .hrx-executive-header h1,.hrx-clients-header h1,.hrx-suspensions-header h1,.hrx-documents-page-header h1,.hrx-fiscal-header h2,.admin-projects-header h2{font-size:1.28rem}
+  .hrx-executive-content,.hrx-suspensions-content,.hrx-documents-page-content,.hrx-fiscal-content{padding:14px 12px 24px}
+  .admin-projects-overview{padding:14px 12px 0}.admin-projects-layout{padding:0 12px 24px;grid-template-columns:1fr}
+  .admin-projects-list{grid-template-columns:repeat(3,78vw)}
 }
