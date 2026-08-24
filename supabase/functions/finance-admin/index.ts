@@ -24,6 +24,7 @@ const isoDate = (value: unknown) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : ''
 }
 const safePercent = (value: unknown) => Math.min(99.9999, Math.max(0, Number(value) || 0))
+const METRIC_PAGE_SIZE = 1000
 
 function allowedOrigins() {
   const configured = (Deno.env.get('HRX_ALLOWED_ORIGINS') ?? '').split(',').map((item) => item.trim()).filter(Boolean)
@@ -72,6 +73,85 @@ function approvedTaxPercent(version: any, fallback: unknown) {
   return safePercent(proposal.tax_percent ?? fallback)
 }
 
+function effectiveStatus(entry: any, currentDate: string) {
+  if (['open', 'partial'].includes(String(entry.status)) && String(entry.due_date || '') < currentDate) return 'overdue'
+  return entry.status
+}
+
+function nextMonthStart(currentDate: string) {
+  const date = new Date(`${currentDate.slice(0, 7)}-01T12:00:00Z`)
+  date.setUTCMonth(date.getUTCMonth() + 1)
+  return date.toISOString().slice(0, 10)
+}
+
+async function loadFinanceMetrics(db: any, currentDate: string) {
+  let offset = 0
+  let outstandingCents = 0
+  let payableCents = 0
+  let overdueReceivableCents = 0
+  let overduePayableCents = 0
+  let reserveCents = 0
+  const entryTypeById = new Map<string, 'receivable' | 'payable'>()
+
+  while (true) {
+    const { data, error } = await db.from('financial_entries')
+      .select('id,entry_type,status,gross_amount,paid_amount,tax_reserve_amount,due_date')
+      .order('id', { ascending: true })
+      .range(offset, offset + METRIC_PAGE_SIZE - 1)
+    if (error) throw error
+    const rows = data ?? []
+
+    for (const entry of rows) {
+      entryTypeById.set(entry.id, entry.entry_type)
+      if (entry.status === 'cancelled') continue
+      const balance = Math.max(0, cents(entry.gross_amount) - cents(entry.paid_amount))
+      if (entry.status === 'paid' || balance <= 0) continue
+      const overdue = String(entry.due_date || '') < currentDate
+      if (entry.entry_type === 'receivable') {
+        outstandingCents += balance
+        reserveCents += cents(entry.tax_reserve_amount)
+        if (overdue) overdueReceivableCents += balance
+      } else if (entry.entry_type === 'payable') {
+        payableCents += balance
+        if (overdue) overduePayableCents += balance
+      }
+    }
+
+    if (rows.length < METRIC_PAGE_SIZE) break
+    offset += METRIC_PAGE_SIZE
+  }
+
+  const monthStart = `${currentDate.slice(0, 7)}-01`
+  const monthEnd = nextMonthStart(currentDate)
+  offset = 0
+  let receivedMonthCents = 0
+  while (true) {
+    const { data, error } = await db.from('financial_settlements')
+      .select('entry_id,amount,settled_at')
+      .gte('settled_at', `${monthStart}T00:00:00.000Z`)
+      .lt('settled_at', `${monthEnd}T00:00:00.000Z`)
+      .order('id', { ascending: true })
+      .range(offset, offset + METRIC_PAGE_SIZE - 1)
+    if (error) throw error
+    const rows = data ?? []
+    for (const settlement of rows) {
+      if (entryTypeById.get(settlement.entry_id) === 'receivable') receivedMonthCents += cents(settlement.amount)
+    }
+    if (rows.length < METRIC_PAGE_SIZE) break
+    offset += METRIC_PAGE_SIZE
+  }
+
+  return {
+    outstanding: money(outstandingCents),
+    payable: money(payableCents),
+    projected: money(outstandingCents - payableCents),
+    overdueReceivable: money(overdueReceivableCents),
+    overduePayable: money(overduePayableCents),
+    reserve: money(reserveCents),
+    receivedMonth: money(receivedMonthCents),
+  }
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
   const headers = cors(origin)
@@ -98,21 +178,19 @@ Deno.serve(async (req) => {
 
   if (req.method === 'GET') {
     const currentDate = new Date().toISOString().slice(0, 10)
-    await db.from('financial_entries')
-      .update({ status: 'overdue', updated_at: new Date().toISOString() })
-      .lt('due_date', currentDate)
-      .in('status', ['open', 'partial'])
+    const metricsPromise = loadFinanceMetrics(db, currentDate)
 
-    const [{ data: entries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }] = await Promise.all([
+    const [{ data: rawEntries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }] = await Promise.all([
       db.from('financial_entries').select('*').order('due_date', { ascending: true }).limit(800),
       db.from('financial_accounts').select('id,name,active,sort_order,created_at').order('sort_order').order('name'),
       db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_percent,tax_amount,approved_version,current_version,payment_mode,installments,first_due_date,valid_until,updated_at').in('commercial_status', ['approved', 'invoiced', 'received']).order('updated_at', { ascending: false }).limit(300),
       db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).limit(1600),
     ])
     if (entriesError) return json({ error: 'query_failed' }, 500, headers)
+    const entries = (rawEntries ?? []).map((entry: any) => ({ ...entry, status: effectiveStatus(entry, currentDate) }))
 
     const requestIds: string[] = [...new Set((drafts ?? []).map((item: any) => item.request_id).filter(Boolean))]
-    const entryRequestIds = (entries ?? []).map((item: any) => item.quote_request_id).filter(Boolean)
+    const entryRequestIds = entries.map((item: any) => item.quote_request_id).filter(Boolean)
     for (const id of entryRequestIds) if (!requestIds.includes(id)) requestIds.push(id)
 
     const [{ data: requests }, { data: installments }, { data: versions }] = await Promise.all([
@@ -141,14 +219,16 @@ Deno.serve(async (req) => {
       }
     })
 
-    const clientIds: string[] = [...new Set([...(requests ?? []).map((item: any) => item.client_id), ...(entries ?? []).map((item: any) => item.client_id)].filter(Boolean))]
+    const clientIds: string[] = [...new Set([...(requests ?? []).map((item: any) => item.client_id), ...entries.map((item: any) => item.client_id)].filter(Boolean))]
     const { data: clients } = clientIds.length
       ? await db.from('clients').select('id,name,company,document,email,phone').in('id', clientIds)
       : { data: [] }
 
     const publicVersions = versionRows.map(({ snapshot: _snapshot, ...version }: any) => version)
+    let metrics
+    try { metrics = await metricsPromise } catch { return json({ error: 'metrics_query_failed' }, 500, headers) }
     return json({
-      entries: entries ?? [],
+      entries,
       accounts: accounts ?? [],
       drafts: financeDrafts,
       settlements: settlements ?? [],
@@ -156,6 +236,7 @@ Deno.serve(async (req) => {
       installments: installmentRows,
       versions: publicVersions,
       clients: clients ?? [],
+      metrics,
     }, 200, headers)
   }
 
