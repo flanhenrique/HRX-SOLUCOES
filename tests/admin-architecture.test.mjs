@@ -31,22 +31,35 @@ test('authenticated admin mounts exactly one canonical root', async () => {
   assert.match(main, /<AdminAuthRouter \/>/)
 })
 
-test('business modules are routed as views instead of sibling fullscreen apps', async () => {
-  const [root, quotes, suspensions, fiscal] = await Promise.all([
+test('business modules are routed as pure views instead of sibling fullscreen apps', async () => {
+  const [root, quotes, suspensions, fiscal, activities, settings, panels, panelsCss] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/AdminQuotes.tsx'),
     read('src/quotes/AdminSuspensionsPage.tsx'),
     read('src/quotes/AdminFiscalPage.tsx'),
+    read('src/quotes/AdminActivitiesPage.tsx'),
+    read('src/quotes/AdminSettingsPage.tsx'),
+    read('src/quotes/AdminProjectPanelsPage.tsx'),
+    read('src/quotes/admin-project-panels.css'),
   ])
 
   assert.match(root, /destination === 'quotes'.*<AdminQuotes \/>/s)
   assert.match(root, /destination === 'suspensions'.*<AdminSuspensionsPage \/>/s)
   assert.match(root, /destination === 'fiscal'.*<AdminFiscalPage \/>/s)
-  assert.match(root, /coreDestinations\.has\(destination\).*<AdminExperienceLayer \/>/s)
+  assert.match(root, /destination === 'activities'.*<AdminActivitiesPage \/>/s)
+  assert.match(root, /destination === 'panels'.*<AdminProjectPanelsPage \/>/s)
+  assert.match(root, /<AdminSettingsPage \/>/)
+  assert.doesNotMatch(root, /AdminExperienceLayer/)
 
   assert.match(quotes, /action: 'save_quote'/)
   assert.match(quotes, /generateProposalPdf/)
   assert.match(quotes, /proposal_number/)
+  assert.doesNotMatch(quotes, /className="admin-exec-sidebar"/)
+  assert.doesNotMatch(quotes, /className="admin-mobile-nav"/)
+  assert.doesNotMatch(activities, /hrx-glass-sidebar/)
+  assert.doesNotMatch(settings, /hrx-glass-sidebar/)
+  assert.doesNotMatch(panels, /role="dialog"|aria-modal|admin-projects-close|onAdminNavigate|PANELS_HASH/)
+  assert.doesNotMatch(panelsCss, /\.admin-projects-shell\{[^}]*position:fixed/)
   assert.match(suspensions, /hrx_suspend_quote/)
   assert.match(suspensions, /hrx_resume_quote/)
   assert.match(fiscal, /cnpj-lookup/)
@@ -72,35 +85,37 @@ test('desktop and compact shells are selected by viewport while runtime mode rem
   const pwaBlock = root.slice(root.indexOf('function PwaShell'), root.indexOf('export default function AdminUnifiedRoot'))
   assert.doesNotMatch(desktopBlock, /hrx-unified-mobile-nav/)
   assert.doesNotMatch(pwaBlock, /hrx-unified-sidebar" aria-label="Navegação principal/)
+  assert.doesNotMatch(pwaBlock, /hrx-pwa-settings/)
 })
 
-test('nested legacy shells are explicitly neutralized inside the canonical workspace', async () => {
-  const css = await read('src/quotes/admin-unified-shell.css')
+test('canonical workspace no longer relies on hiding quote navigation shells', async () => {
+  const [quotes, root] = await Promise.all([
+    read('src/quotes/AdminQuotes.tsx'),
+    read('src/quotes/AdminUnifiedRoot.tsx'),
+  ])
 
-  assert.match(css, /\.hrx-unified-shell\{[\s\S]*position:fixed/)
-  assert.match(css, /\.hrx-unified-content>\.hrx-glass-app\{[\s\S]*position:relative!important/)
-  assert.match(css, /\.hrx-unified-content>\.hrx-glass-app>\.hrx-glass-sidebar,[\s\S]*display:none!important/)
-  assert.match(css, /\.hrx-unified-content>\.admin-live-shell\.quote-commercial-shell\{[\s\S]*position:relative!important/)
-  assert.match(css, /quote-commercial-shell>\.admin-exec-sidebar,[\s\S]*display:none!important/)
-  assert.match(css, /\.hrx-unified-content \.hrx-legacy-shell\{display:none!important\}/)
+  assert.doesNotMatch(quotes, /admin-exec-sidebar/)
+  assert.doesNotMatch(quotes, /admin-mobile-nav/)
+  assert.match(root, /hrx-unified-sidebar/)
+  assert.match(root, /hrx-unified-mobile-nav/)
 })
 
 test('admin keeps real data, storage and personalization behind the unified shell', async () => {
-  const [root, experience, personalization, interactions] = await Promise.all([
+  const [root, activities, settings, personalization, interactions] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
-    read('src/quotes/AdminExperienceLayer.tsx'),
+    read('src/quotes/AdminActivitiesPage.tsx'),
+    read('src/quotes/AdminSettingsPage.tsx'),
     read('src/quotes/AdminPersonalizationBridge.tsx'),
     read('src/quotes/admin-interactions.css'),
   ])
 
   assert.match(root, /from\('quote_drafts'\)/)
   assert.match(root, /from\('hrx_documents'\)/)
+  assert.match(root, /channel\('hrx-admin-alerts'\)/)
   assert.match(root, /<AdminPersonalizationBridge settingsActive=\{active === 'settings'\} \/>/)
-  assert.match(experience, /from\('clients'\)/)
-  assert.match(experience, /from\('quote_requests'\)/)
-  assert.match(experience, /from\('hrx_documents'\)/)
-  assert.match(experience, /createSignedUrl/)
-  assert.match(experience, /hrx_create_manual_quote/)
+  assert.match(activities, /from\('quote_requests'\)/)
+  assert.match(activities, /from\('hrx_documents'\)/)
+  assert.match(settings, /secureUpdateAdminPassword/)
   assert.match(personalization, /hrx-admin-ui-preferences-v1/)
   assert.doesNotMatch(personalization, /MutationObserver/)
   assert.match(interactions, /:focus-visible/)

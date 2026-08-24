@@ -56,7 +56,7 @@ test('mobile separa lista e editor e usa fluxo comercial por etapas', async () =
   const [editor, css, chrome] = await Promise.all([read('src/quotes/AdminQuotes.tsx'), read('src/quotes/quote-commercial.css'), read('src/quotes/admin-unified-chrome.css')])
   assert.match(editor, /is-mobile-detail-open/)
   assert.match(editor, /quote-back/)
-  assert.match(editor, /className="admin-mobile-nav"/)
+  assert.match(editor, /className="quote-steps"/)
   for (const label of ['Cliente', 'Itens', 'Valores', 'Pagamento', 'Revisão', 'Envio']) assert.match(editor, new RegExp(label))
   assert.match(css, /is-mobile-detail-open \.quote-queue/)
   assert.match(css, /is-mobile-detail-open \.quote-detail/)

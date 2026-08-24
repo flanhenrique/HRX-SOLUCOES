@@ -52,9 +52,9 @@ test('admin bootstrap recognizes project panel destinations', async () => {
   assert.match(main, /configureAdminAppShell/)
 })
 
-test('authenticated admin changes password through hardened security helper inside the unified root', async () => {
-  const [experience, security, adminApp, root, authRouter, main] = await Promise.all([
-    read('src/quotes/AdminExperienceLayer.tsx'),
+test('authenticated admin changes password through hardened security helper inside the canonical settings view', async () => {
+  const [settings, security, adminApp, root, authRouter, main] = await Promise.all([
+    read('src/quotes/AdminSettingsPage.tsx'),
     read('src/quotes/passwordSecurity.ts'),
     read('src/quotes/AdminApp.tsx'),
     read('src/quotes/AdminUnifiedRoot.tsx'),
@@ -62,12 +62,13 @@ test('authenticated admin changes password through hardened security helper insi
     read('src/main.tsx'),
   ])
 
-  assert.match(experience, /secureUpdateAdminPassword\(password\)/)
-  assert.match(experience, /Alterar senha/)
-  assert.match(experience, /minLength=\{12\}/)
+  assert.match(settings, /secureUpdateAdminPassword\(password\)/)
+  assert.match(settings, /Alterar senha/)
+  assert.match(settings, /minLength=\{12\}/)
   assert.match(security, /admin-password/)
   assert.match(adminApp, /<AdminUnifiedRoot \/>/)
-  assert.match(root, /<AdminExperienceLayer \/>/)
+  assert.match(root, /<AdminSettingsPage \/>/)
+  assert.doesNotMatch(root, /AdminExperienceLayer/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.doesNotMatch(main, /<AdminExperienceLayer \/>|<AdminPasswordControl \/>/)
 })

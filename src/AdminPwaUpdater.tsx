@@ -21,8 +21,8 @@ type HrxWindow = Window & typeof globalThis & {
 type UpdateState = 'idle' | 'available' | 'checking' | 'downloading' | 'installing' | 'activating' | 'complete' | 'error'
 
 const VERSION_URL = '/admin/version.json'
-const CHECK_COOLDOWN_MS = 30_000
-const UPDATE_POLL_MS = 30_000
+const CHECK_COOLDOWN_MS = 60_000
+const UPDATE_POLL_MS = 180_000
 const ACTIVATION_TIMEOUT_MS = 20_000
 
 function installedBuild() {
@@ -165,7 +165,7 @@ export default function AdminPwaUpdater() {
 
     const pollForUpdate = () => {
       if (applyingUpdate || document.visibilityState !== 'visible' || !navigator.onLine) return
-      void checkForUpdate(true)
+      void checkForUpdate()
     }
 
     const observeRegistration = (activeRegistration: ServiceWorkerRegistration) => {

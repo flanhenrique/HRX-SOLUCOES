@@ -38,6 +38,7 @@
 /* Menu inferior realmente flutuante: cápsula central, destacada da borda física. */
 .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
   position:fixed!important;
+  z-index:2000!important;
   right:auto!important;
   left:50%!important;
   bottom:max(12px,calc(env(safe-area-inset-bottom) + 8px))!important;
