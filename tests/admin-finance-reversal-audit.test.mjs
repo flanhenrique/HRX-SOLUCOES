@@ -5,12 +5,15 @@ import test from 'node:test'
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('estorno preserva a baixa original e recalcula o ledger apenas com baixas ativas', async () => {
-  const migration = await read('supabase/migrations/20260824124000_finance_reversal_audit_topic2.sql')
+  const [baseMigration, migration] = await Promise.all([
+    read('supabase/migrations/20260823224500_finance_receivables_phase1.sql'),
+    read('supabase/migrations/20260824124000_finance_reversal_audit_topic2.sql'),
+  ])
   assert.match(migration, /reversed_at timestamptz/)
   assert.match(migration, /reversed_by uuid references auth\.users/)
   assert.match(migration, /reversal_reason text/)
   assert.match(migration, /and reversed_at is null/)
-  assert.match(migration, /after insert or update or delete on public\.financial_settlements/)
+  assert.match(baseMigration, /after insert or update or delete on public\.financial_settlements/)
   assert.doesNotMatch(migration, /delete from public\.financial_settlements/)
 })
 
