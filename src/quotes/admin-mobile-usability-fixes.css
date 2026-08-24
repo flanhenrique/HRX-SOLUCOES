@@ -1,0 +1,177 @@
+/*
+ * HRX Admin — correções de usabilidade mobile validadas a partir do PWA real no iPhone.
+ * Este arquivo é carregado por último e atua apenas sobre o shell canônico do PWA.
+ */
+
+/* O conteúdo deve terminar antes do dock flutuante e não expor o fundo do body. */
+.hrx-unified-shell.is-pwa>.hrx-unified-content{
+  background:transparent!important;
+  padding-bottom:calc(112px + env(safe-area-inset-bottom))!important;
+  scrollbar-width:none;
+}
+.hrx-unified-shell.is-pwa>.hrx-unified-content::-webkit-scrollbar{display:none}
+.hrx-unified-shell.is-pwa .hrx-unified-content>.admin-live-shell.quote-commercial-shell>.admin-exec-main{
+  margin:0!important;
+  padding:0!important;
+  min-height:0!important;
+}
+
+/* A view de Orçamentos não deve manter a altura/padding do shell legado. */
+.hrx-unified-shell.is-pwa .quote-commercial-shell{
+  min-height:0!important;
+  height:auto!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-main{
+  padding-bottom:0!important;
+}
+
+/* CTA compacto logo após o header: remove a faixa vazia que aparecia acima do botão. */
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-topbar.quote-topbar{
+  min-height:0!important;
+  height:auto!important;
+  flex-basis:auto!important;
+  margin:0!important;
+  padding:10px 12px 8px!important;
+  border:0!important;
+  background:transparent!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .quote-topbar>div:last-child{
+  width:100%!important;
+  margin:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .quote-topbar>div:last-child .quote-secondary{display:none!important}
+.hrx-unified-shell.is-pwa[data-viewport="phone"] .quote-commercial-shell .quote-topbar>div:last-child .quote-primary{
+  width:100%!important;
+  min-height:48px!important;
+  padding-inline:16px!important;
+  font-size:.76rem!important;
+  border-radius:12px!important;
+}
+.hrx-unified-shell.is-pwa[data-viewport="tablet"] .quote-commercial-shell .quote-topbar>div:last-child .quote-primary{
+  width:auto!important;
+  min-width:220px!important;
+  min-height:46px!important;
+}
+
+/* KPIs compactos: quatro indicadores sem grandes cartões vazios. */
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics.quote-metrics{
+  gap:8px!important;
+  padding:6px 12px 10px!important;
+}
+.hrx-unified-shell.is-pwa[data-viewport="phone"] .quote-commercial-shell .admin-exec-metrics.quote-metrics{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics article{
+  min-height:68px!important;
+  padding:10px 12px!important;
+  gap:2px!important;
+  align-content:center!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics span{
+  min-height:0!important;
+  font-size:.62rem!important;
+  line-height:1.2!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics strong{
+  font-size:1rem!important;
+  line-height:1.15!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics small{
+  font-size:.54rem!important;
+  line-height:1.25!important;
+}
+
+/* A fila cresce pelo conteúdo, sem reservar centenas de pixels vazios. */
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-workspace.quote-workspace{
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  padding:0 12px calc(108px + env(safe-area-inset-bottom))!important;
+  overflow:visible!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-queue,
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-detail{
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-queue-list{
+  overflow:visible!important;
+  padding:7px 7px 18px!important;
+  scroll-padding-bottom:108px;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-lead:last-child{margin-bottom:6px}
+
+/* O editor também reserva espaço real para o dock sem esconder ações. */
+.hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor{
+  min-height:0!important;
+  height:auto!important;
+}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-scroll{
+  overflow:visible!important;
+  scroll-padding-bottom:180px!important;
+}
+
+/* Tema claro: todos os textos que eram hard-coded para o tema escuro recebem contraste explícito. */
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-unified-content{
+  background:linear-gradient(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%)!important;
+}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
+  background:linear-gradient(135deg,rgba(7,24,45,.98),rgba(15,43,70,.97))!important;
+  border-bottom-color:rgba(255,255,255,.08)!important;
+}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-pwa-brand span{color:#a8bdd1!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-unified-actions>.hrx-notifications,
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-pwa-more{
+  background:rgba(255,255,255,.06)!important;
+  border-color:rgba(255,255,255,.14)!important;
+  color:#eef5fb!important;
+}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-unified-actions>.hrx-notifications>span{
+  border-color:#0a223b!important;
+}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics span{color:#50677b!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics strong{color:#102235!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics small{color:#6d8193!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-queue-header strong{color:#183149!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-queue-header>div>span{
+  background:#e7f0ff!important;
+  color:#3168ad!important;
+}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-search input{color:#193149!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-search input::placeholder{color:#8191a0!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead{
+  color:#35536c!important;
+  background:rgba(248,251,253,.64)!important;
+}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead:hover{background:#f2f7fb!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead.is-active{
+  border-color:rgba(55,119,222,.28)!important;
+  background:linear-gradient(90deg,rgba(55,119,222,.11),rgba(55,119,222,.035))!important;
+  box-shadow:inset 3px 0 #4c8cff!important;
+}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead strong,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead b{color:#183149!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead small,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead-top,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-queue .admin-lead-bottom span{color:#677d90!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-status.is-approved,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-status.is-received{color:#2c7b3e!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-status.is-negotiating{color:#9b5d22!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-status.is-reviewed,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-status.is-sent{color:#2e68b4!important}
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-review-card dd,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-summary dd,
+html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-values-grid p strong{color:#183149!important}
+
+@media(max-width:360px){
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics.quote-metrics{gap:6px!important;padding-inline:9px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics article{min-height:64px!important;padding:9px 10px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-workspace.quote-workspace{padding-inline:9px!important}
+}
