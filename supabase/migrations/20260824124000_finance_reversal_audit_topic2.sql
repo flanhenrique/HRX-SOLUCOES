@@ -77,6 +77,84 @@ begin
 end;
 $$;
 
+create or replace function public.hrx_audit_financial_entry_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.financial_audit_log(entry_id, actor_user_id, event_type, event_data)
+  values (
+    new.id,
+    new.created_by,
+    'entry_created',
+    jsonb_build_object(
+      'entryType', new.entry_type,
+      'source', new.source,
+      'grossAmount', new.gross_amount,
+      'dueDate', new.due_date,
+      'quoteRequestId', new.quote_request_id,
+      'installmentNumber', new.installment_number,
+      'invoiceNumber', new.invoice_number
+    )
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists financial_entries_audit_insert on public.financial_entries;
+create trigger financial_entries_audit_insert
+after insert on public.financial_entries
+for each row execute function public.hrx_audit_financial_entry_insert();
+
+create or replace function public.hrx_audit_financial_settlement()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.financial_audit_log(entry_id, settlement_id, actor_user_id, event_type, event_data)
+    values (
+      new.entry_id,
+      new.id,
+      new.created_by,
+      'settlement_recorded',
+      jsonb_build_object(
+        'amount', new.amount,
+        'settledAt', new.settled_at,
+        'accountId', new.account_id,
+        'paymentMethod', new.payment_method,
+        'hasReceipt', new.receipt_document_id is not null
+      )
+    );
+  elsif tg_op = 'UPDATE' and old.reversed_at is null and new.reversed_at is not null then
+    insert into public.financial_audit_log(entry_id, settlement_id, actor_user_id, event_type, event_data)
+    values (
+      new.entry_id,
+      new.id,
+      new.reversed_by,
+      'settlement_reversed',
+      jsonb_build_object(
+        'amount', new.amount,
+        'originalSettledAt', new.settled_at,
+        'reversedAt', new.reversed_at,
+        'reason', new.reversal_reason,
+        'accountId', new.account_id
+      )
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists financial_settlements_audit on public.financial_settlements;
+create trigger financial_settlements_audit
+after insert or update of reversed_at on public.financial_settlements
+for each row execute function public.hrx_audit_financial_settlement();
+
 alter table public.financial_audit_log enable row level security;
 
 drop policy if exists financial_audit_log_admin on public.financial_audit_log;
@@ -94,6 +172,10 @@ revoke insert, update, delete on public.financial_audit_log from authenticated;
 
 revoke all on function public.hrx_refresh_financial_entry_from_settlements() from public, anon, authenticated;
 grant execute on function public.hrx_refresh_financial_entry_from_settlements() to service_role;
+revoke all on function public.hrx_audit_financial_entry_insert() from public, anon, authenticated;
+grant execute on function public.hrx_audit_financial_entry_insert() to service_role;
+revoke all on function public.hrx_audit_financial_settlement() from public, anon, authenticated;
+grant execute on function public.hrx_audit_financial_settlement() to service_role;
 
 comment on column public.financial_settlements.reversed_at is 'Momento em que a baixa foi estornada. O registro original permanece imutável para auditoria.';
 comment on column public.financial_settlements.reversed_by is 'Administrador AAL2 responsável pelo estorno da baixa.';
