@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="25 20 730 315" role="img" aria-label="HRX">
+<defs><linearGradient id="navy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17344f"/><stop offset="1" stop-color="#07182d"/></linearGradient><linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#62dd8a"/><stop offset=".5" stop-color="#24b96d"/><stop offset="1" stop-color="#0e8052"/></linearGradient></defs>
+<path d="M 593 229 L 669 316 L 733 316 L 625 194 Z M 262 35 L 262 134 L 312 134 L 312 83 L 314 81 L 438 81 L 456 86 L 471 99 L 479 117 L 479 136 L 472 154 L 457 168 L 443 173 L 347 174 L 476 316 L 539 316 L 451 218 L 475 212 L 494 201 L 512 183 L 523 163 L 529 138 L 528 107 L 523 89 L 507 63 L 486 46 L 468 38 L 452 35 Z M 46 35 L 46 316 L 101 316 L 102 198 L 260 199 L 261 316 L 312 316 L 311 160 L 300 153 L 102 153 L 101 35 Z" fill="url(#navy)" fill-rule="evenodd"/>
+<path d="M 538 101 L 540 142 L 535 164 L 553 185 L 490 259 L 517 288 L 524 284 L 612 183 Z M 739 35 L 682 35 L 597 134 L 625 167 L 736 41 Z" fill="url(#green)" fill-rule="evenodd"/>
+</svg>
