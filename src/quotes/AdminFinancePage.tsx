@@ -32,7 +32,7 @@ type Client = { id: string; name: string; company?: string | null; document?: st
 type PlannedInstallment = { id: string; draft_id: string; installment_number: number; amount: number; due_date: string; status: string }
 type Version = { id: string; request_id: string; version_number: number; commercial_status: string; document_id?: string | null; pdf_object_path?: string | null }
 type FinanceResponse = { entries: FinancialEntry[]; accounts: FinancialAccount[]; settlements: Settlement[]; drafts: Draft[]; requests: Request[]; clients: Client[]; installments: PlannedInstallment[]; versions: Version[] }
-type View = 'billing' | 'receivables' | 'received' | 'payables' | 'paidPayables'
+type View = 'billing' | 'receivables' | 'received' | 'payables' | 'paidPayables' | 'cashflow'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const date = (value?: string | null) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : '—'
@@ -130,6 +130,7 @@ export default function AdminFinancePage() {
       <button className={view === 'received' ? 'is-active' : ''} onClick={() => setView('received')}>Recebidos <span>{paidReceivables.length}</span></button>
       <button className={view === 'payables' ? 'is-active' : ''} onClick={() => setView('payables')}>Contas a pagar <span>{openPayables.length}</span></button>
       <button className={view === 'paidPayables' ? 'is-active' : ''} onClick={() => setView('paidPayables')}>Pagos <span>{paidPayables.length}</span></button>
+      <button className={view === 'cashflow' ? 'is-active' : ''} onClick={() => setView('cashflow')}>Fluxo de caixa</button>
     </nav>
 
     {view === 'billing' && <BillingList drafts={billingCandidates} requestById={requestById} clientById={clientById} installments={data.installments} onInvoice={setInvoiceDraft} />}
@@ -137,6 +138,7 @@ export default function AdminFinancePage() {
     {view === 'received' && <ReceivablesList entries={paidReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
     {view === 'payables' && <PayablesList entries={openPayables} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onCancel={setCancelEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} />}
     {view === 'paidPayables' && <PayablesList entries={paidPayables} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onCancel={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
+    {view === 'cashflow' && <CashFlowView entries={data.entries} settlements={data.settlements} accounts={data.accounts} requestById={requestById} clientById={clientById} />}
 
     <footer className="finance-page-footer"><span>Todos os lançamentos usam o ledger financeiro oficial da HRX e exigem sessão administrativa com MFA/AAL2.</span><button type="button" onClick={() => setAccountOpen(true)}>Configurar contas financeiras</button></footer>
 
@@ -185,6 +187,76 @@ function PayablesList({ entries, settlements, accounts, onSettle, onCancel, onOp
     const statusLabel = entry.status === 'paid' ? 'Pago' : entry.status === 'partial' ? 'Pago parcial' : entry.status === 'overdue' ? (Number(entry.paid_amount) > 0 ? 'Vencido • parcial' : 'Vencido') : 'A pagar'
     return <tr key={entry.id}><td data-label="Favorecido / despesa"><strong>{entry.counterparty_name || 'Favorecido'}</strong><small>{entry.description}</small></td><td data-label="Vencimento">{date(entry.due_date)}</td><td data-label="Categoria"><strong>{entry.category || '—'}</strong><small>Competência {date(entry.competence_date)}</small></td><td data-label="Documento">{entry.invoice_number || '—'}</td><td data-label="Valor"><strong>{currency.format(Number(entry.gross_amount))}</strong><small>Saldo {currency.format(remaining)}</small></td><td data-label="Pago"><strong>{currency.format(Number(entry.paid_amount))}</strong>{latest && <small>{accountById.get(latest.account_id)?.name || 'Conta'} • {new Date(latest.settled_at).toLocaleDateString('pt-BR')}</small>}</td><td data-label="Status"><span className={`finance-status is-${entry.status}`}>{statusLabel}</span></td><td data-label="Ações"><div className="finance-row-actions">{!readOnly && <button type="button" onClick={() => onSettle(entry)}>Registrar pagamento</button>}{!readOnly && Number(entry.paid_amount) === 0 && <button type="button" className="is-danger" onClick={() => onCancel(entry)}>Cancelar</button>}{latest?.receipt_object_path && <button type="button" className="is-secondary" onClick={() => onOpenReceipt(latest.receipt_object_path!)}>Comprovante</button>}</div></td></tr>
   })}</tbody></table></div>
+}
+
+function CashFlowView({ entries, settlements, accounts, requestById, clientById }: { entries: FinancialEntry[]; settlements: Settlement[]; accounts: FinancialAccount[]; requestById: Map<string, Request>; clientById: Map<string, Client> }) {
+  const [accountId, setAccountId] = useState('all')
+  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7))
+  const entryById = useMemo(() => new Map(entries.map((item) => [item.id, item])), [entries])
+  const accountById = useMemo(() => new Map(accounts.map((item) => [item.id, item])), [accounts])
+  const periodStart = `${period}-01`
+  const periodLabel = useMemo(() => new Date(`${period}-01T12:00:00`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), [period])
+
+  const filteredSettlements = useMemo(() => settlements.filter((item) => accountId === 'all' || item.account_id === accountId), [accountId, settlements])
+  const periodSettlements = useMemo(() => filteredSettlements.filter((item) => item.settled_at.startsWith(period)).sort((a, b) => b.settled_at.localeCompare(a.settled_at)), [filteredSettlements, period])
+  const opening = useMemo(() => filteredSettlements.filter((item) => item.settled_at.slice(0, 10) < periodStart).reduce((sum, item) => {
+    const entry = entryById.get(item.entry_id)
+    return sum + (entry?.entry_type === 'payable' ? -Number(item.amount) : Number(item.amount))
+  }, 0), [entryById, filteredSettlements, periodStart])
+  const inflow = useMemo(() => periodSettlements.filter((item) => entryById.get(item.entry_id)?.entry_type === 'receivable').reduce((sum, item) => sum + Number(item.amount), 0), [entryById, periodSettlements])
+  const outflow = useMemo(() => periodSettlements.filter((item) => entryById.get(item.entry_id)?.entry_type === 'payable').reduce((sum, item) => sum + Number(item.amount), 0), [entryById, periodSettlements])
+  const closing = opening + inflow - outflow
+  const accumulated = useMemo(() => filteredSettlements.reduce((sum, item) => {
+    const entry = entryById.get(item.entry_id)
+    return sum + (entry?.entry_type === 'payable' ? -Number(item.amount) : Number(item.amount))
+  }, 0), [entryById, filteredSettlements])
+
+  const projectedEntries = useMemo(() => entries.filter((item) => item.status !== 'cancelled' && item.status !== 'paid' && item.due_date.startsWith(period)), [entries, period])
+  const projectedIn = useMemo(() => projectedEntries.filter((item) => item.entry_type === 'receivable').reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0), [projectedEntries])
+  const projectedOut = useMemo(() => projectedEntries.filter((item) => item.entry_type === 'payable').reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0), [projectedEntries])
+
+  const accountSummaries = useMemo(() => accounts.filter((item) => item.active || settlements.some((settlement) => settlement.account_id === item.id)).map((account) => {
+    const accountSettlements = settlements.filter((item) => item.account_id === account.id)
+    const received = accountSettlements.filter((item) => entryById.get(item.entry_id)?.entry_type === 'receivable').reduce((sum, item) => sum + Number(item.amount), 0)
+    const paid = accountSettlements.filter((item) => entryById.get(item.entry_id)?.entry_type === 'payable').reduce((sum, item) => sum + Number(item.amount), 0)
+    return { account, received, paid, balance: received - paid }
+  }).sort((a, b) => a.account.sort_order - b.account.sort_order || a.account.name.localeCompare(b.account.name)), [accounts, entryById, settlements])
+
+  return <div className="finance-cashflow">
+    <div className="finance-cashflow-notice"><strong>Fluxo de caixa registrado no HRX</strong><span>Este painel não representa saldo bancário nem faz conciliação automática. O saldo parte de zero e considera somente recebimentos e pagamentos efetivamente baixados no HRX.</span></div>
+    <div className="finance-cashflow-toolbar">
+      <label>Período<input type="month" value={period} onChange={(event) => setPeriod(event.target.value || new Date().toISOString().slice(0, 7))} /></label>
+      <label>Conta financeira<select value={accountId} onChange={(event) => setAccountId(event.target.value)}><option value="all">Todas as contas</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}{account.active ? '' : ' • inativa'}</option>)}</select></label>
+      <div><span>Referência</span><strong>{periodLabel}</strong></div>
+    </div>
+    <div className="finance-cashflow-metrics">
+      <article><span>Saldo inicial registrado</span><strong>{currency.format(opening)}</strong><small>Movimento acumulado antes do período</small></article>
+      <article><span>Entradas realizadas</span><strong>{currency.format(inflow)}</strong><small>Recebimentos baixados no período</small></article>
+      <article><span>Saídas realizadas</span><strong>{currency.format(outflow)}</strong><small>Pagamentos baixados no período</small></article>
+      <article><span>Saldo final registrado</span><strong>{currency.format(closing)}</strong><small>Saldo inicial + entradas − saídas</small></article>
+      <article><span>Acumulado no HRX</span><strong>{currency.format(accumulated)}</strong><small>Desde o primeiro lançamento baixado</small></article>
+    </div>
+    <div className="finance-cashflow-projection">
+      <div><span>Previsto a receber no período</span><strong>{currency.format(projectedIn)}</strong></div>
+      <div><span>Previsto a pagar no período</span><strong>{currency.format(projectedOut)}</strong></div>
+      <div><span>Resultado previsto</span><strong>{currency.format(projectedIn - projectedOut)}</strong></div>
+      <p>A previsão usa os vencimentos ainda abertos e é geral. Ela não é atribuída a uma conta financeira até a baixa do lançamento.</p>
+    </div>
+    <section className="finance-cashflow-section"><header><div><span>MOVIMENTAÇÕES REALIZADAS</span><h2>{periodLabel}</h2></div><small>{periodSettlements.length} movimentação(ões)</small></header>
+      {!periodSettlements.length ? <EmptyState title="Nenhuma movimentação no período" text="Recebimentos e pagamentos aparecerão aqui depois que forem efetivamente baixados no Financeiro." /> : <div className="finance-table-wrap"><table className="finance-table finance-cashflow-table"><thead><tr><th>Data</th><th>Descrição</th><th>Conta</th><th>Tipo</th><th>Forma</th><th>Valor</th></tr></thead><tbody>{periodSettlements.map((settlement) => {
+        const entry = entryById.get(settlement.entry_id)
+        const request = entry?.quote_request_id ? requestById.get(entry.quote_request_id) : undefined
+        const client = entry?.client_id ? clientById.get(entry.client_id) : undefined
+        const isPayable = entry?.entry_type === 'payable'
+        const title = isPayable ? (entry?.counterparty_name || entry?.description || 'Pagamento') : (client?.company || client?.name || request?.company || request?.name || entry?.description || 'Recebimento')
+        const detail = isPayable ? entry?.description : (request?.proposal_number || entry?.description)
+        return <tr key={settlement.id}><td data-label="Data"><strong>{new Date(settlement.settled_at).toLocaleDateString('pt-BR')}</strong></td><td data-label="Descrição"><strong>{title}</strong><small>{detail}</small></td><td data-label="Conta">{accountById.get(settlement.account_id)?.name || 'Conta'}</td><td data-label="Tipo"><span className={`finance-cashflow-kind ${isPayable ? 'is-out' : 'is-in'}`}>{isPayable ? 'Saída' : 'Entrada'}</span></td><td data-label="Forma">{settlement.payment_method || '—'}</td><td data-label="Valor"><strong className={isPayable ? 'finance-value-out' : 'finance-value-in'}>{isPayable ? '− ' : '+ '}{currency.format(Number(settlement.amount))}</strong></td></tr>
+      })}</tbody></table></div>}
+    </section>
+    <section className="finance-cashflow-section"><header><div><span>RESUMO POR CONTA</span><h2>Movimento acumulado registrado</h2></div></header>
+      {!accountSummaries.length ? <EmptyState title="Nenhuma conta financeira cadastrada" text="Cadastre uma conta financeira para organizar recebimentos e pagamentos por origem ou destino." /> : <div className="finance-account-summary">{accountSummaries.map(({ account, received, paid, balance }) => <article key={account.id}><div><strong>{account.name}</strong><small>{account.active ? 'Ativa' : 'Inativa'}</small></div><span>Entradas <strong>{currency.format(received)}</strong></span><span>Saídas <strong>{currency.format(paid)}</strong></span><span>Saldo registrado <strong>{currency.format(balance)}</strong></span></article>)}</div>}
+    </section>
+  </div>
 }
 
 function InvoiceModal({ session, draft, request, installments, onClose, onDone, onError }: { session: Session; draft: Draft; request?: Request; installments: PlannedInstallment[]; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {

@@ -71,6 +71,24 @@ test('visão financeira mostra saldo previsto sem misturar recebimentos e pagame
   assert.match(page, /Vencidos/)
 })
 
+test('fluxo de caixa usa somente baixas registradas e deixa claro que não é saldo bancário', async () => {
+  const [page, css] = await Promise.all([
+    read('src/quotes/AdminFinancePage.tsx'),
+    read('src/quotes/admin-finance.css'),
+  ])
+  assert.match(page, /Fluxo de caixa registrado no HRX/)
+  assert.match(page, /não representa saldo bancário/i)
+  assert.match(page, /filteredSettlements/)
+  assert.match(page, /entry\?\.entry_type === 'payable' \? -Number\(item\.amount\) : Number\(item\.amount\)/)
+  assert.match(page, /type="month"/)
+  assert.match(page, /Todas as contas/)
+  assert.match(page, /Previsto a receber no período/)
+  assert.match(page, /Previsto a pagar no período/)
+  assert.match(page, /resumo por conta/i)
+  assert.match(css, /finance-cashflow-metrics/)
+  assert.match(css, /finance-account-summary/)
+})
+
 test('navegação expõe Financeiro sem substituir as cinco áreas primárias do PWA', async () => {
   const [root, navigation] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
