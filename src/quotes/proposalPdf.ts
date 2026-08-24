@@ -723,7 +723,7 @@ function drawInstallmentsAnnex(ctx: CanvasRenderingContext2D, data: ProposalPdfD
 }
 
 function appendDetailAnnexes(canvases: HTMLCanvasElement[], data: ProposalPdfData, markDark: HTMLImageElement) {
-  const itemPages = data.items.length > 3 ? chunks(data.items, 9) : []
+  const itemPages = data.items.length > 3 ? chunks(data.items, 8) : []
   const allInstallments = data.installments.length ? data.installments : [{ installmentNumber: 1, amount: data.finalAmount, dueDate: data.validUntil }]
   const installmentPages = allInstallments.length > 3 ? chunks(allInstallments, 16) : []
   const totalAnnexes = itemPages.length + installmentPages.length
@@ -732,7 +732,7 @@ function appendDetailAnnexes(canvases: HTMLCanvasElement[], data: ProposalPdfDat
   let annex = 1
   itemPages.forEach((items, pageIndex) => {
     const canvas = pageCanvas()
-    drawItemsAnnex(canvas.getContext('2d')!, data, markDark, items, pageIndex * 9, annex, totalAnnexes)
+    drawItemsAnnex(canvas.getContext('2d')!, data, markDark, items, pageIndex * 8, annex, totalAnnexes)
     canvases.push(canvas)
     annex += 1
   })
