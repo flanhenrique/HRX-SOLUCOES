@@ -42,7 +42,8 @@ test('navegação React real preserva deep link e histórico entre Projetos e Co
 
   await page.getByRole('button', { name: 'Perfil' }).click()
   await expect(page).toHaveURL(/#admin\/configuracoes$/)
-  await expect(page.getByRole('heading', { name: /Configurações/i })).toBeVisible()
+  await expect(page.locator('.hrx-settings-view')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Alterar senha/i })).toBeVisible()
   await expect(page.locator('[data-admin-shell]')).toHaveCount(1)
 
   await page.goBack()

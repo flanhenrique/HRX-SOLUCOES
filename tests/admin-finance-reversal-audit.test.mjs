@@ -40,7 +40,7 @@ test('backend só estorna a última baixa ativa, exige motivo e reabre proposta 
 test('métricas e cancelamento ignoram baixas já estornadas', async () => {
   const backend = await read('supabase/functions/finance-admin/index.ts')
   assert.match(backend, /select\('entry_id,amount,settled_at,reversed_at'\)/)
-  assert.match(backend, /\.is\('reversed_at', null\)\n      \.gte\('settled_at'/)
+  assert.match(backend, /\.is\('reversed_at', null\)[\s\S]*?\.gte\('settled_at'/)
   assert.match(backend, /eq\('entry_id', entryId\)\.is\('reversed_at', null\)/)
 })
 

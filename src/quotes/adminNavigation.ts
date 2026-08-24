@@ -18,6 +18,8 @@ const hashes: Record<AdminDestination, string> = {
 const hashDestinations: Record<string, AdminDestination> = {
   'visao-geral': 'executive',
   paineis: 'panels',
+  painels: 'panels',
+  projetos: 'panels',
   atividades: 'activities',
   clientes: 'clients',
   documentos: 'documents',
@@ -32,6 +34,8 @@ const pathDestinations: Record<string, AdminDestination> = {
   '/admin': 'executive',
   '/admin/visao-geral': 'executive',
   '/admin/paineis': 'panels',
+  '/admin/painels': 'panels',
+  '/admin/projetos': 'panels',
   '/admin/atividades': 'activities',
   '/admin/clientes': 'clients',
   '/admin/documentos': 'documents',

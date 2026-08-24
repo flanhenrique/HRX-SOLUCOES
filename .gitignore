@@ -25,6 +25,11 @@ Thumbs.db
 
 # Test / coverage
 coverage/
+test-results/
+playwright-report/
+
+# TypeScript
+*.tsbuildinfo
 
 # Vite
 .vite/
