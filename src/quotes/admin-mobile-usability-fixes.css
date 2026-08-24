@@ -3,9 +3,27 @@
  * Este arquivo é carregado por último e atua apenas sobre o shell canônico do PWA.
  */
 
-/* O conteúdo termina antes do dock flutuante e não expõe o fundo do body. */
+/*
+ * O dock é fixed e não participa do fluxo. O shell mobile usa apenas duas faixas reais:
+ * topbar + conteúdo. Assim a área rolável preenche toda a viewport útil e nunca deixa
+ * uma terceira faixa do fundo do shell aparecer abaixo do conteúdo.
+ */
+.hrx-unified-shell.is-pwa{
+  display:flex!important;
+  flex-direction:column!important;
+  grid-template-rows:none!important;
+  min-height:100dvh!important;
+  background:linear-gradient(180deg,#081a2f 0%,#061427 100%)!important;
+}
+.hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
+  flex:0 0 64px!important;
+}
 .hrx-unified-shell.is-pwa>.hrx-unified-content{
-  background:transparent!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  min-height:0!important;
+  height:auto!important;
+  background:linear-gradient(180deg,#081a2f 0%,#061427 100%)!important;
   padding-bottom:104px!important;
   scrollbar-width:none;
 }
@@ -118,7 +136,10 @@
   scroll-padding-bottom:180px!important;
 }
 
-/* Tema claro: todos os textos antes hard-coded para o tema escuro recebem contraste explícito. */
+/* Tema claro: o shell e o conteúdo usam a mesma superfície até a borda física inferior. */
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa{
+  background:linear-gradient(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%)!important;
+}
 html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-unified-content{
   background:linear-gradient(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%)!important;
 }
