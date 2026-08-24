@@ -45,9 +45,10 @@ export type ProposalPdfData = {
  * Design ID: DAHTJI6gD7s
  * Dimensão original: 794 × 1123 px (A4), 6 páginas.
  *
- * As coordenadas abaixo reproduzem a geometria do arquivo aprovado. Mudanças de
- * identidade/layout devem ser feitas primeiro no documento canônico e só depois
- * refletidas neste renderer.
+ * As seis páginas abaixo reproduzem a geometria do arquivo aprovado e permanecem
+ * imutáveis. Quando o conteúdo real excede a capacidade visual do template, o
+ * renderer acrescenta anexos de detalhamento depois da página 6, sem resumir nem
+ * omitir itens ou parcelas da referência comercial oficial.
  */
 const W = 794
 const H = 1123
@@ -204,7 +205,6 @@ function drawCoverArtwork(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, W, H)
 
-  // Geometria derivada do X da marca, preservando a composição escura da capa aprovada.
   ctx.save()
   ctx.globalAlpha = .11
   ctx.fillStyle = '#245175'
@@ -256,8 +256,7 @@ function drawCover(ctx: CanvasRenderingContext2D, data: ProposalPdfData, logoLig
     ctx.fillText(label, x, y)
     ctx.fillStyle = WHITE
     font(ctx, 700, 14)
-    const maxWidth = x === 68 ? 321 : 321
-    writeWrapped(ctx, value, x, y + 29, maxWidth, 18, 2)
+    writeWrapped(ctx, value, x, y + 29, 321, 18, 2)
   })
 
   drawDraftWatermark(ctx, data)
@@ -517,7 +516,7 @@ function drawConditions(ctx: CanvasRenderingContext2D, data: ProposalPdfData, ma
   if (all.length > 3) {
     ctx.fillStyle = MUTED
     font(ctx, 500, 8.5)
-    ctx.fillText(`+ ${all.length - 3} parcela(s) adicional(is) conforme cronograma comercial registrado.`, 68, 538)
+    ctx.fillText(`+ ${all.length - 3} parcela(s) adicional(is) detalhada(s) no anexo desta proposta.`, 68, 538)
   }
 
   roundedRect(ctx, 68, 546, 658, 100, 9)
@@ -537,7 +536,7 @@ function drawAcceptance(ctx: CanvasRenderingContext2D, data: ProposalPdfData, lo
 
   ctx.fillStyle = BODY
   font(ctx, 400, 13.5)
-  writeWrapped(ctx, 'Ao aprovar esta proposta, o cliente declara estar de acordo com o escopo, investimento, condições de pagamento, prazos e demais condições registradas nesta versão.', 68, 155, 658, 20, 5)
+  writeWrapped(ctx, 'Ao aprovar esta proposta, o cliente declara estar de acordo com o escopo, investimento, condições de pagamento, prazos e demais condições registradas nesta versão, incluindo seus anexos de detalhamento quando existentes.', 68, 155, 658, 20, 5)
 
   roundedRect(ctx, 68, 246, 658, 73, 9)
   ctx.fillStyle = '#F7F9FB'
@@ -579,7 +578,6 @@ function drawAcceptance(ctx: CanvasRenderingContext2D, data: ProposalPdfData, lo
   font(ctx, 500, 8.5)
   writeWrapped(ctx, `${COMPANY_CNPJ} • ${COMPANY_EMAIL} • ${COMPANY_SITE}`, 521.56, 728.89, 176.44, 12, 3)
 
-  // O rodapé da página de aceite usa a legenda específica do arquivo aprovado.
   ctx.fillStyle = WHITE
   ctx.fillRect(60, FOOTER_Y - 14, 675, 24)
   ctx.fillStyle = '#768A9D'
@@ -588,6 +586,162 @@ function drawAcceptance(ctx: CanvasRenderingContext2D, data: ProposalPdfData, lo
   ctx.textAlign = 'right'
   ctx.fillText(`${data.proposalNumber} • v${versionLabel(data.version)} • 6/6`, 726, FOOTER_Y)
   ctx.textAlign = 'left'
+}
+
+function chunks<T>(items: T[], size: number) {
+  const result: T[][] = []
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size))
+  return result
+}
+
+function drawAnnexBase(ctx: CanvasRenderingContext2D, data: ProposalPdfData, markDark: HTMLImageElement, annex: number, totalAnnexes: number, title: string, subtitle: string) {
+  ctx.fillStyle = PAPER
+  ctx.fillRect(0, 0, W, H)
+  drawWatermark(ctx, markDark)
+  drawDraftWatermark(ctx, data)
+
+  const line = ctx.createLinearGradient(LEFT, 66, RIGHT, 66)
+  line.addColorStop(0, NAVY)
+  line.addColorStop(.78, NAVY_3)
+  line.addColorStop(1, GREEN)
+  ctx.fillStyle = line
+  ctx.fillRect(LEFT, 66, RIGHT - LEFT, 6)
+
+  ctx.fillStyle = GREEN
+  font(ctx, 800, 9.5)
+  ctx.fillText(`ANEXO ${annex} DE ${totalAnnexes}`, LEFT, 108)
+  ctx.fillStyle = TEXT
+  font(ctx, 800, 23)
+  ctx.fillText(title, LEFT, 141)
+  ctx.fillStyle = BODY
+  font(ctx, 400, 11)
+  writeWrapped(ctx, subtitle, LEFT, 165, RIGHT - LEFT, 16, 2)
+
+  ctx.fillStyle = '#768A9D'
+  font(ctx, 500, 7.5)
+  ctx.fillText(companyContactLine(), LEFT, FOOTER_Y)
+  ctx.textAlign = 'right'
+  ctx.fillText(`${data.proposalNumber} • v${versionLabel(data.version)} • Anexo ${annex}/${totalAnnexes}`, RIGHT, FOOTER_Y)
+  ctx.textAlign = 'left'
+}
+
+function drawItemsAnnex(ctx: CanvasRenderingContext2D, data: ProposalPdfData, markDark: HTMLImageElement, items: ProposalPdfItem[], startIndex: number, annex: number, totalAnnexes: number) {
+  drawAnnexBase(ctx, data, markDark, annex, totalAnnexes, 'Detalhamento integral do escopo', 'Este anexo integra a proposta e preserva todos os itens que não cabem integralmente no quadro executivo das páginas canônicas.')
+
+  const columns = [68, 105, 449, 503, 610, 726]
+  const headers = ['Item', 'Descrição', 'Qtd.', 'Unitário', 'Total']
+  for (let index = 0; index < headers.length; index += 1) {
+    ctx.fillStyle = NAVY
+    ctx.fillRect(columns[index], 208, columns[index + 1] - columns[index], 38)
+    ctx.fillStyle = WHITE
+    font(ctx, 800, 8)
+    ctx.fillText(headers[index], columns[index] + 8, 232)
+  }
+
+  let y = 246
+  items.forEach((item, index) => {
+    const rowHeight = 86
+    ctx.fillStyle = index % 2 === 0 ? WHITE : '#F7F9FB'
+    ctx.fillRect(LEFT, y, RIGHT - LEFT, rowHeight)
+    ctx.strokeStyle = LINE
+    ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(LEFT, y + rowHeight); ctx.lineTo(RIGHT, y + rowHeight); ctx.stroke()
+
+    ctx.fillStyle = TEXT
+    font(ctx, 800, 8.5)
+    ctx.fillText(String(startIndex + index + 1).padStart(2, '0'), 78, y + 28)
+
+    ctx.fillStyle = TEXT
+    font(ctx, 700, 10)
+    writeWrapped(ctx, item.serviceName, 116, y + 24, 322, 14, 2)
+    if (item.description) {
+      ctx.fillStyle = BODY
+      font(ctx, 400, 8.5)
+      writeWrapped(ctx, item.description, 116, y + 55, 322, 12, 2)
+    }
+
+    ctx.fillStyle = TEXT
+    font(ctx, 600, 8.5)
+    ctx.fillText(String(item.quantity).replace('.', ','), 462, y + 28)
+    ctx.fillText(brl.format(item.unitAmount), 514, y + 28)
+    ctx.fillText(brl.format(item.totalAmount), 620, y + 28)
+    y += rowHeight
+  })
+
+  roundedRect(ctx, 454, 1010, 272, 43, 8)
+  ctx.fillStyle = SOFT_GREEN
+  ctx.fill()
+  ctx.fillStyle = MUTED
+  font(ctx, 700, 8)
+  ctx.fillText('Valor final da proposta', 468, 1027)
+  ctx.textAlign = 'right'
+  ctx.fillStyle = TEXT
+  font(ctx, 800, 11)
+  ctx.fillText(brl.format(data.finalAmount), 712, 1028)
+  ctx.textAlign = 'left'
+}
+
+function drawInstallmentsAnnex(ctx: CanvasRenderingContext2D, data: ProposalPdfData, markDark: HTMLImageElement, installments: PlannedInstallment[], totalInstallments: number, annex: number, totalAnnexes: number) {
+  drawAnnexBase(ctx, data, markDark, annex, totalAnnexes, 'Cronograma integral de pagamento', 'Todas as parcelas previstas estão discriminadas abaixo. Em caso de divergência, este cronograma integra a versão comercial aprovada.')
+
+  const columns = [68, 220, 450, 726]
+  const headers = ['Parcela', 'Valor', 'Vencimento']
+  for (let index = 0; index < headers.length; index += 1) {
+    ctx.fillStyle = NAVY
+    ctx.fillRect(columns[index], 208, columns[index + 1] - columns[index], 38)
+    ctx.fillStyle = WHITE
+    font(ctx, 800, 8)
+    ctx.fillText(headers[index], columns[index] + 12, 232)
+  }
+
+  let y = 246
+  installments.forEach((installment, index) => {
+    const rowHeight = 46
+    ctx.fillStyle = index % 2 === 0 ? WHITE : '#F7F9FB'
+    ctx.fillRect(LEFT, y, RIGHT - LEFT, rowHeight)
+    ctx.strokeStyle = LINE
+    ctx.beginPath(); ctx.moveTo(LEFT, y + rowHeight); ctx.lineTo(RIGHT, y + rowHeight); ctx.stroke()
+    ctx.fillStyle = TEXT
+    font(ctx, 700, 10)
+    ctx.fillText(`${installment.installmentNumber}/${totalInstallments}`, 82, y + 29)
+    ctx.fillText(brl.format(installment.amount), 234, y + 29)
+    ctx.fillText(date(installment.dueDate), 464, y + 29)
+    y += rowHeight
+  })
+
+  roundedRect(ctx, 454, 1010, 272, 43, 8)
+  ctx.fillStyle = SOFT_GREEN
+  ctx.fill()
+  ctx.fillStyle = MUTED
+  font(ctx, 700, 8)
+  ctx.fillText('Soma prevista', 468, 1027)
+  ctx.textAlign = 'right'
+  ctx.fillStyle = TEXT
+  font(ctx, 800, 11)
+  ctx.fillText(brl.format(data.installments.reduce((sum, item) => sum + item.amount, 0)), 712, 1028)
+  ctx.textAlign = 'left'
+}
+
+function appendDetailAnnexes(canvases: HTMLCanvasElement[], data: ProposalPdfData, markDark: HTMLImageElement) {
+  const itemPages = data.items.length > 3 ? chunks(data.items, 9) : []
+  const allInstallments = data.installments.length ? data.installments : [{ installmentNumber: 1, amount: data.finalAmount, dueDate: data.validUntil }]
+  const installmentPages = allInstallments.length > 3 ? chunks(allInstallments, 16) : []
+  const totalAnnexes = itemPages.length + installmentPages.length
+  if (!totalAnnexes) return
+
+  let annex = 1
+  itemPages.forEach((items, pageIndex) => {
+    const canvas = pageCanvas()
+    drawItemsAnnex(canvas.getContext('2d')!, data, markDark, items, pageIndex * 9, annex, totalAnnexes)
+    canvases.push(canvas)
+    annex += 1
+  })
+  installmentPages.forEach((installments) => {
+    const canvas = pageCanvas()
+    drawInstallmentsAnnex(canvas.getContext('2d')!, data, markDark, installments, allInstallments.length, annex, totalAnnexes)
+    canvases.push(canvas)
+    annex += 1
+  })
 }
 
 function base64Bytes(dataUrl: string) {
@@ -651,5 +805,6 @@ export async function generateProposalPdf(data: ProposalPdfData) {
   const page5 = pageCanvas(); drawConditions(page5.getContext('2d')!, data, markDark); canvases.push(page5)
   const page6 = pageCanvas(); drawAcceptance(page6.getContext('2d')!, data, logoDark, markDark); canvases.push(page6)
 
+  appendDetailAnnexes(canvases, data, markDark)
   return canvasesToPdf(canvases)
 }
