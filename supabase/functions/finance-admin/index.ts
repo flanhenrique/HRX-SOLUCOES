@@ -14,6 +14,7 @@ type ActionPayload =
   | { action: 'cancel_entry'; entryId: string }
   | { action: 'add_account'; name: string }
   | { action: 'record_settlement'; entryId: string; amount: number; accountId: string; settledAt?: string; paymentMethod?: string; note?: string; receipt?: ReceiptInput | null }
+  | { action: 'reverse_settlement'; settlementId: string; reason: string }
 
 const defaultOrigins = ['http://localhost:5173', 'https://flanhenrique.github.io', 'https://hrxsolutions.com.br', 'https://www.hrxsolutions.com.br']
 const clean = (value: unknown, max = 1000) => String(value ?? '').trim().slice(0, max)
@@ -127,7 +128,8 @@ async function loadFinanceMetrics(db: any, currentDate: string) {
   let receivedMonthCents = 0
   while (true) {
     const { data, error } = await db.from('financial_settlements')
-      .select('entry_id,amount,settled_at')
+      .select('entry_id,amount,settled_at,reversed_at')
+      .is('reversed_at', null)
       .gte('settled_at', `${monthStart}T00:00:00.000Z`)
       .lt('settled_at', `${monthEnd}T00:00:00.000Z`)
       .order('id', { ascending: true })
@@ -180,11 +182,12 @@ Deno.serve(async (req) => {
     const currentDate = new Date().toISOString().slice(0, 10)
     const metricsPromise = loadFinanceMetrics(db, currentDate)
 
-    const [{ data: rawEntries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }] = await Promise.all([
+    const [{ data: rawEntries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }, { data: audits }] = await Promise.all([
       db.from('financial_entries').select('*').order('due_date', { ascending: true }).limit(800),
       db.from('financial_accounts').select('id,name,active,sort_order,created_at').order('sort_order').order('name'),
       db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_percent,tax_amount,approved_version,current_version,payment_mode,installments,first_due_date,valid_until,updated_at').in('commercial_status', ['approved', 'invoiced', 'received']).order('updated_at', { ascending: false }).limit(300),
-      db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).limit(1600),
+      db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).order('created_at', { ascending: false }).limit(1600),
+      db.from('financial_audit_log').select('*').order('created_at', { ascending: false }).limit(1600),
     ])
     if (entriesError) return json({ error: 'query_failed' }, 500, headers)
     const entries = (rawEntries ?? []).map((entry: any) => ({ ...entry, status: effectiveStatus(entry, currentDate) }))
@@ -232,6 +235,7 @@ Deno.serve(async (req) => {
       accounts: accounts ?? [],
       drafts: financeDrafts,
       settlements: settlements ?? [],
+      audits: audits ?? [],
       requests: requests ?? [],
       installments: installmentRows,
       versions: publicVersions,
@@ -293,11 +297,66 @@ Deno.serve(async (req) => {
     const { data: entry } = await db.from('financial_entries').select('id,entry_type,source,status').eq('id', entryId).maybeSingle()
     if (!entry) return json({ error: 'entry_not_found' }, 404, headers)
     if (entry.entry_type !== 'payable' || entry.source !== 'manual' || ['paid', 'cancelled'].includes(entry.status)) return json({ error: 'entry_not_cancellable' }, 409, headers)
-    const { count } = await db.from('financial_settlements').select('id', { count: 'exact', head: true }).eq('entry_id', entryId)
+    const { count } = await db.from('financial_settlements').select('id', { count: 'exact', head: true }).eq('entry_id', entryId).is('reversed_at', null)
     if ((count ?? 0) > 0) return json({ error: 'entry_has_settlements' }, 409, headers)
     const { data: cancelled, error } = await db.from('financial_entries').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', entryId).select('*').single()
     if (error || !cancelled) return json({ error: 'entry_cancel_failed' }, 500, headers)
+    await db.from('financial_audit_log').insert({ entry_id: entryId, actor_user_id: user.id, event_type: 'entry_cancelled', event_data: { previousStatus: entry.status } })
     return json({ entry: cancelled }, 200, headers)
+  }
+
+  if (body.action === 'reverse_settlement') {
+    const settlementId = clean(body.settlementId, 80)
+    const reason = clean(body.reason, 500)
+    if (!settlementId || reason.length < 5) return json({ error: 'reversal_reason_required' }, 400, headers)
+
+    const { data: settlement } = await db.from('financial_settlements').select('*').eq('id', settlementId).maybeSingle()
+    if (!settlement) return json({ error: 'settlement_not_found' }, 404, headers)
+    if (settlement.reversed_at) return json({ error: 'settlement_already_reversed' }, 409, headers)
+
+    const { data: entry } = await db.from('financial_entries').select('*').eq('id', settlement.entry_id).maybeSingle()
+    if (!entry) return json({ error: 'entry_not_found' }, 404, headers)
+    if (entry.status === 'cancelled') return json({ error: 'entry_not_open' }, 409, headers)
+
+    const { data: latestActive } = await db.from('financial_settlements')
+      .select('id')
+      .eq('entry_id', settlement.entry_id)
+      .is('reversed_at', null)
+      .order('settled_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!latestActive || latestActive.id !== settlement.id) return json({ error: 'reversal_requires_latest' }, 409, headers)
+
+    const reversedAt = new Date().toISOString()
+    const { data: reversed, error: reverseError } = await db.from('financial_settlements')
+      .update({ reversed_at: reversedAt, reversed_by: user.id, reversal_reason: reason })
+      .eq('id', settlement.id)
+      .is('reversed_at', null)
+      .select('*')
+      .single()
+    if (reverseError || !reversed) return json({ error: 'settlement_reverse_failed' }, 500, headers)
+
+    const { data: refreshed } = await db.from('financial_entries').select('*').eq('id', entry.id).single()
+
+    if (entry.entry_type === 'receivable' && entry.quote_request_id) {
+      await db.from('quote_audit_log').insert({
+        request_id: entry.quote_request_id,
+        actor_user_id: user.id,
+        event_type: 'financial_settlement_reversed',
+        event_data: { entryId: entry.id, settlementId: settlement.id, installmentNumber: entry.installment_number, amount: Number(settlement.amount), reason },
+      })
+
+      const { data: quoteDraft } = await db.from('quote_drafts').select('id,current_version,approved_version,commercial_status').eq('request_id', entry.quote_request_id).maybeSingle()
+      if (quoteDraft?.commercial_status === 'received') {
+        const version = Number(quoteDraft.approved_version || quoteDraft.current_version || 0)
+        await db.from('quote_drafts').update({ commercial_status: 'invoiced', updated_at: reversedAt }).eq('id', quoteDraft.id)
+        if (version > 0) await db.from('quote_versions').update({ commercial_status: 'invoiced' }).eq('request_id', entry.quote_request_id).eq('version_number', version)
+        await db.from('quote_audit_log').insert({ request_id: entry.quote_request_id, actor_user_id: user.id, event_type: 'commercial_status_invoiced_after_reversal', event_data: { source: 'finance', version, settlementId: settlement.id } })
+      }
+    }
+
+    return json({ settlement: reversed, entry: refreshed }, 200, headers)
   }
 
   if (body.action === 'create_receivables') {
