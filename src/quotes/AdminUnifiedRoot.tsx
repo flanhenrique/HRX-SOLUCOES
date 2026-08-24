@@ -1,17 +1,19 @@
-import { lazy, ReactNode, Ref, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode, Ref } from 'react'
 import AdminPersonalizationBridge from './AdminPersonalizationBridge'
 import { navigateAdmin, onAdminNavigate, resolveAdminDestination, type AdminDestination } from './adminNavigation'
 import { hrxSupabase } from './supabaseClient'
 
 const AdminExecutiveDashboard = lazy(() => import('./AdminExecutiveDashboard'))
 const AdminProjectPanelsPage = lazy(() => import('./AdminProjectPanelsPage'))
-const AdminExperienceLayer = lazy(() => import('./AdminExperienceLayer'))
+const AdminActivitiesPage = lazy(() => import('./AdminActivitiesPage'))
 const AdminClientsPage = lazy(() => import('./AdminClientsPage'))
 const AdminDocumentsPage = lazy(() => import('./AdminDocumentsPage'))
 const AdminQuotes = lazy(() => import('./AdminQuotes'))
 const AdminFinancePage = lazy(() => import('./AdminFinancePage'))
 const AdminFiscalPage = lazy(() => import('./AdminFiscalPage'))
 const AdminSuspensionsPage = lazy(() => import('./AdminSuspensionsPage'))
+const AdminSettingsPage = lazy(() => import('./AdminSettingsPage'))
 
 type NavItem = { destination: AdminDestination; label: string; shortLabel?: string; icon: string }
 type RuntimeMode = 'standalone' | 'browser'
@@ -98,13 +100,14 @@ function RouteContent({ destination }: { destination: AdminDestination }) {
 
   if (destination === 'executive') content = <AdminExecutiveDashboard />
   else if (destination === 'panels') content = <AdminProjectPanelsPage />
+  else if (destination === 'activities') content = <AdminActivitiesPage />
   else if (destination === 'clients') content = <AdminClientsPage />
   else if (destination === 'documents') content = <AdminDocumentsPage />
   else if (destination === 'quotes') content = <AdminQuotes />
   else if (destination === 'finance') content = <AdminFinancePage />
   else if (destination === 'suspensions') content = <AdminSuspensionsPage />
   else if (destination === 'fiscal') content = <AdminFiscalPage />
-  else content = <AdminExperienceLayer />
+  else content = <AdminSettingsPage />
 
   return <Suspense fallback={<RouteLoading />}><ActivatedRoute destination={destination}>{content}</ActivatedRoute></Suspense>
 }
