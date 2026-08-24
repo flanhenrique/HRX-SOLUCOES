@@ -15,7 +15,8 @@ test('mobile quote usability layer is loaded last and neutralizes legacy spacing
   assert.ok(chromeImport >= 0, 'chrome canônico precisa continuar carregado')
   assert.ok(usabilityImport > chromeImport, 'correções mobile devem ser carregadas por último')
 
-  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*padding-bottom:104px!important/)
+  assert.match(css, /\.hrx-unified-shell\.is-pwa\{[\s\S]*display:flex!important[\s\S]*flex-direction:column!important[\s\S]*grid-template-rows:none!important/)
+  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*flex:1 1 0!important[\s\S]*min-height:0!important[\s\S]*padding-bottom:104px!important/)
   assert.match(css, /\.quote-commercial-shell \.admin-exec-main\{[\s\S]*padding-bottom:0!important/)
   assert.match(css, /\.admin-exec-topbar\.quote-topbar\{[\s\S]*background:transparent!important/)
   assert.match(css, /\.admin-exec-metrics article\{[\s\S]*min-height:68px!important/)
@@ -23,9 +24,10 @@ test('mobile quote usability layer is loaded last and neutralizes legacy spacing
   assert.match(css, /::-webkit-scrollbar\{display:none\}/)
 })
 
-test('light quote theme explicitly restores contrast for KPIs and proposal list', async () => {
+test('light quote theme explicitly restores contrast and paints the entire mobile shell', async () => {
   const css = await read('src/quotes/admin-mobile-usability-fixes.css')
 
+  assert.match(css, /data-hrx-theme-resolved="light"[\s\S]*\.hrx-unified-shell\.is-pwa\{[\s\S]*linear-gradient\(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%\)/)
   assert.match(css, /data-hrx-theme-resolved="light"[\s\S]*\.admin-exec-metrics strong\{color:#102235!important\}/)
   assert.match(css, /\.quote-queue \.admin-queue-header strong\{color:#183149!important\}/)
   assert.match(css, /\.quote-queue \.admin-lead strong,[\s\S]*\.quote-queue \.admin-lead b\{color:#183149!important\}/)
