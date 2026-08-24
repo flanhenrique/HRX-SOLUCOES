@@ -3,9 +3,9 @@
 **Data**: 2026-08-24  
 **Versão**: V01  
 **Status**: APROVADO PARA MERGE  
-**Repositório Canônico**: lanhenrique/HRX-SOLUCOES  
+**Repositório Canônico**: flanhenrique/HRX-SOLUCOES  
 **Branch Principal**: main  
-**Branch Auditada e Reconciliada**: ix/auditoria-rigorosa-admin-20260823 (PR #74)  
+**Branch Auditada e Reconciliada**: fix/auditoria-rigorosa-admin-20260823 (PR #74)  
 **SHA Base main**: 9e7b5c9  
 
 ---
@@ -17,7 +17,7 @@ Esta auditoria técnica integral reconciliou o estado real do código-fonte, arq
 As pendências estruturais históricas foram resolvidas e validadas:
 1. **Shell Único Estrito**: Extinção de sidebars, topbars e docks duplicados. A aplicação opera sob uma raiz autenticada (AdminAuthRouter → AdminMfaGate → AdminApp → AdminUnifiedRoot), alternando entre DesktopShell e PwaShell conforme viewport, com views puras e sem sobreposição de microaplicativos.
 2. **Reconciliação Git e Backend**: Integração completa entre main e a PR #74, combinando o cálculo global de métricas financeiras (sem escritas colaterais no GET) com a auditoria append-only e exclusão de liquidações estornadas (
-eversed_at).
+rreversed_at).
 3. **PWA e Performance**: Code-splitting implementado em todas as 10 áreas administrativas; bundle principal em 482 kB (136 kB gzip); polling do atualizador moderado para 120s; Service Worker com exclusão explícita de cache para rotas e dados administrativos sensíveis.
 4. **Proposta Comercial DAHTJI6gD7s**: Geração estrita em 6 páginas canônicas idênticas ao design Canva aprovado, com transbordamento automático para anexos de detalhamento sem truncamento de itens ou parcelas.
 5. **Quality Gates 100% Verdes**:
@@ -34,11 +34,11 @@ px playwright test: 24/24 testes E2E executados contra o app React real montado 
 
 ### 2.1 Estado das Branches
 - main (SHA 9e7b5c9): Continha as PRs #75, #76 e #77 (hardening financeiro, estorno e advisors).
-- ix/auditoria-rigorosa-admin-20260823 (PR #74): Continha os 20 commits de refatoração arquitetural para shell único, testes Playwright contra o app real e lazy loading.
-- **Reconciliação Realizada**: Merge de main em ix/auditoria-rigorosa-admin-20260823 com resolução de conflito em supabase/functions/finance-admin/index.ts.
+- fix/auditoria-rigorosa-admin-20260823 (PR #74): Continha os 20 commits de refatoração arquitetural para shell único, testes Playwright contra o app real e lazy loading.
+- **Reconciliação Realizada**: Merge de main em fix/auditoria-rigorosa-admin-20260823 com resolução de conflito em supabase/functions/finance-admin/index.ts.
 
 ### 2.2 Auditoria de PRs Abertas/Históricas
-- **PR #74** (ix/auditoria-rigorosa-admin-20260823): Ativa, reconciliada com main, pronta para merge.
+- **PR #74** (fix/auditoria-rigorosa-admin-20260823): Ativa, reconciliada com main, pronta para merge.
 - **PR #65** (qa/verify-pwa-production-20260823): Incorporada na suíte de testes do PWA e nesta auditoria documental.
 - **PR #53** (governanca/documentacao-central-obrigatoria-2026-08-21): Incorporada na estrutura de pastas canônica DOCUMENTOS/.
 - **PR #40, #38, #37, #1**: Superseded pelas implementações consolidadas na PR #74 e no main.
@@ -100,8 +100,8 @@ Todos os 10 módulos administrativos são carregados via React.lazy() como **vie
 - **Destaques de Hardening**:
   - Imutabilidade estrita de versões comerciais aprovadas (quote_versions).
   - Grants de escrita revogados em tabelas críticas; mutações canalizadas via Edge Functions e RPCs autenticadas com verificação AAL2.
-  - Trilha de auditoria append-only para liquidações financeiras (inancial_audit_log) e suporte a estorno imutável (
-eversed_at).
+  - Trilha de auditoria append-only para liquidações financeiras (financial_audit_log) e suporte a estorno imutável (
+rreversed_at).
   - RLS restritivo com validação direta de (select auth.jwt()) ->> 'aal' = 'aal2'.
 
 ---

@@ -3,7 +3,7 @@
 **Data**: 2026-08-24  
 **Versão**: V01  
 **Status**: IMPLEMENTADO — HOMOLOGAÇÃO EXTERNA PENDENTE  
-**Repositório Canônico**: lanhenrique/HRX-SOLUCOES  
+**Repositório Canônico**: flanhenrique/HRX-SOLUCOES  
 **Branch**: main  
 
 ---
@@ -11,10 +11,10 @@
 ## 1. RASTREABILIDADE GIT E MERGE
 
 - **SHA Anterior de main**: 9e7b5c91f552c020bcde4a8469ebfbb61af8c085
-- **Branch da PR #74**: ix/auditoria-rigorosa-admin-20260823
+- **Branch da PR #74**: fix/auditoria-rigorosa-admin-20260823
 - **Head SHA da PR**: 4602debe870a551686d0cbaf16b9d2b162b06a3d
 - **SHA do Commit de Merge**: 7815cb4d5c5b159fc11605af28e0a8a4a8267551
-- **Novo SHA de main**: 7815cb4d5c5b159fc11605af28e0a8a4a8267551
+- **SHA Atual de main**: 7421cd8938fb0847e27fe8b54dc4fb64ebca4e8a
 - **Data/Hora do Merge**: 2026-08-24T15:18:55Z
 - **Estratégia Utilizada**: Merge standard com histórico de reconciliação preservado.
 
@@ -26,9 +26,13 @@
 - **Validate HRX site**: SUCCESS (Run #32736606114)
 - **HRX Admin PWA Quality Gate**: SUCCESS (Run #32736605948)
 
-### Workflows Pós-Merge no main (SHA: 7815cb4)
+### Workflows do Merge em main (SHA: 7815cb4)
 - **Validate HRX site**: SUCCESS (Run #32744101401)
 - **Deploy HRX Solutions to GitHub Pages**: SUCCESS (Run #32744102015)
+
+### Workflows do Commit em main (SHA: 7421cd8)
+- **Validate HRX site**: SUCCESS (Run #32744346632)
+- **Deploy HRX Solutions to GitHub Pages**: SUCCESS (Run #32744345440)
 
 ---
 
@@ -60,7 +64,7 @@
 | **Atividades** | Timeline e pendências | Lista de tarefas operacionais | PASS (Playwright) | Pendente de sessão autorizada |
 | **Configurações** | Perfil e troca de senha | Formulário seguro com validação | PASS (Playwright) | Pendente de sessão autorizada |
 
-> **Nota Operacional**: A homologação automatizada com mocks e navegação real obteve 100% de aprovação. A homologação em ambiente de produção com usuário real e token TOTP depende da execução direta pelo operador humano responsável.
+> **Nota Operacional**: A homologação automatizada com mocks e navegação real obteve 100% de aprovação. A homologação em ambiente de produção com usuário real e token TOTP depende da execução direta pelo operador humano responsável com credenciais ativas.
 
 ---
 
@@ -85,7 +89,7 @@ As seguintes PRs foram confirmadas como integralmente SUPERSEDED, comentadas com
 - **PR #40** (quality-gate/hrx-adminapp-mfa): Encerrada.
 - **PR #38** (quality-gate/hrx-shell-pages): Encerrada.
 - **PR #37** (quality-gate/hrx-documents-page-v2): Encerrada.
-- **PR #1** (eat/orcamento-inteligente): Encerrada.
+- **PR #1** (feat/orcamento-inteligente): Encerrada.
 
 ---
 

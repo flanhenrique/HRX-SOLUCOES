@@ -3,7 +3,7 @@
 **Data**: 2026-08-24  
 **Versão**: V01  
 **Status**: CONCLUÍDO E HOMOLOGADO INTERNAMENTE  
-**Repositório Canônico**: lanhenrique/HRX-SOLUCOES  
+**Repositório Canônico**: flanhenrique/HRX-SOLUCOES  
 
 ---
 
@@ -17,7 +17,7 @@ Todas as pendências técnicas, arquiteturais, comerciais e de governança foram
 
 ### P0 — Bloqueadores Críticos (Status: 100% EXECUTADO)
 - [x] **Shells Duplicados e Competição no DOM**: Eliminada a criação de chrome/sidebars internas nos módulos de Orçamentos, Atividades, Projetos e Configurações. A arquitetura canônica possui exatamente um shell ativo (DesktopShell ou PwaShell).
-- [x] **Reconciliação Git main vs PR #74**: Conflito em inance-admin/index.ts resolvido integrando KPIs globais sem escrita no GET com exclusão de liquidações estornadas e trilha de auditoria.
+- [x] **Reconciliação Git main vs PR #74**: Conflito em finance-admin/index.ts resolvido integrando KPIs globais sem escrita no GET com exclusão de liquidações estornadas e trilha de auditoria.
 - [x] **Imutabilidade e Segurança Fiscal/Comercial**: Propostas versionadas (quote_versions) bloqueadas contra alteração e exclusão; escrita sensível requer AAL2.
 - [x] **Fidelidade Canônica da Proposta Comercial (DAHTJI6gD7s)**: Garantidas as 6 páginas canônicas aprovadas sem truncamento; itens e parcelas excedentes fluem automaticamente para anexos de detalhamento.
 
@@ -51,10 +51,10 @@ avigator.share nativo. Integração via API de parceiro (Meta Business Cloud API
 
 | PULL REQUEST | BRANCH | STATUS ATUAL | DESTINO / JUSTIFICATIVA |
 |---|---|---|---|
-| **PR #74** | ix/auditoria-rigorosa-admin-20260823 | **APROVADO PARA MERGE** | Frente canônica ativa que consolida toda a auditoria e correções estruturais. |
+| **PR #74** | fix/auditoria-rigorosa-admin-20260823 | **APROVADO PARA MERGE** | Frente canônica ativa que consolida toda a auditoria e correções estruturais. |
 | **PR #65** | qa/verify-pwa-production-20260823 | **SUPERSEDED** | Testes e validações de PWA integrados à suíte canônica do repositório. |
 | **PR #53** | governanca/documentacao-central-obrigatoria-2026-08-21 | **SUPERSEDED** | Central de Documentos estruturada e populada em DOCUMENTOS/. |
 | **PR #40** | quality-gate/hrx-adminapp-mfa | **SUPERSEDED** | MFA Gate consolidado na cadeia canônica AdminMfaGate. |
 | **PR #38** | quality-gate/hrx-shell-pages | **SUPERSEDED** | Páginas administrativas shell-native migradas para views puras. |
 | **PR #37** | quality-gate/hrx-documents-page-v2 | **SUPERSEDED** | Central de Documentos shell-native consolidada. |
-| **PR #1** | eat/orcamento-inteligente | **SUPERSEDED** | Motor de orçamentos e proposta DAHTJI6gD7s consolidado no estado atual. |
+| **PR #1** | feat/orcamento-inteligente | **SUPERSEDED** | Motor de orçamentos e proposta DAHTJI6gD7s consolidado no estado atual. |

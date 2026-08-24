@@ -6,7 +6,7 @@
 **Data**: 2026-08-24  
 **Versão**: V01  
 **Status**: RECONCILIADO E ENDURECIDO  
-**Repositório Canônico**: lanhenrique/HRX-SOLUCOES  
+**Repositório Canônico**: flanhenrique/HRX-SOLUCOES  
 
 ---
 
@@ -15,7 +15,7 @@
 O backend de dados da HRX Solutions opera sobre o PostgreSQL gerenciado do Supabase, implementando:
 1. **Row Level Security (RLS)** ativo em 100% das tabelas.
 2. **Autenticação com MFA/AAL2 obrigatório** para todas as operações administrativas e fiscais.
-3. **Imutabilidade Estrita** de propostas aprovadas (quote_versions) e trilha de auditoria financeira (inancial_audit_log).
+3. **Imutabilidade Estrita** de propostas aprovadas (quote_versions) e trilha de auditoria financeira (financial_audit_log).
 4. **Armazenamento Privado** de documentos no bucket hrx-documents com URLs assinadas temporárias.
 
 ---
@@ -39,11 +39,11 @@ equest_id_idx, ersion_idx | Admin AAL2 (Read-only) | SELECT (Admin) / INSERT vi
 | quote_audit_log | Histórico e trilha de eventos comerciais | id (UUID) | 
 equest_id_idx, created_at_idx | Admin AAL2 | INSERT via RPC / Edge Function | Append-only |
 | hrx_documents | Metadados da Central de Documentos | id (UUID) | client_id_idx, checksum_idx | Restrictive Admin AAL2 | SELECT, INSERT (Admin) | Vínculo com Storage privado |
-| inancial_accounts | Contas de liquidação financeira | id (UUID) | sort_order_idx | Admin AAL2 | SELECT, INSERT, UPDATE | Ordenação e status ativo |
-| inancial_entries | Lançamentos de Contas a Receber/Pagar | id (UUID) | due_date_idx, 	ype_idx | Admin AAL2 | Mutations via Edge Function | Status efetivo derivado em leitura |
-| inancial_settlements | Liquidações financeiras e baixas | id (UUID) | entry_id_idx, settled_at_idx | Admin AAL2 | Mutations via Edge Function | Suporte a estorno imutável (
-eversed_at) |
-| inancial_audit_log | Auditoria de baixas e estornos contábeis | id (UUID) | settlement_id_idx, ctor_idx | Admin AAL2 | INSERT (Edge Function) | **Append-only**: DELETE e UPDATE revogados |
+| financial_accounts | Contas de liquidação financeira | id (UUID) | sort_order_idx | Admin AAL2 | SELECT, INSERT, UPDATE | Ordenação e status ativo |
+| financial_entries | Lançamentos de Contas a Receber/Pagar | id (UUID) | due_date_idx, 	ype_idx | Admin AAL2 | Mutations via Edge Function | Status efetivo derivado em leitura |
+| financial_settlements | Liquidações financeiras e baixas | id (UUID) | entry_id_idx, settled_at_idx | Admin AAL2 | Mutations via Edge Function | Suporte a estorno imutável (
+rreversed_at) |
+| financial_audit_log | Auditoria de baixas e estornos contábeis | id (UUID) | settlement_id_idx, ctor_idx | Admin AAL2 | INSERT (Edge Function) | **Append-only**: DELETE e UPDATE revogados |
 
 ---
 
