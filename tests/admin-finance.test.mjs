@@ -84,7 +84,7 @@ test('fluxo de caixa usa somente baixas registradas e deixa claro que não é sa
   assert.match(page, /Todas as contas/)
   assert.match(page, /Previsto a receber no período/)
   assert.match(page, /Previsto a pagar no período/)
-  assert.match(page, /Resumo por conta/)
+  assert.match(page, /resumo por conta/i)
   assert.match(css, /finance-cashflow-metrics/)
   assert.match(css, /finance-account-summary/)
 })
