@@ -35,13 +35,40 @@ test('baixa exige conta configurável e comprovante permanece opcional na Centra
     read('src/quotes/AdminFinancePage.tsx'),
     read('supabase/functions/finance-admin/index.ts'),
   ])
-  assert.match(page, /Configurar contas de recebimento/)
+  assert.match(page, /Configurar contas financeiras/)
   assert.match(page, /Comprovante é recomendado|comprovante é recomendado/i)
   assert.match(page, /hrx-documents/)
   assert.match(page, /SHA-256/)
   assert.match(backend, /Comprovante de Recebimento/)
   assert.match(backend, /account_required/)
   assert.match(backend, /receipt_document_id/)
+})
+
+test('fase 2 adiciona contas a pagar sem criar ledger paralelo', async () => {
+  const [page, backend, migration] = await Promise.all([
+    read('src/quotes/AdminFinancePage.tsx'),
+    read('supabase/functions/finance-admin/index.ts'),
+    read('supabase/migrations/20260824003000_finance_payables_phase2.sql'),
+  ])
+  assert.match(migration, /alter table public\.financial_entries/)
+  assert.match(migration, /counterparty_name/)
+  assert.match(migration, /financial_entries_open_payables_due_idx/)
+  assert.match(backend, /action: 'create_payable'/)
+  assert.match(backend, /entry_type: 'payable'/)
+  assert.match(backend, /action: 'cancel_entry'/)
+  assert.match(backend, /Comprovante de Pagamento/)
+  assert.match(page, /Nova despesa/)
+  assert.match(page, /Contas a pagar/)
+  assert.match(page, /Registrar pagamento/)
+})
+
+test('visão financeira mostra saldo previsto sem misturar recebimentos e pagamentos', async () => {
+  const page = await read('src/quotes/AdminFinancePage.tsx')
+  assert.match(page, /Saldo previsto/)
+  assert.match(page, /projected = outstanding - payable/)
+  assert.match(page, /entryById\.get\(item\.entry_id\)\?\.entry_type === 'receivable'/)
+  assert.match(page, /Impostos a reservar/)
+  assert.match(page, /Vencidos/)
 })
 
 test('navegação expõe Financeiro sem substituir as cinco áreas primárias do PWA', async () => {
