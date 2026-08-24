@@ -43,3 +43,10 @@ test('métricas e cancelamento ignoram baixas já estornadas', async () => {
   assert.match(backend, /\.is\('reversed_at', null\)\n      \.gte\('settled_at'/)
   assert.match(backend, /eq\('entry_id', entryId\)\.is\('reversed_at', null\)/)
 })
+
+test('fechamento dos advisors indexa FKs de auditoria e evita reavaliação do JWT por linha', async () => {
+  const migration = await read('supabase/migrations/20260824125500_finance_reversal_audit_advisor_fix.sql')
+  assert.match(migration, /financial_audit_actor_user_idx/)
+  assert.match(migration, /financial_settlements_reversed_by_idx/)
+  assert.match(migration, /\(select auth\.jwt\(\)\) ->> 'aal'/)
+})
