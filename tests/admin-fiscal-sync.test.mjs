@@ -18,7 +18,7 @@ test('fiscal page allows manual IE and latest quote keeps the client synchronize
   assert.match(fiscal, /Salvar cadastro estadual/)
   assert.match(fiscal, /Inscrição Estadual/)
   assert.match(fiscal, /Atualizar/)
-  assert.match(fiscal, /onAdminNavigate/)
+  assert.doesNotMatch(fiscal, /onAdminNavigate/)
   assert.doesNotMatch(fiscal, /MutationObserver/)
   assert.doesNotMatch(fiscal, /createPortal/)
   assert.match(migration, /before insert or update on public\.quote_requests/i)
