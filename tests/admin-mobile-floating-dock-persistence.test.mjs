@@ -13,7 +13,7 @@ test('PWA mobile keeps the dock fixed while only content scrolls', async () => {
 
   assert.match(app, /import '\.\/admin-mobile-floating-dock-fix\.css'/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding:0!important/)
-  assert.match(css, /--hrx-dock-bottom:max\(8px,env\(safe-area-inset-bottom\)\)/)
+  assert.match(css, /--hrx-dock-bottom:clamp\(8px,env\(safe-area-inset-bottom\),34px\)/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*overflow-y:auto!important/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-mobile-nav\{[\s\S]*position:fixed!important/)
   assert.match(css, /bottom:var\(--hrx-dock-bottom\)!important/)
@@ -26,6 +26,19 @@ test('PWA mobile keeps the dock fixed while only content scrolls', async () => {
   assert.match(finance, /document\.documentElement\.classList\.add\('hrx-finance-modal-open'\)/)
   assert.match(finance, /return createPortal\(<div className="finance-modal-backdrop"/)
   assert.match(finance, /, document\.body\)/)
+})
+
+test('iPhone standalone shell is anchored by inset instead of 100dvh', async () => {
+  const css = await read('src/quotes/admin-mobile-floating-dock-fix.css')
+  const shellBlock = css.match(/\.hrx-unified-shell\.is-pwa\{([\s\S]*?)\n  \}/)?.[1] ?? ''
+
+  assert.match(shellBlock, /position:fixed!important/)
+  assert.match(shellBlock, /inset:0!important/)
+  assert.match(shellBlock, /height:auto!important/)
+  assert.match(shellBlock, /max-height:none!important/)
+  assert.doesNotMatch(shellBlock, /100dvh/)
+  assert.match(css, /--hrx-dock-bottom:clamp\(8px,env\(safe-area-inset-bottom\),34px\)/)
+  assert.match(css, /--hrx-dock-bottom:clamp\(5px,env\(safe-area-inset-bottom\),21px\)/)
 })
 
 test('dock is a true overlay and does not create permanent dead space at page end', async () => {
