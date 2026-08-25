@@ -92,6 +92,7 @@ async function refreshAdminClients(clients) {
     try {
       const url = new URL(client.url)
       if (url.origin !== self.location.origin || !url.pathname.startsWith('/admin/')) return
+      if (url.searchParams.has('hrx-preview')) return
       await client.navigate(client.url)
     } catch {
       // Uma janela pode desaparecer durante a ativação. Isso não invalida o pacote.
