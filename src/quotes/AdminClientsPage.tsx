@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { hrxSupabase } from './supabaseClient'
-import { navigateAdmin, onAdminNavigate } from './adminNavigation'
+import { navigateAdmin } from './adminNavigation'
 import AdminClientForm from './AdminClientForm'
 import './admin-clients-page.css'
 
@@ -34,7 +34,6 @@ type QuoteRow = {
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function AdminClientsPage() {
-  const [open, setOpen] = useState(false)
   const [clients, setClients] = useState<ClientRow[]>([])
   const [quotes, setQuotes] = useState<QuoteRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -46,14 +45,6 @@ export default function AdminClientsPage() {
   const [quoteFormOpen, setQuoteFormOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [manualForm, setManualForm] = useState({ clientId: '', requestText: '', desiredDeadline: '', preferredContact: 'whatsapp' })
-
-  useEffect(() => onAdminNavigate((destination) => {
-    setOpen(destination === 'clients')
-    if (destination !== 'clients') {
-      setQuoteFormOpen(false)
-      setMobileDetailOpen(false)
-    }
-  }), [])
 
   const load = async () => {
     setLoading(true); setError('')
@@ -77,7 +68,7 @@ export default function AdminClientsPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { if (open) void load() }, [open])
+  useEffect(() => { void load() }, [])
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('pt-BR')
@@ -117,8 +108,6 @@ export default function AdminClientsPage() {
     setQuoteFormOpen(false)
     navigateAdmin('quotes')
   }
-
-  if (!open) return null
 
   return <section className={`hrx-clients-page${mobileDetailOpen ? ' is-mobile-detail-open' : ''}`} aria-label="Clientes HRX">
     <header className="hrx-clients-header">
