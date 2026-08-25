@@ -22,9 +22,12 @@ test('Financeiro mantém visão HRX e adiciona visão Pessoal sem segundo shell'
     read('src/quotes/AdminFinanceScopedPage.tsx'),
     read('src/quotes/AdminPersonalFinancePage.tsx'),
   ])
-  const financeModule = modules.slice(modules.indexOf("id: 'finance'"), modules.indexOf("id: 'finance'") + 650)
+  const financeModule = modules.slice(modules.indexOf("id: 'finance'"), modules.indexOf("id: 'finance'") + 900)
   assert.match(financeModule, /component: lazy\(\(\) => import\('\.\/AdminFinanceScopedPage'\)\)/)
-  assert.match(root, /const ActiveView = module\.component/)
+  assert.match(financeModule, /finance-receivable/)
+  assert.match(financeModule, /finance-payable/)
+  assert.match(root, /const ActiveView = route\.module\.component/)
+  assert.match(root, /<AdminRouteProvider route=\{route\}>/)
   assert.match(scoped, /<AdminFinancePage \/>/)
   assert.match(scoped, /<AdminPersonalFinancePage \/>/)
   assert.match(scoped, /HRX Solutions/)
