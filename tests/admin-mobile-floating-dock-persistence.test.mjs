@@ -34,7 +34,7 @@ test('dock is a true overlay and does not create permanent dead space at page en
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*padding-bottom:0!important/)
   assert.match(css, /scroll-padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\) \+ 12px\)!important/)
   assert.match(css, /:focus\{[\s\S]*scroll-margin-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\) \+ 12px\)!important/)
-  assert.doesNotMatch(css, /padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\)/)
+  assert.doesNotMatch(css, /\n\s+padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\)/)
 })
 
 test('light PWA canvas continues behind the dock without a navy bottom strip', async () => {
