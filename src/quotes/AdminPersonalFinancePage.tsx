@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Session } from '@supabase/supabase-js'
 import { hrxSupabase } from './supabaseClient'
 import './admin-finance.css'
@@ -35,6 +36,17 @@ function derivedStatus(entry: PersonalEntry) {
   if (entry.status === 'paid') return { label: 'Pago', className: 'is-paid' }
   if (entry.due_date < today()) return { label: 'Vencido', className: 'is-overdue' }
   return { label: 'A pagar', className: 'is-open' }
+}
+
+function useFinanceModalViewportLock() {
+  useEffect(() => {
+    document.documentElement.classList.add('hrx-finance-modal-open')
+    document.body.classList.add('hrx-finance-modal-open')
+    return () => {
+      document.documentElement.classList.remove('hrx-finance-modal-open')
+      document.body.classList.remove('hrx-finance-modal-open')
+    }
+  }, [])
 }
 
 export default function AdminPersonalFinancePage() {
@@ -125,6 +137,7 @@ export default function AdminPersonalFinancePage() {
 }
 
 function NewPersonalEntryModal({ session, onClose, onDone, onError }: { session: Session; onClose: () => void; onDone: () => Promise<void>; onError: (message: string) => void }) {
+  useFinanceModalViewportLock()
   const [counterpartyName, setCounterpartyName] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(categories[0])
@@ -158,10 +171,11 @@ function NewPersonalEntryModal({ session, onClose, onDone, onError }: { session:
     setBusy(false)
   }
 
-  return <div className="finance-modal-backdrop"><form className="finance-modal" onSubmit={submit}><header><div><span>FINANCEIRO PESSOAL</span><h2>Nova conta a pagar</h2><p>Este lançamento é pessoal e não será usado nos indicadores empresariais da HRX Solutions.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Conta / favorecido<input autoFocus value={counterpartyName} onChange={(event) => setCounterpartyName(event.target.value)} placeholder="Ex.: Internet, academia, locador" /></label><label>Categoria<select value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><label className="is-wide">Descrição<input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ex.: Mensalidade de setembro" /></label><label>Valor<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0,00" /></label><label>Vencimento<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label><label>Competência<input type="date" value={competenceDate} onChange={(event) => setCompetenceDate(event.target.value)} /></label><label>Referência<input value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} placeholder="Opcional" /></label><label className="is-wide">Observações<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Informação pessoal opcional." /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy}>{busy ? 'Salvando…' : 'Criar conta'}</button></footer></form></div>
+  return createPortal(<div className="finance-modal-backdrop"><form className="finance-modal" onSubmit={submit}><header><div><span>FINANCEIRO PESSOAL</span><h2>Nova conta a pagar</h2><p>Este lançamento é pessoal e não será usado nos indicadores empresariais da HRX Solutions.</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Conta / favorecido<input autoFocus value={counterpartyName} onChange={(event) => setCounterpartyName(event.target.value)} placeholder="Ex.: Internet, academia, locador" /></label><label>Categoria<select value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><label className="is-wide">Descrição<input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ex.: Mensalidade de setembro" /></label><label>Valor<input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0,00" /></label><label>Vencimento<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label><label>Competência<input type="date" value={competenceDate} onChange={(event) => setCompetenceDate(event.target.value)} /></label><label>Referência<input value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} placeholder="Opcional" /></label><label className="is-wide">Observações<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Informação pessoal opcional." /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button disabled={busy}>{busy ? 'Salvando…' : 'Criar conta'}</button></footer></form></div>, document.body)
 }
 
 function PayPersonalEntryModal({ session, entry, onClose, onDone, onError }: { session: Session; entry: PersonalEntry; onClose: () => void; onDone: () => Promise<void>; onError: (message: string) => void }) {
+  useFinanceModalViewportLock()
   const [paidDate, setPaidDate] = useState(today())
   const [method, setMethod] = useState('pix')
   const [busy, setBusy] = useState(false)
@@ -173,10 +187,11 @@ function PayPersonalEntryModal({ session, entry, onClose, onDone, onError }: { s
     else await onDone()
     setBusy(false)
   }
-  return <div className="finance-modal-backdrop"><div className="finance-modal is-small"><header><div><span>BAIXA PESSOAL</span><h2>Registrar pagamento</h2><p>{entry.counterparty_name} • {currency.format(Number(entry.gross_amount))}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Data do pagamento<input type="date" value={paidDate} onChange={(event) => setPaidDate(event.target.value)} /></label><label>Forma<select value={method} onChange={(event) => setMethod(event.target.value)}><option value="pix">PIX</option><option value="transferencia">Transferência</option><option value="boleto">Boleto</option><option value="cartao">Cartão</option><option value="dinheiro">Dinheiro</option><option value="debito_automatico">Débito automático</option><option value="outro">Outro</option></select></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button type="button" disabled={busy} onClick={() => void confirm()}>{busy ? 'Registrando…' : 'Confirmar pagamento'}</button></footer></div></div>
+  return createPortal(<div className="finance-modal-backdrop"><div className="finance-modal is-small"><header><div><span>BAIXA PESSOAL</span><h2>Registrar pagamento</h2><p>{entry.counterparty_name} • {currency.format(Number(entry.gross_amount))}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><label>Data do pagamento<input type="date" value={paidDate} onChange={(event) => setPaidDate(event.target.value)} /></label><label>Forma<select value={method} onChange={(event) => setMethod(event.target.value)}><option value="pix">PIX</option><option value="transferencia">Transferência</option><option value="boleto">Boleto</option><option value="cartao">Cartão</option><option value="dinheiro">Dinheiro</option><option value="debito_automatico">Débito automático</option><option value="outro">Outro</option></select></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button type="button" disabled={busy} onClick={() => void confirm()}>{busy ? 'Registrando…' : 'Confirmar pagamento'}</button></footer></div></div>, document.body)
 }
 
 function CancelPersonalEntryModal({ session, entry, onClose, onDone, onError }: { session: Session; entry: PersonalEntry; onClose: () => void; onDone: () => Promise<void>; onError: (message: string) => void }) {
+  useFinanceModalViewportLock()
   const [busy, setBusy] = useState(false)
   const confirm = async () => {
     setBusy(true)
@@ -185,5 +200,5 @@ function CancelPersonalEntryModal({ session, entry, onClose, onDone, onError }: 
     else await onDone()
     setBusy(false)
   }
-  return <div className="finance-modal-backdrop"><div className="finance-modal is-small"><header><div><span>FINANCEIRO PESSOAL</span><h2>Cancelar conta?</h2><p>{entry.counterparty_name} • {entry.description}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><div className="finance-cancel-warning">A conta sairá das pendências, mas permanecerá registrada com status cancelado.</div></div><footer><button type="button" className="is-secondary" onClick={onClose}>Manter</button><button type="button" className="is-danger" disabled={busy} onClick={() => void confirm()}>{busy ? 'Cancelando…' : 'Cancelar conta'}</button></footer></div></div>
+  return createPortal(<div className="finance-modal-backdrop"><div className="finance-modal is-small"><header><div><span>FINANCEIRO PESSOAL</span><h2>Cancelar conta?</h2><p>{entry.counterparty_name} • {entry.description}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><div className="finance-cancel-warning">A conta sairá das pendências, mas permanecerá registrada com status cancelado.</div></div><footer><button type="button" className="is-secondary" onClick={onClose}>Manter</button><button type="button" className="is-danger" disabled={busy} onClick={() => void confirm()}>{busy ? 'Cancelando…' : 'Cancelar conta'}</button></footer></div></div>, document.body)
 }
