@@ -15,8 +15,9 @@ test('personal finance remains readable and creatable on mobile PWA', async () =
   assert.match(page, /data-label="Ações"/)
 
   assert.match(css, /data-finance-scope="personal"/)
-  assert.match(css, /position:fixed;[\s\S]*bottom:calc\(104px \+ env\(safe-area-inset-bottom\)\)/)
-  assert.match(css, /padding:8px 10px calc\(188px \+ env\(safe-area-inset-bottom\)\)/)
+  assert.match(css, /\.personal-finance-page\{[\s\S]*padding:8px 10px 12px/)
+  assert.match(css, /button\.is-primary\{[\s\S]*position:static;[\s\S]*width:100%/)
+  assert.doesNotMatch(css, /188px|bottom:calc\(104px/)
   assert.match(css, /\.personal-finance-tabs\{[\s\S]*position:sticky/)
   assert.match(css, /\.personal-finance-table \.finance-row-actions button\{[\s\S]*min-height:44px/)
   assert.match(css, /data-hrx-theme-resolved="light"[\s\S]*\.personal-finance-table tr\{[\s\S]*background:#fff/)

@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window.navigator, 'standalone', { configurable: true, value: true })
+  })
   await page.route('**/rest/v1/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -9,6 +12,60 @@ test.beforeEach(async ({ page }) => {
       body: '[]',
     })
   })
+})
+
+test('standalone PWA preserves dock geometry after lazy routes load', async ({ page }) => {
+  await page.setViewportSize({ width: 402, height: 874 })
+  await page.goto('/admin/?hrx-preview=1#admin/painels')
+  const shell = page.locator('.hrx-unified-shell.is-pwa')
+  await expect(shell).toHaveAttribute('data-runtime', 'standalone')
+  await shell.evaluate((node) => node.style.setProperty('--hrx-safe-bottom', '34px'))
+
+  const measure = () => page.evaluate(() => {
+    const content = document.querySelector('.hrx-unified-content') as HTMLElement
+    const dock = document.querySelector('.hrx-unified-mobile-nav') as HTMLElement
+    const dockRect = dock.getBoundingClientRect()
+    const contentRect = content.getBoundingClientRect()
+    return {
+      dockTop: dockRect.top,
+      dockBottom: dockRect.bottom,
+      dockHeight: dockRect.height,
+      gap: (window.visualViewport?.height ?? window.innerHeight) - dockRect.bottom,
+      contentBottom: contentRect.bottom,
+      contentOverflowY: getComputedStyle(content).overflowY,
+      shellCount: document.querySelectorAll('[data-admin-shell]').length,
+    }
+  })
+
+  const baseline = await measure()
+  expect(baseline.gap).toBeCloseTo(6, 0)
+
+  await page.getByRole('button', { name: 'Orçamentos' }).click()
+  await expect(page.locator('.quote-module-loading')).toBeVisible()
+  const quotes = await measure()
+
+  await page.getByRole('button', { name: 'Abrir mais áreas' }).click()
+  await page.getByRole('button', { name: 'Financeiro' }).click()
+  await expect(page.locator('.finance-scope-root')).toBeVisible()
+  const finance = await measure()
+
+  await page.getByRole('button', { name: 'Projetos' }).click()
+  await expect(page.locator('.admin-projects-shell')).toBeVisible()
+  const projects = await measure()
+
+  await page.getByRole('button', { name: 'Docs' }).click()
+  await expect(page.locator('.hrx-documents-page')).toBeVisible()
+  const documents = await measure()
+
+  for (const current of [quotes, finance, projects, documents]) {
+    expect(current.shellCount).toBe(1)
+    expect(current.contentOverflowY).toBe('auto')
+    expect(current.dockTop).toBeCloseTo(baseline.dockTop, 0)
+    expect(current.dockBottom).toBeCloseTo(baseline.dockBottom, 0)
+    expect(current.dockHeight).toBeCloseTo(baseline.dockHeight, 0)
+    expect(current.gap).toBeCloseTo(6, 0)
+    expect(current.contentBottom).toBeCloseTo(874, 0)
+  }
 })
 
 test('aplicativo React real mantém um único shell e Projetos como view normal no mobile', async ({ page }) => {
@@ -124,4 +181,3 @@ test('topbar mobile exibe título canônico e popover de perfil desktop opera co
   await page.keyboard.press('Escape')
   await expect(popover).toHaveCount(0)
 })
-

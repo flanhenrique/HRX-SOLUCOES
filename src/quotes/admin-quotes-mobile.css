@@ -1,45 +1,18 @@
-/*
- * HRX Admin — correções de usabilidade mobile validadas a partir do PWA real no iPhone.
- * Este arquivo é carregado por último e atua apenas sobre o shell canônico do PWA.
- */
+/* HRX Admin — layout mobile da rota lazy de Orçamentos. */
 
-/*
- * O dock é fixed e não participa do fluxo. O shell mobile usa apenas duas faixas reais:
- * topbar + conteúdo. Assim a área rolável preenche toda a viewport útil e nunca deixa
- * uma terceira faixa do fundo do shell aparecer abaixo do conteúdo.
- */
-.hrx-unified-shell.is-pwa{
-  display:flex!important;
-  flex-direction:column!important;
-  grid-template-rows:none!important;
-  min-height:100dvh!important;
-  background:linear-gradient(180deg,#081a2f 0%,#061427 100%)!important;
-}
-.hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
-  flex:0 0 64px!important;
-}
-.hrx-unified-shell.is-pwa>.hrx-unified-content{
-  flex:1 1 0!important;
-  width:100%!important;
-  min-height:0!important;
-  height:auto!important;
-  background:linear-gradient(180deg,#081a2f 0%,#061427 100%)!important;
-  padding-bottom:104px!important;
-  scrollbar-width:none;
-}
-.hrx-unified-shell.is-pwa>.hrx-unified-content::-webkit-scrollbar{display:none}
-.hrx-unified-shell.is-pwa .hrx-unified-content>.admin-live-shell.quote-commercial-shell>.admin-exec-main{
-  margin:0!important;
-  padding:0!important;
-  min-height:0!important;
-}
-
-/* A view de Orçamentos não mantém altura/padding do shell legado. */
+/* A view lazy não controla viewport, shell, dock nem a área global de rolagem. */
 .hrx-unified-shell.is-pwa .quote-commercial-shell{
   min-height:0!important;
   height:auto!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
 }
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-main{
+  min-height:0!important;
+  height:auto!important;
+  margin:0!important;
+  overflow:visible!important;
   padding-bottom:0!important;
 }
 
@@ -108,7 +81,7 @@
   line-height:1.25!important;
 }
 
-/* A fila cresce pelo conteúdo, sem reservar centenas de pixels vazios. */
+/* A fila cresce pelo conteúdo; a proteção do dock pertence ao scroll container global. */
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-workspace.quote-workspace{
   min-height:0!important;
   height:auto!important;
@@ -124,10 +97,9 @@
 }
 .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-queue-list{
   overflow:visible!important;
-  padding:7px 7px 18px!important;
-  scroll-padding-bottom:104px;
+  padding:7px!important;
 }
-.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-lead:last-child{margin-bottom:6px}
+.hrx-unified-shell.is-pwa .quote-commercial-shell .admin-lead:last-child{margin-bottom:0}
 
 /* O editor reserva espaço real para o dock sem esconder ações. */
 .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor{
@@ -136,32 +108,53 @@
 }
 .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-scroll{
   overflow:visible!important;
-  scroll-padding-bottom:180px!important;
+  scroll-padding-bottom:var(--hrx-dock-clearance)!important;
 }
 
-/* Tema claro: o shell e o conteúdo usam a mesma superfície até a borda física inferior. */
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa{
-  background:linear-gradient(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%)!important;
-}
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-unified-content{
-  background:linear-gradient(180deg,#eef4fa 0%,#f7fafc 52%,#edf3f8 100%)!important;
+@media(max-width:1100px){
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-steps{
+    position:sticky!important;
+    z-index:35;
+    top:0;
+    display:flex!important;
+    grid-template-columns:none!important;
+    gap:4px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    padding:5px 8px!important;
+    scrollbar-width:none;
+    background:rgba(7,25,43,.96)!important;
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-steps::-webkit-scrollbar{display:none}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-steps button{flex:0 0 auto!important;min-width:108px!important;min-height:42px!important;padding:0 8px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-main{display:flex!important;flex-direction:column!important;gap:10px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-stage{order:1!important;width:100%!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-summary{position:static!important;order:2!important;width:100%!important;margin-top:0!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-scroll{padding-bottom:8px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-review-card{overflow:visible!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-footer{
+    position:sticky!important;
+    z-index:55!important;
+    bottom:var(--hrx-dock-clearance)!important;
+    min-height:58px!important;
+    padding:8px 10px!important;
+    border:1px solid rgba(164,200,235,.18)!important;
+    border-radius:14px!important;
+    margin:0 8px 8px!important;
+    box-shadow:0 14px 32px rgba(0,7,18,.3)!important;
+  }
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-footer>div:last-child{margin-left:auto;display:flex!important;align-items:center!important;gap:6px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-footer .quote-danger{width:auto!important;min-width:44px!important;padding:0 10px!important;font-size:.62rem!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-editor-footer .quote-danger svg{width:17px;height:17px}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-review-card>footer{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;padding:12px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-review-card>footer .quote-primary{grid-column:1/-1!important;grid-row:1!important;width:100%!important;min-height:50px!important;font-size:.76rem!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-review-card>footer .quote-secondary{width:100%!important;min-height:42px!important}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-validation{scroll-margin-bottom:var(--hrx-dock-clearance)}
+  .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-section{padding-bottom:18px!important}
 }
 
-/* O logo oficial é prata/branco; mantemos o chrome superior navy no tema claro para preservar contraste da marca. */
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
-  background:linear-gradient(135deg,rgba(7,24,45,.98),rgba(15,43,70,.97))!important;
-  border-bottom-color:rgba(255,255,255,.08)!important;
-}
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-pwa-brand span{color:#a8bdd1!important}
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-unified-actions>.hrx-notifications,
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-pwa-more{
-  background:rgba(255,255,255,.06)!important;
-  border-color:rgba(255,255,255,.14)!important;
-  color:#eef5fb!important;
-}
-html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .hrx-unified-actions>.hrx-notifications>span{
-  border-color:#0a223b!important;
-}
 html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics span{color:#50677b!important}
 html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics strong{color:#102235!important}
 html[data-hrx-theme-resolved="light"] .quote-commercial-shell .admin-exec-metrics small{color:#6d8193!important}
@@ -195,6 +188,11 @@ html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-status.is-s
 html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-review-card dd,
 html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-summary dd,
 html[data-hrx-theme-resolved="light"] .quote-commercial-shell .quote-values-grid p strong{color:#183149!important}
+html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa .quote-commercial-shell .quote-review-card>footer{
+  border-color:rgba(25,65,101,.16)!important;
+  background:rgba(248,251,254,.97)!important;
+  box-shadow:0 -12px 30px rgba(34,65,91,.14)!important;
+}
 
 @media(max-width:360px){
   .hrx-unified-shell.is-pwa .quote-commercial-shell .admin-exec-metrics.quote-metrics{gap:6px!important;padding-inline:9px!important}
