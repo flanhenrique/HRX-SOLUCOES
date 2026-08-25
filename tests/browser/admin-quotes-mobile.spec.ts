@@ -165,13 +165,13 @@ test('short quote list keeps the light surface painted to the physical bottom of
     const contentElement = document.querySelector('.hrx-unified-content') as HTMLElement
     return {
       display: getComputedStyle(shellElement).display,
-      shellBackground: getComputedStyle(shellElement).backgroundImage,
-      contentBackground: getComputedStyle(contentElement).backgroundImage,
+      shellBackgroundColor: getComputedStyle(shellElement).backgroundColor,
+      contentBackgroundColor: getComputedStyle(contentElement).backgroundColor,
       contentPaddingBottom: getComputedStyle(contentElement).paddingBottom,
     }
   })
   expect(surfaces.display).toBe('flex')
-  expect(surfaces.shellBackground).toContain('rgb(238, 244, 250)')
-  expect(surfaces.contentBackground).toContain('rgb(238, 244, 250)')
+  expect(surfaces.shellBackgroundColor).toBe('rgb(243, 247, 250)')
+  expect(surfaces.contentBackgroundColor).toBe('rgb(243, 247, 250)')
   expect(surfaces.contentPaddingBottom).toBe('0px')
 })
