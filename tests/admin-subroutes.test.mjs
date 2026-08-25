@@ -4,12 +4,13 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-const [modules, navigation, routeContext, root, deploy] = await Promise.all([
+const [modules, navigation, routeContext, root, deploy, clients] = await Promise.all([
   read('src/quotes/adminModules.ts'),
   read('src/quotes/adminNavigation.ts'),
   read('src/quotes/AdminRouteContext.tsx'),
   read('src/quotes/AdminUnifiedRoot.tsx'),
   read('.github/workflows/deploy-pages.yml'),
+  read('src/quotes/AdminClientsPage.tsx'),
 ])
 
 test('subrotas pertencem ao módulo pai e extraem parâmetros sem router local nas views', () => {
@@ -45,6 +46,17 @@ test('navegação aceita pathname administrativo completo sem abandonar APIs de 
   assert.match(navigation, /invalid_admin_path/)
   assert.match(navigation, /hrxAdminPath: normalized/)
   assert.match(navigation, /dispatchAdminNavigation\(route\.module\.id\)/)
+})
+
+test('Clientes usa a subrota como fonte de verdade sem criar uma segunda tela de detalhe', () => {
+  assert.match(clients, /const route = useAdminRoute\(\)/)
+  assert.match(clients, /route\.subroute\?\.id === 'client-detail'/)
+  assert.match(clients, /route\.params\.clienteId/)
+  assert.match(clients, /navigateAdminPath\(buildAdminSubroutePath\('clients', 'client-detail', \{ clienteId: id \}\)\)/)
+  assert.match(clients, /navigateAdmin\('clients'\)/)
+  assert.match(clients, /Cliente não encontrado/)
+  assert.doesNotMatch(clients, /window\.location|history\.(pushState|replaceState)/)
+  assert.equal((clients.match(/className="hrx-client-detail"/g) ?? []).length, 1)
 })
 
 test('fallback do Pages permite bootstrap da SPA em path dinâmico sem substituir entradas principais', () => {
