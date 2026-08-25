@@ -27,3 +27,13 @@ test('PWA mobile keeps the dock fixed while only content scrolls', async () => {
   assert.match(finance, /return createPortal\(<div className="finance-modal-backdrop"/)
   assert.match(finance, /, document\.body\)/)
 })
+
+test('light PWA canvas continues behind the dock without a navy bottom strip', async () => {
+  const css = await read('src/quotes/admin-mobile-floating-dock-fix.css')
+
+  assert.match(css, /--hrx-pwa-canvas:#081a2f/)
+  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*background:var\(--hrx-pwa-canvas\)!important/)
+  assert.match(css, /html\[data-hrx-theme-resolved="light"\]\.hrx-admin-pwa:has\(\.hrx-unified-shell\)[\s\S]*background:#f3f7fa!important/)
+  assert.match(css, /html\[data-hrx-theme-resolved="light"\] \.hrx-unified-shell\.is-pwa\{[\s\S]*--hrx-pwa-canvas:#f3f7fa/)
+  assert.match(css, /html\[data-hrx-theme-resolved="light"\] \.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*background:#f3f7fa!important/)
+})
