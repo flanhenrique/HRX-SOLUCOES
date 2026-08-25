@@ -1,78 +1,100 @@
 /*
- * HRX Admin PWA — dock mobile persistente no estilo de app nativo.
- * O dock permanece fixo enquanto somente a área de conteúdo rola.
- * Carregado por último para neutralizar regras legadas que criavam faixas
- * inferiores, excesso de padding e competição com o Financeiro Pessoal.
+ * HRX Admin PWA — correção estrutural do dock mobile.
+ *
+ * Regra canônica no telefone:
+ * 1. viewport/shell NÃO rolam;
+ * 2. somente .hrx-unified-content rola;
+ * 3. o dock é fixed e usa a safe area UMA única vez;
+ * 4. páginas internas não criam uma segunda reserva inferior;
+ * 5. modais portados ao body cobrem a viewport inteira.
  */
 
 @media(max-width:760px){
-  html.hrx-admin-pwa,
-  html.hrx-admin-pwa body,
-  html.hrx-admin-pwa #root{
-    width:100%;
-    height:100%;
-    min-height:100%;
-    overflow:hidden;
+  html.hrx-admin-pwa:has(.hrx-unified-shell),
+  html.hrx-admin-pwa:has(.hrx-unified-shell) body,
+  html.hrx-admin-pwa:has(.hrx-unified-shell) #root{
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    margin:0!important;
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+    background:#081a2f!important;
   }
 
   .hrx-unified-shell.is-pwa{
-    width:100%!important;
+    --hrx-phone-topbar:calc(64px + env(safe-area-inset-top));
+    --hrx-dock-height:64px;
+    --hrx-dock-bottom:max(8px,env(safe-area-inset-bottom));
+    position:fixed!important;
+    inset:0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    width:100vw!important;
     height:100dvh!important;
     min-height:100dvh!important;
     max-height:100dvh!important;
+    margin:0!important;
+    padding:0!important;
     overflow:hidden!important;
-    display:flex!important;
-    flex-direction:column!important;
   }
 
+  /* Safe area superior pertence ao header, não ao shell inteiro. */
   .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
-    flex:0 0 auto!important;
+    flex:0 0 var(--hrx-phone-topbar)!important;
+    width:100%!important;
+    height:var(--hrx-phone-topbar)!important;
+    min-height:var(--hrx-phone-topbar)!important;
+    padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left))!important;
   }
 
-  /*
-   * Só o conteúdo rola. O dock não participa do fluxo, por isso não sobe,
-   * não some e não gera uma terceira faixa visual no fim da página.
-   */
+  /* Esta é a ÚNICA área rolável do PWA. */
   .hrx-unified-shell.is-pwa>.hrx-unified-content{
-    flex:1 1 auto!important;
+    flex:1 1 0!important;
+    min-width:0!important;
     min-height:0!important;
+    width:100%!important;
     height:auto!important;
+    margin:0!important;
     overflow-x:hidden!important;
     overflow-y:auto!important;
     -webkit-overflow-scrolling:touch;
-    overscroll-behavior-y:contain;
-    scroll-padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
-    padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+    overscroll-behavior-y:contain!important;
+    padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 16px)!important;
+    scroll-padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 16px)!important;
   }
 
+  /* Dock no comportamento de app nativo/WhatsApp: preso à viewport. */
   .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
     position:fixed!important;
     z-index:2400!important;
-    left:50%!important;
+    top:auto!important;
     right:auto!important;
-    bottom:max(10px,calc(env(safe-area-inset-bottom) + 8px))!important;
-    transform:translateX(-50%)!important;
-    width:min(560px,calc(100vw - max(22px,env(safe-area-inset-left) + env(safe-area-inset-right) + 16px)))!important;
+    bottom:var(--hrx-dock-bottom)!important;
+    left:50%!important;
+    width:min(560px,calc(100vw - max(20px,env(safe-area-inset-left) + env(safe-area-inset-right) + 14px)))!important;
+    height:var(--hrx-dock-height)!important;
+    min-height:var(--hrx-dock-height)!important;
     margin:0!important;
-    isolation:isolate;
-    contain:layout paint;
+    transform:translateX(-50%)!important;
   }
 
-  /* Nenhuma superfície adicional é permitida abaixo/atrás do dock. */
   .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav::before,
   .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav::after{
     display:none!important;
     content:none!important;
   }
 
-  /* Financeiro Pessoal: remove a reserva exagerada criada pela correção anterior. */
+  /*
+   * A correção anterior reservava espaço no conteúdo E dentro da página
+   * financeira, duplicando a safe area e criando a faixa azul/branca.
+   * Agora a reserva existe somente no scroll container acima.
+   */
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
     min-height:100%!important;
-    padding-bottom:calc(112px + env(safe-area-inset-bottom))!important;
+    padding-bottom:18px!important;
   }
 
-  /* O CTA continua fácil de encontrar, mas volta ao fluxo da página.
-     Ele não deve criar uma segunda barra fixa acima do menu principal. */
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-header{
     display:block!important;
     min-height:0!important;
@@ -85,37 +107,64 @@
     height:auto!important;
     margin:0!important;
   }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button:not(.is-primary){
+    display:none!important;
+  }
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button.is-primary{
     position:static!important;
     inset:auto!important;
-    transform:none!important;
     width:100%!important;
     min-height:48px!important;
     margin:0!important;
+    transform:none!important;
   }
 
-  /* Modal financeiro cobre a interface inteira. O dock volta ao fechar o modal. */
-  .hrx-unified-shell.is-pwa:has(.finance-modal-backdrop)>.hrx-unified-mobile-nav{
+  /* Modal financeiro: viewport real, acima de todo o chrome do app. */
+  .finance-modal-backdrop{
+    position:fixed!important;
+    z-index:5200!important;
+    inset:0!important;
+    width:100vw!important;
+    height:100dvh!important;
+    margin:0!important;
+    padding:0!important;
+    align-items:flex-end!important;
+    overflow:hidden!important;
+  }
+  .finance-modal-backdrop>.finance-modal,
+  .finance-modal-backdrop>.finance-modal.is-small{
+    width:100%!important;
+    max-height:calc(100dvh - env(safe-area-inset-top))!important;
+    margin:0!important;
+    border-radius:20px 20px 0 0!important;
+    border-bottom:0!important;
+    padding-bottom:env(safe-area-inset-bottom)!important;
+    overflow:auto!important;
+    overscroll-behavior:contain!important;
+  }
+
+  html.hrx-finance-modal-open .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav,
+  body.hrx-finance-modal-open .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
     opacity:0!important;
     visibility:hidden!important;
     pointer-events:none!important;
   }
-  .hrx-unified-shell.is-pwa:has(.finance-modal-backdrop)>.hrx-unified-content{
-    overscroll-behavior:none!important;
-  }
-  .finance-modal-backdrop{
-    position:fixed!important;
-    inset:0!important;
-    z-index:5200!important;
+  html.hrx-finance-modal-open .hrx-unified-shell.is-pwa>.hrx-unified-content,
+  body.hrx-finance-modal-open .hrx-unified-shell.is-pwa>.hrx-unified-content{
+    overflow:hidden!important;
   }
 }
 
-@media(max-width:360px){
-  .hrx-unified-shell.is-pwa>.hrx-unified-content{
-    padding-bottom:calc(98px + env(safe-area-inset-bottom))!important;
-    scroll-padding-bottom:calc(98px + env(safe-area-inset-bottom))!important;
+@media(max-width:390px){
+  .hrx-unified-shell.is-pwa{
+    --hrx-dock-height:62px;
   }
-  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
-    padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+}
+
+@media(orientation:landscape) and (max-height:520px) and (max-width:932px){
+  .hrx-unified-shell.is-pwa{
+    --hrx-phone-topbar:calc(56px + env(safe-area-inset-top));
+    --hrx-dock-height:54px;
+    --hrx-dock-bottom:max(5px,env(safe-area-inset-bottom));
   }
 }
