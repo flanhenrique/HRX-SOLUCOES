@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 
-const css = await Promise.all([
-  readFile(new URL('../../src/quotes/quotes.css', import.meta.url), 'utf8'),
-  readFile(new URL('../../src/quotes/quote-commercial.css', import.meta.url), 'utf8'),
+// AdminApp carrega o shell primeiro; AdminQuotes é lazy e injeta o CSS da rota depois.
+const staticCss = await Promise.all([
   readFile(new URL('../../src/quotes/admin-page-system.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-feedback.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-interactions.css', import.meta.url), 'utf8'),
@@ -14,7 +13,15 @@ const css = await Promise.all([
   readFile(new URL('../../src/quotes/admin-unified-shell.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-unified-chrome.css', import.meta.url), 'utf8'),
   readFile(new URL('../../src/quotes/admin-mobile-usability-fixes.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/admin-mobile-floating-dock-fix.css', import.meta.url), 'utf8'),
 ]).then((parts) => parts.join('\n'))
+
+const lazyQuoteCss = await Promise.all([
+  readFile(new URL('../../src/quotes/quotes.css', import.meta.url), 'utf8'),
+  readFile(new URL('../../src/quotes/quote-commercial.css', import.meta.url), 'utf8'),
+]).then((parts) => parts.join('\n'))
+
+const css = `${staticCss}\n${lazyQuoteCss}`
 
 const proposal = (index: number) => `
   <button type="button" class="admin-lead${index === 0 ? ' is-active' : ''}">
@@ -85,7 +92,7 @@ async function mountQuoteScreen(page: import('@playwright/test').Page) {
     </html>`)
 }
 
-test('quote list is compact, legible and clears the floating dock on iPhone-sized PWA', async ({ page }) => {
+test('quote list is compact, legible and scrolls behind the floating dock on iPhone-sized PWA', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 })
   await mountQuoteScreen(page)
 
@@ -112,14 +119,18 @@ test('quote list is compact, legible and clears the floating dock on iPhone-size
   await expect(page.locator('.quote-queue .admin-lead').first().locator('strong')).toHaveCSS('color', 'rgb(24, 49, 73)')
 
   const bottomPadding = await content.evaluate((element) => Number.parseFloat(getComputedStyle(element).paddingBottom))
-  expect(bottomPadding).toBeGreaterThanOrEqual(100)
+  expect(bottomPadding).toBe(0)
 
   await content.evaluate((element) => { element.scrollTop = element.scrollHeight })
   const lastProposal = await page.locator('.admin-lead').last().boundingBox()
   const dock = await page.locator('.hrx-unified-mobile-nav').boundingBox()
   expect(lastProposal).not.toBeNull()
   expect(dock).not.toBeNull()
-  expect(lastProposal!.y + lastProposal!.height).toBeLessThanOrEqual(dock!.y - 12)
+
+  // O dock é overlay: no fim da lista o conteúdo pode passar por trás da cápsula,
+  // mas a cápsula deve estar colada ao fundo físico, sem uma faixa reservada abaixo.
+  expect(lastProposal!.y + lastProposal!.height).toBeGreaterThan(dock!.y)
+  expect(932 - (dock!.y + dock!.height)).toBeLessThanOrEqual(10)
 
   const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }))
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.width)
@@ -139,22 +150,28 @@ test('short quote list keeps the light surface painted to the physical bottom of
 
   const shell = page.locator('.hrx-unified-shell.is-pwa')
   const content = page.locator('.hrx-unified-content')
+  const dock = page.locator('.hrx-unified-mobile-nav')
   const shellBox = await shell.boundingBox()
   const contentBox = await content.boundingBox()
+  const dockBox = await dock.boundingBox()
   expect(shellBox).not.toBeNull()
   expect(contentBox).not.toBeNull()
+  expect(dockBox).not.toBeNull()
   expect(contentBox!.y + contentBox!.height).toBeGreaterThanOrEqual(shellBox!.y + shellBox!.height - 1)
+  expect(932 - (dockBox!.y + dockBox!.height)).toBeLessThanOrEqual(10)
 
   const surfaces = await page.evaluate(() => {
     const shellElement = document.querySelector('.hrx-unified-shell.is-pwa') as HTMLElement
     const contentElement = document.querySelector('.hrx-unified-content') as HTMLElement
     return {
       display: getComputedStyle(shellElement).display,
-      shellBackground: getComputedStyle(shellElement).backgroundImage,
-      contentBackground: getComputedStyle(contentElement).backgroundImage,
+      shellBackgroundColor: getComputedStyle(shellElement).backgroundColor,
+      contentBackgroundColor: getComputedStyle(contentElement).backgroundColor,
+      contentPaddingBottom: getComputedStyle(contentElement).paddingBottom,
     }
   })
   expect(surfaces.display).toBe('flex')
-  expect(surfaces.shellBackground).toContain('rgb(238, 244, 250)')
-  expect(surfaces.contentBackground).toContain('rgb(238, 244, 250)')
+  expect(surfaces.shellBackgroundColor).toBe('rgb(243, 247, 250)')
+  expect(surfaces.contentBackgroundColor).toBe('rgb(243, 247, 250)')
+  expect(surfaces.contentPaddingBottom).toBe('0px')
 })

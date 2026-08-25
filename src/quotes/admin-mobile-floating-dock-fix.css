@@ -4,9 +4,9 @@
  * Regra canônica no telefone:
  * 1. viewport/shell NÃO rolam;
  * 2. somente .hrx-unified-content rola;
- * 3. o dock é fixed e ancorado na viewport física, não em 100dvh;
- * 4. a safe area inferior é limitada ao valor realista do iPhone;
- * 5. páginas internas não criam uma segunda reserva inferior;
+ * 3. o dock é fixed e ancorado na viewport física;
+ * 4. o dock fica próximo à borda física, sem criar faixa de safe area abaixo;
+ * 5. páginas internas não criam reservas inferiores próprias;
  * 6. modais portados ao body cobrem a viewport inteira;
  * 7. o conteúdo passa por trás do dock; não existe faixa/respiro físico após o último item.
  */
@@ -22,6 +22,7 @@
     min-width:0!important;
     min-height:0!important;
     margin:0!important;
+    padding:0!important;
     overflow:hidden!important;
     overscroll-behavior:none!important;
     background:#081a2f!important;
@@ -30,15 +31,13 @@
   .hrx-unified-shell.is-pwa{
     --hrx-phone-topbar:calc(64px + env(safe-area-inset-top));
     --hrx-dock-height:64px;
-    /* iOS pode expor um inset exagerado em standalone durante mudanças de viewport.
-       O home indicator usa ~34 CSS px em portrait; não deixamos esse valor empurrar
-       o dock dezenas de pixels para cima. */
-    --hrx-dock-bottom:clamp(8px,env(safe-area-inset-bottom),34px);
+    --hrx-dock-bottom:8px;
     --hrx-pwa-canvas:#081a2f;
     position:fixed!important;
     inset:0!important;
     display:flex!important;
     flex-direction:column!important;
+    grid-template-rows:none!important;
     width:auto!important;
     height:auto!important;
     min-width:0!important;
@@ -59,7 +58,7 @@
     padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left))!important;
   }
 
-  /* Única área rolável. Sem padding físico no final: o dock é overlay real. */
+  /* Única área rolável. O dock não reserva uma terceira faixa. */
   .hrx-unified-shell.is-pwa>.hrx-unified-content{
     flex:1 1 0!important;
     min-width:0!important;
@@ -67,17 +66,17 @@
     width:100%!important;
     height:auto!important;
     margin:0!important;
-    padding-bottom:0!important;
+    padding:0!important;
     overflow-x:hidden!important;
     overflow-y:auto!important;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior-y:contain!important;
-    scroll-padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 12px)!important;
+    scroll-padding-bottom:calc(var(--hrx-dock-height) + 20px)!important;
     background:var(--hrx-pwa-canvas)!important;
     background-clip:border-box!important;
   }
 
-  /* Dock no comportamento de app nativo/WhatsApp: preso à viewport real. */
+  /* Dock de aplicativo: overlay real, próximo à borda física. */
   .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
     position:fixed!important;
     z-index:2400!important;
@@ -98,10 +97,45 @@
     content:none!important;
   }
 
-  /* Itens focados/ancorados ainda ganham folga para não parar sob o dock,
-     sem criar espaço morto permanente ao fim da rolagem. */
   .hrx-unified-shell.is-pwa>.hrx-unified-content :is(button,a,input,select,textarea,[tabindex]):focus{
-    scroll-margin-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 12px)!important;
+    scroll-margin-bottom:calc(var(--hrx-dock-height) + 20px)!important;
+  }
+
+  /*
+   * Orçamentos ainda carregava CSS legado depois do shell canônico.
+   * Esse CSS reservava espaço para um segundo menu mobile de 58px e adicionava
+   * paddings no workspace/lista. A soma dessas reservas é a faixa vazia vista no iPhone.
+   * As regras abaixo têm especificidade suficiente para continuar válidas mesmo quando
+   * quotes.css e quote-commercial.css chegam depois por lazy-load.
+   */
+  html.hrx-admin-pwa .hrx-unified-shell.is-pwa>.hrx-unified-content>.admin-live-shell.quote-commercial-shell{
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+  }
+  html.hrx-admin-pwa .hrx-unified-shell.is-pwa>.hrx-unified-content>.admin-live-shell.quote-commercial-shell>.admin-exec-main{
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  html.hrx-admin-pwa .hrx-unified-shell.is-pwa>.hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-workspace.quote-workspace{
+    min-height:0!important;
+    height:auto!important;
+    max-height:none!important;
+    margin:0!important;
+    padding:0 12px!important;
+    overflow:visible!important;
+  }
+  html.hrx-admin-pwa .hrx-unified-shell.is-pwa>.hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-queue-list{
+    margin:0!important;
+    padding:7px!important;
+    overflow:visible!important;
+  }
+  html.hrx-admin-pwa .hrx-unified-shell.is-pwa>.hrx-unified-content>.admin-live-shell.quote-commercial-shell .admin-lead:last-child{
+    margin-bottom:0!important;
   }
 
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
@@ -191,6 +225,6 @@
   .hrx-unified-shell.is-pwa{
     --hrx-phone-topbar:calc(56px + env(safe-area-inset-top));
     --hrx-dock-height:54px;
-    --hrx-dock-bottom:clamp(5px,env(safe-area-inset-bottom),21px);
+    --hrx-dock-bottom:5px;
   }
 }
