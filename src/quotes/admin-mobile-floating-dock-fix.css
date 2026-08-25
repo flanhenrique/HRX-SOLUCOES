@@ -7,7 +7,7 @@
  * 3. o dock é fixed e usa a safe area UMA única vez;
  * 4. páginas internas não criam uma segunda reserva inferior;
  * 5. modais portados ao body cobrem a viewport inteira;
- * 6. a área de respiro sob o dock usa o MESMO canvas do tema, nunca o fundo azul do shell.
+ * 6. o conteúdo passa por trás do dock; não existe faixa/respiro físico após o último item.
  */
 
 @media(max-width:760px){
@@ -42,7 +42,6 @@
     background:var(--hrx-pwa-canvas)!important;
   }
 
-  /* Safe area superior pertence ao header, não ao shell inteiro. */
   .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
     flex:0 0 var(--hrx-phone-topbar)!important;
     width:100%!important;
@@ -51,8 +50,7 @@
     padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left))!important;
   }
 
-  /* Esta é a ÚNICA área rolável do PWA. O padding do dock pertence a este
-     canvas e, por isso, não pode revelar o fundo estrutural azul do shell. */
+  /* Única área rolável. Sem padding físico no final: o dock é overlay real. */
   .hrx-unified-shell.is-pwa>.hrx-unified-content{
     flex:1 1 0!important;
     min-width:0!important;
@@ -60,12 +58,12 @@
     width:100%!important;
     height:auto!important;
     margin:0!important;
+    padding-bottom:0!important;
     overflow-x:hidden!important;
     overflow-y:auto!important;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior-y:contain!important;
-    padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 16px)!important;
-    scroll-padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 16px)!important;
+    scroll-padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 12px)!important;
     background:var(--hrx-pwa-canvas)!important;
     background-clip:border-box!important;
   }
@@ -91,10 +89,15 @@
     content:none!important;
   }
 
-  /* A reserva inferior existe somente no scroll container. */
+  /* Itens focados/ancorados ainda ganham folga para não parar sob o dock,
+     sem criar espaço morto permanente ao fim da rolagem. */
+  .hrx-unified-shell.is-pwa>.hrx-unified-content :is(button,a,input,select,textarea,[tabindex]):focus{
+    scroll-margin-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 12px)!important;
+  }
+
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
     min-height:100%!important;
-    padding-bottom:18px!important;
+    padding-bottom:0!important;
   }
 
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-header{
@@ -121,7 +124,6 @@
     transform:none!important;
   }
 
-  /* Modal financeiro: viewport real, acima de todo o chrome do app. */
   .finance-modal-backdrop{
     position:fixed!important;
     z-index:5200!important;
@@ -156,9 +158,6 @@
     overflow:hidden!important;
   }
 
-  /* Tema claro: o fundo do documento, shell e scroll container é contínuo.
-     Isso elimina a faixa azul que aparecia depois do último conteúdo ao rolar
-     até o fim, inclusive em Orçamentos e demais áreas do PWA. */
   html[data-hrx-theme-resolved="light"].hrx-admin-pwa:has(.hrx-unified-shell),
   html[data-hrx-theme-resolved="light"].hrx-admin-pwa:has(.hrx-unified-shell) body,
   html[data-hrx-theme-resolved="light"].hrx-admin-pwa:has(.hrx-unified-shell) #root{
