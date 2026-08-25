@@ -1,21 +1,21 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode, Ref } from 'react'
 import AdminPersonalizationBridge from './AdminPersonalizationBridge'
-import { navigateAdmin, onAdminNavigate, resolveAdminDestination, type AdminDestination } from './adminNavigation'
+import {
+  ADMIN_DESKTOP_MODULES,
+  ADMIN_MOBILE_MORE_MODULES,
+  ADMIN_MOBILE_PRIMARY_MODULES,
+  getAdminModule,
+} from './adminModules'
+import {
+  canonicalizeAdminLocation,
+  navigateAdmin,
+  onAdminNavigate,
+  resolveAdminDestination,
+  type AdminDestination,
+} from './adminNavigation'
 import { hrxSupabase } from './supabaseClient'
 
-const AdminExecutiveDashboard = lazy(() => import('./AdminExecutiveDashboard'))
-const AdminProjectPanelsPage = lazy(() => import('./AdminProjectPanelsPage'))
-const AdminActivitiesPage = lazy(() => import('./AdminActivitiesPage'))
-const AdminClientsPage = lazy(() => import('./AdminClientsPage'))
-const AdminDocumentsPage = lazy(() => import('./AdminDocumentsPage'))
-const AdminQuotes = lazy(() => import('./AdminQuotes'))
-const AdminFinancePage = lazy(() => import('./AdminFinanceScopedPage'))
-const AdminFiscalPage = lazy(() => import('./AdminFiscalPage'))
-const AdminSuspensionsPage = lazy(() => import('./AdminSuspensionsPage'))
-const AdminSettingsPage = lazy(() => import('./AdminSettingsPage'))
-
-type NavItem = { destination: AdminDestination; label: string; shortLabel?: string; icon: string }
 type RuntimeMode = 'standalone' | 'browser'
 type ViewportClass = 'phone' | 'tablet' | 'desktop'
 type AlertLoadStatus = 'loading' | 'ready' | 'unavailable'
@@ -36,21 +36,6 @@ const EMPTY_ALERTS: AlertSnapshot = {
 }
 
 const ALERT_REFRESH_MS = 120_000
-
-const navItems: NavItem[] = [
-  { destination: 'executive', label: 'Visão Geral', shortLabel: 'Início', icon: '⌂' },
-  { destination: 'panels', label: 'Projetos', icon: '▣' },
-  { destination: 'activities', label: 'Atividades', icon: '✓' },
-  { destination: 'quotes', label: 'Orçamentos', icon: '◫' },
-  { destination: 'clients', label: 'Clientes', icon: '♙' },
-  { destination: 'suspensions', label: 'Suspensões', icon: 'Ⅱ' },
-  { destination: 'fiscal', label: 'Fiscal', icon: '§' },
-  { destination: 'finance', label: 'Financeiro', icon: '¤' },
-  { destination: 'documents', label: 'Central de Documentos', shortLabel: 'Docs', icon: '▤' },
-  { destination: 'settings', label: 'Configurações', shortLabel: 'Perfil', icon: '⚙' },
-]
-
-const pwaPrimary = new Set<AdminDestination>(['executive', 'quotes', 'panels', 'documents', 'settings'])
 
 function runtimeMode(): RuntimeMode {
   const iosStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -83,33 +68,14 @@ function useAdminEnvironment() {
   return environment
 }
 
-function ActivatedRoute({ destination, children }: { destination: AdminDestination; children: ReactNode }) {
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => navigateAdmin(destination, { replace: true }))
-    return () => window.cancelAnimationFrame(frame)
-  }, [destination])
-  return <>{children}</>
-}
-
 function RouteLoading() {
   return <section className="hrx-route-loading" role="status" aria-live="polite">Carregando área administrativa…</section>
 }
 
 function RouteContent({ destination }: { destination: AdminDestination }) {
-  let content: ReactNode
-
-  if (destination === 'executive') content = <AdminExecutiveDashboard />
-  else if (destination === 'panels') content = <AdminProjectPanelsPage />
-  else if (destination === 'activities') content = <AdminActivitiesPage />
-  else if (destination === 'clients') content = <AdminClientsPage />
-  else if (destination === 'documents') content = <AdminDocumentsPage />
-  else if (destination === 'quotes') content = <AdminQuotes />
-  else if (destination === 'finance') content = <AdminFinancePage />
-  else if (destination === 'suspensions') content = <AdminSuspensionsPage />
-  else if (destination === 'fiscal') content = <AdminFiscalPage />
-  else content = <AdminSettingsPage />
-
-  return <Suspense fallback={<RouteLoading />}><ActivatedRoute destination={destination}>{content}</ActivatedRoute></Suspense>
+  const module = getAdminModule(destination)
+  const ActiveView = module.component
+  return <Suspense fallback={<RouteLoading />}><ActiveView /></Suspense>
 }
 
 function totalAlerts(alerts: AlertSnapshot) {
@@ -187,7 +153,7 @@ function NotificationPanel({ alerts, onClose, onNavigate }: { alerts: AlertSnaps
 function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { active: AdminDestination; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
-  const current = navItems.find((item) => item.destination === active) ?? navItems[0]
+  const current = getAdminModule(active)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setProfileOpen(false) }
@@ -216,10 +182,10 @@ function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef,
         <img src="/hrx-mark.svg" alt="HRX" className="hrx-brand-mark-svg" />
         <div className="hrx-brand-copy"><strong>HRX</strong><span>Solutions</span></div>
       </div>
-      <nav>{navItems.map((item) => <button type="button" key={item.destination} className={active === item.destination ? 'is-active' : ''} aria-current={active === item.destination ? 'page' : undefined} onClick={() => navigateAdmin(item.destination)}><i aria-hidden="true">{item.icon}</i><span>{item.label}</span></button>)}</nav>
+      <nav>{ADMIN_DESKTOP_MODULES.map((item) => <button type="button" key={item.id} className={active === item.id ? 'is-active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => navigateAdmin(item.id)}><i aria-hidden="true">{item.icon}</i><span>{item.title}</span></button>)}</nav>
     </aside>
     <header className="hrx-glass-topbar hrx-unified-topbar">
-      <div className="hrx-unified-title"><span>HRX ADMIN</span><strong>{current.label}</strong></div>
+      <div className="hrx-unified-title"><span>HRX ADMIN</span><strong>{current.title}</strong></div>
       <div className="hrx-unified-actions">
         <NotificationButton buttonRef={notificationButtonRef} alerts={alerts} open={notificationOpen} onClick={onToggleNotifications} />
         <div ref={profileRef} className="hrx-profile-wrapper">
@@ -250,24 +216,25 @@ function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef,
 
 function PwaShell({ active, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { active: AdminDestination; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
   const [moreOpen, setMoreOpen] = useState(false)
-  const current = navItems.find((item) => item.destination === active) ?? navItems[0]
-  const primary = navItems.filter((item) => pwaPrimary.has(item.destination))
-  const secondary = navItems.filter((item) => !pwaPrimary.has(item.destination))
+  const current = getAdminModule(active)
+  const moreActive = moreOpen || ADMIN_MOBILE_MORE_MODULES.some((item) => item.id === active)
   const go = (destination: AdminDestination) => { setMoreOpen(false); navigateAdmin(destination) }
 
   useEffect(() => setMoreOpen(false), [active])
 
   return <div className="hrx-unified-shell is-pwa" data-admin-shell="pwa" data-runtime={runtime} data-viewport={viewport}>
     <header className="hrx-glass-topbar hrx-unified-topbar hrx-pwa-topbar">
-      <div className="hrx-pwa-brand"><img src="/hrx-logo.svg" alt="HRX Solutions" /><div><span>HRX ADMIN</span><strong>{current.shortLabel || current.label}</strong></div></div>
+      <div className="hrx-pwa-brand"><img src="/hrx-logo.svg" alt="HRX Solutions" /><div><span>HRX ADMIN</span><strong>{current.shortTitle || current.title}</strong></div></div>
       <div className="hrx-unified-actions">
         <NotificationButton buttonRef={notificationButtonRef} alerts={alerts} open={notificationOpen} onClick={onToggleNotifications} />
-        <button className={`hrx-pwa-more${moreOpen ? ' is-open' : ''}`} type="button" aria-label="Abrir mais áreas" aria-expanded={moreOpen} aria-controls="hrx-pwa-secondary" onClick={() => setMoreOpen((value) => !value)}>•••</button>
       </div>
     </header>
-    {moreOpen && <aside id="hrx-pwa-secondary" className="hrx-pwa-secondary" aria-label="Mais áreas do HRX Admin"><header><span>MAIS ÁREAS</span><button type="button" aria-label="Fechar menu" onClick={() => setMoreOpen(false)}>×</button></header><nav>{secondary.map((item) => <button type="button" key={item.destination} className={active === item.destination ? 'is-active' : ''} aria-current={active === item.destination ? 'page' : undefined} onClick={() => go(item.destination)}><i aria-hidden="true">{item.icon}</i><span>{item.label}</span></button>)}</nav></aside>}
+    {moreOpen && <aside id="hrx-pwa-secondary" className="hrx-pwa-secondary" aria-label="Mais áreas do HRX Admin"><header><span>MAIS ÁREAS</span><button type="button" aria-label="Fechar menu" onClick={() => setMoreOpen(false)}>×</button></header><nav>{ADMIN_MOBILE_MORE_MODULES.map((item) => <button type="button" key={item.id} className={active === item.id ? 'is-active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => go(item.id)}><i aria-hidden="true">{item.icon}</i><span>{item.title}</span></button>)}</nav></aside>}
     <main className="hrx-unified-content" data-admin-workspace="true">{children}</main>
-    <nav className="hrx-mobile-nav hrx-unified-mobile-nav" aria-label="Navegação principal do aplicativo">{primary.map((item) => <button type="button" key={item.destination} className={active === item.destination ? 'is-active' : ''} aria-current={active === item.destination ? 'page' : undefined} onClick={() => go(item.destination)}><i aria-hidden="true">{item.icon}</i><span>{item.shortLabel || item.label}</span></button>)}</nav>
+    <nav className="hrx-mobile-nav hrx-unified-mobile-nav" aria-label="Navegação principal do aplicativo">
+      {ADMIN_MOBILE_PRIMARY_MODULES.map((item) => <button type="button" key={item.id} className={active === item.id ? 'is-active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => go(item.id)}><i aria-hidden="true">{item.icon}</i><span>{item.shortTitle || item.title}</span></button>)}
+      <button className={`hrx-mobile-more${moreActive ? ' is-active' : ''}`} type="button" aria-label="Abrir mais áreas" aria-expanded={moreOpen} aria-controls="hrx-pwa-secondary" onClick={() => setMoreOpen((value) => !value)}><i aria-hidden="true">•••</i><span>Mais</span></button>
+    </nav>
   </div>
 }
 
@@ -279,10 +246,17 @@ export default function AdminUnifiedRoot() {
   const environment = useAdminEnvironment()
   const compactShell = environment.viewport !== 'desktop'
 
-  useEffect(() => onAdminNavigate((destination) => {
-    setActive(destination)
-    setNotificationOpen(false)
-  }), [])
+  useEffect(() => {
+    canonicalizeAdminLocation(active)
+    return onAdminNavigate((destination) => {
+      setActive(destination)
+      setNotificationOpen(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    document.title = `${getAdminModule(active).title} · HRX Admin`
+  }, [active])
 
   useEffect(() => {
     document.documentElement.dataset.hrxRuntime = environment.runtime

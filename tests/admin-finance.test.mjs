@@ -89,16 +89,20 @@ test('fluxo de caixa usa somente baixas registradas e deixa claro que não é sa
   assert.match(css, /finance-account-summary/)
 })
 
-test('navegação expõe Financeiro sem substituir as cinco áreas primárias do PWA', async () => {
-  const [root, navigation] = await Promise.all([
+test('navegação expõe Financeiro como módulo primário por pathname canônico', async () => {
+  const [root, navigation, modules] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/adminNavigation.ts'),
+    read('src/quotes/adminModules.ts'),
   ])
-  assert.match(root, /AdminFinancePage/)
-  assert.match(root, /label: 'Financeiro'/)
-  assert.match(root, /destination === 'finance'/)
-  assert.match(navigation, /#admin\/financeiro/)
-  assert.match(root, /new Set<AdminDestination>\(\['executive', 'quotes', 'panels', 'documents', 'settings'\]\)/)
+  const financeBlock = modules.slice(modules.indexOf("id: 'finance'"), modules.indexOf("id: 'finance'") + 650)
+  assert.match(financeBlock, /path: '\/admin\/financeiro'/)
+  assert.match(financeBlock, /title: 'Financeiro'/)
+  assert.match(financeBlock, /mobileNavigation: 'primary'/)
+  assert.match(financeBlock, /component: lazy\(\(\) => import\('\.\/AdminFinanceScopedPage'\)\)/)
+  assert.match(root, /ADMIN_MOBILE_PRIMARY_MODULES\.map/)
+  assert.match(navigation, /history\.pushState/)
+  assert.doesNotMatch(navigation, /#admin\/financeiro/)
 })
 
 test('financeiro tem tratamento mobile e rota direta no deploy', async () => {
@@ -108,6 +112,7 @@ test('financeiro tem tratamento mobile e rota direta no deploy', async () => {
   ])
   assert.match(css, /@media\(max-width:760px\)/)
   assert.match(css, /safe-area-inset-bottom/)
-  assert.match(workflow, /dist\/admin\/financeiro/)
-  assert.match(workflow, /for route in \('orcamentos', 'financeiro'\)/)
+  assert.match(workflow, /for route in orcamentos clientes financeiro fiscal suspensoes atividades documentos paineis configuracoes/)
+  assert.match(workflow, /mkdir -p "dist\/admin\/\$route"/)
+  assert.match(workflow, /cp dist\/index\.html "dist\/admin\/\$route\/index\.html"/)
 })

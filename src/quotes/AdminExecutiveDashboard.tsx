@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { hrxPublishableKey, hrxSupabase, quoteAdminEndpoint } from './supabaseClient'
-import { navigateAdmin, onAdminNavigate } from './adminNavigation'
+import { navigateAdmin } from './adminNavigation'
 import './admin-executive-dashboard.css'
 
 type ExecutiveDraft = {
@@ -33,14 +33,11 @@ async function loadRequests(session: Session) {
 }
 
 export default function AdminExecutiveDashboard() {
-  const [open, setOpen] = useState(() => window.location.hash !== '#admin/painels')
   const [ready, setReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
   const [state, setState] = useState<DashboardState>({ requests: [], activeClients: 0, documents: 0 })
-
-  useEffect(() => onAdminNavigate((destination) => setOpen(destination === 'executive')), [])
 
   const load = async (session?: Session | null) => {
     const currentSession = session ?? (await hrxSupabase.auth.getSession()).data.session
@@ -90,7 +87,7 @@ export default function AdminExecutiveDashboard() {
     return { pipeline, pipelineNet, approvedValue, avgTicket, pricedCoverage, awaiting, scope, approved, suspended, recent, topAccounts }
   }, [state.requests])
 
-  if (!open || !ready) return null
+  if (!ready) return null
   const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
   const attention = metrics.awaiting + metrics.scope + metrics.suspended
   const emptyBusiness = loaded && !state.requests.length && state.activeClients === 0 && state.documents === 0

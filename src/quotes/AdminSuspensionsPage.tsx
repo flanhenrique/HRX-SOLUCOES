@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { hrxSupabase } from './supabaseClient'
-import { navigateAdmin, onAdminNavigate } from './adminNavigation'
+import { navigateAdmin } from './adminNavigation'
 import './admin-suspensions-page.css'
 
 type QuoteRow = {
@@ -31,7 +31,6 @@ function canDeleteDraft(quote: QuoteRow) {
 }
 
 export default function AdminSuspensionsPage() {
-  const [open, setOpen] = useState(false)
   const [quotes, setQuotes] = useState<QuoteRow[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')

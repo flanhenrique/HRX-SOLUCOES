@@ -4,7 +4,20 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('authenticated admin mounts exactly one canonical root', async () => {
+const pureViewPaths = [
+  'src/quotes/AdminExecutiveDashboard.tsx',
+  'src/quotes/AdminQuotes.tsx',
+  'src/quotes/AdminClientsPage.tsx',
+  'src/quotes/AdminFinanceScopedPage.tsx',
+  'src/quotes/AdminFiscalPage.tsx',
+  'src/quotes/AdminSuspensionsPage.tsx',
+  'src/quotes/AdminActivitiesPage.tsx',
+  'src/quotes/AdminDocumentsPage.tsx',
+  'src/quotes/AdminProjectPanelsPage.tsx',
+  'src/quotes/AdminSettingsPage.tsx',
+]
+
+test('admin autenticado preserva a cadeia canônica e monta exatamente uma raiz', async () => {
   const [adminApp, unifiedRoot, authRouter, main] = await Promise.all([
     read('src/quotes/AdminApp.tsx'),
     read('src/quotes/AdminUnifiedRoot.tsx'),
@@ -13,73 +26,83 @@ test('authenticated admin mounts exactly one canonical root', async () => {
   ])
 
   assert.match(adminApp, /<AdminUnifiedRoot \/>/)
-  for (const legacyRoot of ['AdminQuotes', 'AdminSuspensionsPage', 'AdminFiscalPage', 'AdminExperienceLayer', 'AdminSettingsShortcut', 'SuspendedQuoteGuard']) {
-    assert.doesNotMatch(adminApp, new RegExp(`<${legacyRoot}\\s*\\/>`), `${legacyRoot} não pode ser montado em paralelo no AdminApp`)
-  }
-
-  assert.match(unifiedRoot, /function RouteContent/)
+  assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
+  assert.match(main, /<AdminAuthRouter \/>/)
   assert.match(unifiedRoot, /function DesktopShell/)
   assert.match(unifiedRoot, /function PwaShell/)
   assert.match(unifiedRoot, /data-admin-shell="desktop"/)
   assert.match(unifiedRoot, /data-admin-shell="pwa"/)
-  assert.match(unifiedRoot, /compactShell/)
+  assert.match(unifiedRoot, /environment\.viewport !== 'desktop'/)
   assert.match(unifiedRoot, /\? <PwaShell/)
   assert.match(unifiedRoot, /: <DesktopShell/)
-  assert.match(unifiedRoot, /data-admin-workspace="true"/)
+  assert.match(unifiedRoot, /<main className="hrx-unified-content" data-admin-workspace="true">/)
 
-  assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
-  assert.match(main, /<AdminAuthRouter \/>/)
+  for (const legacyRoot of ['AdminQuotes', 'AdminSuspensionsPage', 'AdminFiscalPage', 'AdminExperienceLayer', 'AdminSettingsShortcut', 'SuspendedQuoteGuard']) {
+    assert.doesNotMatch(adminApp, new RegExp(`<${legacyRoot}\\s*\\/>`), `${legacyRoot} não pode ser montado em paralelo no AdminApp`)
+  }
 })
 
-test('business modules are routed as pure views instead of sibling fullscreen apps', async () => {
-  const [root, quotes, suspensions, fiscal, activities, settings, panels, panelsCss] = await Promise.all([
+test('registro modular possui a responsabilidade de lazy loading e metadados', async () => {
+  const [root, modules] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
-    read('src/quotes/AdminQuotes.tsx'),
-    read('src/quotes/AdminSuspensionsPage.tsx'),
-    read('src/quotes/AdminFiscalPage.tsx'),
-    read('src/quotes/AdminActivitiesPage.tsx'),
-    read('src/quotes/AdminSettingsPage.tsx'),
-    read('src/quotes/AdminProjectPanelsPage.tsx'),
-    read('src/quotes/admin-project-panels.css'),
+    read('src/quotes/adminModules.ts'),
   ])
 
-  assert.match(root, /destination === 'quotes'.*<AdminQuotes \/>/s)
-  assert.match(root, /destination === 'suspensions'.*<AdminSuspensionsPage \/>/s)
-  assert.match(root, /destination === 'fiscal'.*<AdminFiscalPage \/>/s)
-  assert.match(root, /destination === 'activities'.*<AdminActivitiesPage \/>/s)
-  assert.match(root, /destination === 'panels'.*<AdminProjectPanelsPage \/>/s)
-  assert.match(root, /<AdminSettingsPage \/>/)
-  assert.doesNotMatch(root, /AdminExperienceLayer/)
+  assert.match(modules, /export type AdminModule/)
+  assert.match(modules, /export const ADMIN_MODULES/)
+  assert.match(modules, /component: lazy\(\(\) => import/)
+  assert.match(modules, /navigationGroup:/)
+  assert.match(modules, /mobileNavigation:/)
+  assert.match(modules, /permissions:/)
+  assert.match(modules, /resolveAdminModuleFromPath/)
+  assert.match(root, /const module = getAdminModule\(destination\)/)
+  assert.match(root, /const ActiveView = module\.component/)
+  assert.doesNotMatch(root, /import\('\.\/AdminQuotes'\)|import\('\.\/AdminSettingsPage'\)|const navItems|const pwaPrimary/)
+})
+
+test('módulos de negócio permanecem views puras dentro do workspace canônico', async () => {
+  const views = await Promise.all(pureViewPaths.map(read))
+  for (let index = 0; index < pureViewPaths.length; index += 1) {
+    const source = views[index]
+    const path = pureViewPaths[index]
+    assert.doesNotMatch(source, /<AdminUnifiedRoot|function DesktopShell|function PwaShell|hrx-unified-sidebar|hrx-unified-mobile-nav/, `${path} não pode criar shell ou navegação global`)
+    assert.doesNotMatch(source, /onAdminNavigate|window\.location\.hash|const\s+\[open,\s*setOpen\]/, `${path} não pode controlar sua própria ativação de rota`)
+  }
+
+  const quotes = views[pureViewPaths.indexOf('src/quotes/AdminQuotes.tsx')]
+  const suspensions = views[pureViewPaths.indexOf('src/quotes/AdminSuspensionsPage.tsx')]
+  const fiscal = views[pureViewPaths.indexOf('src/quotes/AdminFiscalPage.tsx')]
+  const panels = views[pureViewPaths.indexOf('src/quotes/AdminProjectPanelsPage.tsx')]
+  const panelsCss = await read('src/quotes/admin-project-panels.css')
 
   assert.match(quotes, /action: 'save_quote'/)
   assert.match(quotes, /generateProposalPdf/)
-  assert.match(quotes, /proposal_number/)
-  assert.doesNotMatch(quotes, /className="admin-exec-sidebar"/)
-  assert.doesNotMatch(quotes, /className="admin-mobile-nav"/)
-  assert.doesNotMatch(activities, /hrx-glass-sidebar/)
-  assert.doesNotMatch(settings, /hrx-glass-sidebar/)
-  assert.doesNotMatch(panels, /role="dialog"|aria-modal|admin-projects-close|onAdminNavigate|PANELS_HASH/)
-  assert.doesNotMatch(panelsCss, /\.admin-projects-shell\{[^}]*position:fixed/)
+  assert.doesNotMatch(quotes, /className="admin-exec-sidebar"|className="admin-mobile-nav"|from '\.\/adminNavigation'/)
   assert.match(suspensions, /hrx_suspend_quote/)
   assert.match(suspensions, /hrx_resume_quote/)
   assert.match(fiscal, /cnpj-lookup/)
   assert.match(fiscal, /hrx_confirm_client_tax_regime/)
+  assert.doesNotMatch(panels, /role="dialog"|aria-modal|admin-projects-close|PANELS_HASH/)
+  assert.doesNotMatch(panelsCss, /\.admin-projects-shell\{[^}]*position:fixed/)
 })
 
-test('desktop and compact shells are selected by viewport while runtime mode remains independent', async () => {
-  const root = await read('src/quotes/AdminUnifiedRoot.tsx')
+test('desktop e PWA consomem o mesmo registro, mantendo um único dock mobile', async () => {
+  const [root, modules] = await Promise.all([
+    read('src/quotes/AdminUnifiedRoot.tsx'),
+    read('src/quotes/adminModules.ts'),
+  ])
 
-  assert.match(root, /const pwaPrimary/)
-  assert.match(root, /function useAdminEnvironment/)
-  assert.match(root, /type RuntimeMode = 'standalone' \| 'browser'/)
-  assert.match(root, /type ViewportClass = 'phone' \| 'tablet' \| 'desktop'/)
-  assert.match(root, /display-mode: standalone/)
-  assert.match(root, /window\.innerWidth <= 760/)
-  assert.match(root, /window\.innerWidth <= 1100/)
-  assert.match(root, /environment\.viewport !== 'desktop'/)
-  assert.match(root, /<aside className="hrx-glass-sidebar hrx-unified-sidebar"/)
-  assert.match(root, /<nav className="hrx-mobile-nav hrx-unified-mobile-nav"/)
+  assert.match(root, /ADMIN_DESKTOP_MODULES\.map/)
+  assert.match(root, /ADMIN_MOBILE_PRIMARY_MODULES\.map/)
+  assert.match(root, /ADMIN_MOBILE_MORE_MODULES\.map/)
+  assert.match(root, /className="hrx-mobile-nav hrx-unified-mobile-nav"/)
+  assert.match(root, /className={`hrx-mobile-more\$\{moreActive \? ' is-active' : ''\}`}/)
+  assert.match(root, /<span>Mais<\/span>/)
   assert.match(root, /hrx-pwa-secondary/)
+  assert.match(modules, /id: 'clients',[\s\S]*mobileNavigation: 'primary'/)
+  assert.match(modules, /id: 'finance',[\s\S]*mobileNavigation: 'primary'/)
+  assert.match(modules, /id: 'panels',[\s\S]*mobileNavigation: 'more'/)
+  assert.match(modules, /id: 'settings',[\s\S]*mobileNavigation: 'more'/)
 
   const desktopBlock = root.slice(root.indexOf('function DesktopShell'), root.indexOf('function PwaShell'))
   const pwaBlock = root.slice(root.indexOf('function PwaShell'), root.indexOf('export default function AdminUnifiedRoot'))
@@ -88,19 +111,7 @@ test('desktop and compact shells are selected by viewport while runtime mode rem
   assert.doesNotMatch(pwaBlock, /hrx-pwa-settings/)
 })
 
-test('canonical workspace no longer relies on hiding quote navigation shells', async () => {
-  const [quotes, root] = await Promise.all([
-    read('src/quotes/AdminQuotes.tsx'),
-    read('src/quotes/AdminUnifiedRoot.tsx'),
-  ])
-
-  assert.doesNotMatch(quotes, /admin-exec-sidebar/)
-  assert.doesNotMatch(quotes, /admin-mobile-nav/)
-  assert.match(root, /hrx-unified-sidebar/)
-  assert.match(root, /hrx-unified-mobile-nav/)
-})
-
-test('admin keeps real data, storage and personalization behind the unified shell', async () => {
+test('runtime responsivo, dados reais e personalização permanecem atrás do shell', async () => {
   const [root, activities, settings, personalization, interactions] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/AdminActivitiesPage.tsx'),
@@ -109,12 +120,16 @@ test('admin keeps real data, storage and personalization behind the unified shel
     read('src/quotes/admin-interactions.css'),
   ])
 
+  assert.match(root, /type RuntimeMode = 'standalone' \| 'browser'/)
+  assert.match(root, /type ViewportClass = 'phone' \| 'tablet' \| 'desktop'/)
+  assert.match(root, /display-mode: standalone/)
+  assert.match(root, /window\.innerWidth <= 760/)
+  assert.match(root, /window\.innerWidth <= 1100/)
   assert.match(root, /from\('quote_drafts'\)/)
   assert.match(root, /from\('hrx_documents'\)/)
   assert.match(root, /channel\('hrx-admin-alerts'\)/)
   assert.match(root, /<AdminPersonalizationBridge settingsActive=\{active === 'settings'\} \/>/)
   assert.match(activities, /from\('quote_requests'\)/)
-  assert.match(activities, /from\('hrx_documents'\)/)
   assert.match(settings, /secureUpdateAdminPassword/)
   assert.match(personalization, /hrx-admin-ui-preferences-v1/)
   assert.doesNotMatch(personalization, /MutationObserver/)

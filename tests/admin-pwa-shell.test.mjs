@@ -20,6 +20,7 @@ test('admin PWA locks zoom only in standalone while browser mode stays accessibl
 
   assert.equal(manifest.display, 'standalone')
   assert.equal(manifest.orientation, undefined)
+  assert.equal(manifest.start_url, '/admin/')
   assert.match(shell, /BROWSER_VIEWPORT = 'width=device-width, initial-scale=1, viewport-fit=cover'/)
   assert.match(shell, /STANDALONE_VIEWPORT = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'/)
   assert.match(shell, /display-mode: standalone/)
@@ -39,26 +40,29 @@ test('admin PWA locks zoom only in standalone while browser mode stays accessibl
   assert.doesNotMatch(deploy, /user-scalable=no/)
   assert.doesNotMatch(deploy, /maximum-scale=1/)
   assert.match(deploy, /width=device-width, initial-scale=1, viewport-fit=cover/)
+  assert.match(deploy, /dist\/admin\/index\.html/)
   assert.doesNotMatch(publicIndex, /user-scalable=no/)
   assert.doesNotMatch(bridge, /serviceWorker\.register/)
   assert.match(service, /ensureAdminServiceWorker/)
   assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable'))
 })
 
-test('admin bootstrap recognizes project panel destinations', async () => {
+test('admin bootstrap recognizes canonical admin paths and legacy panel hashes', async () => {
   const main = await read('src/main.tsx')
   assert.match(main, /#admin\/orcamentos/)
   assert.match(main, /#admin\/painels/)
+  assert.match(main, /pathname === '\/admin'/)
   assert.match(main, /pathname\.startsWith\('\/admin\/'\)/)
   assert.match(main, /configureAdminAppShell/)
 })
 
 test('authenticated admin changes password through hardened security helper inside the canonical settings view', async () => {
-  const [settings, security, adminApp, root, authRouter, main] = await Promise.all([
+  const [settings, security, adminApp, root, modules, authRouter, main] = await Promise.all([
     read('src/quotes/AdminSettingsPage.tsx'),
     read('src/quotes/passwordSecurity.ts'),
     read('src/quotes/AdminApp.tsx'),
     read('src/quotes/AdminUnifiedRoot.tsx'),
+    read('src/quotes/adminModules.ts'),
     read('src/quotes/AdminAuthRouter.tsx'),
     read('src/main.tsx'),
   ])
@@ -68,7 +72,9 @@ test('authenticated admin changes password through hardened security helper insi
   assert.match(settings, /minLength=\{12\}/)
   assert.match(security, /admin-password/)
   assert.match(adminApp, /<AdminUnifiedRoot \/>/)
-  assert.match(root, /<AdminSettingsPage \/>/)
+  assert.match(root, /getAdminModule\(destination\)/)
+  assert.match(modules, /component: lazy\(\(\) => import\('\.\/AdminSettingsPage'\)\)/)
+  assert.match(modules, /path: '\/admin\/configuracoes'/)
   assert.doesNotMatch(root, /AdminExperienceLayer/)
   assert.match(authRouter, /<AdminMfaGate session=\{session\}><AdminApp \/><\/AdminMfaGate>/)
   assert.doesNotMatch(main, /<AdminExperienceLayer \/>|<AdminPasswordControl \/>/)

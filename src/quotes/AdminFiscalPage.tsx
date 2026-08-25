@@ -1,6 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
-import { onAdminNavigate } from './adminNavigation'
 import { hrxSupabase } from './supabaseClient'
 import './admin-fiscal-page.css'
 
@@ -88,7 +87,6 @@ async function readableLookupError(error: unknown) {
 }
 
 export default function AdminFiscalPage() {
-  const [open, setOpen] = useState(false)
   const [clients, setClients] = useState<ClientRow[]>([])
   const [profiles, setProfiles] = useState<Record<string, FiscalProfile>>({})
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
@@ -104,11 +102,6 @@ export default function AdminFiscalPage() {
 
   const clearMessage = () => { setMessage(''); setMessageTone('success') }
   const showMessage = (tone: MessageTone, text: string) => { setMessageTone(tone); setMessage(text) }
-
-  useEffect(() => onAdminNavigate((destination) => {
-    if (destination === 'fiscal') setOpen(true)
-    else setOpen(false)
-  }), [])
 
   const loadData = async (preferredClientId?: string) => {
     setLoading(true)
@@ -140,7 +133,7 @@ export default function AdminFiscalPage() {
     }
   }
 
-  useEffect(() => { if (open) void loadData() }, [open])
+  useEffect(() => { void loadData() }, [])
 
   const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null
   const selectedProfile = selectedClient ? profiles[selectedClient.id] ?? null : null
@@ -203,8 +196,6 @@ export default function AdminFiscalPage() {
     else { await loadData(selectedClient.id); showMessage('success', 'Cadastro estadual atualizado.') }
     setBusy(false)
   }
-
-  if (!open) return null
 
   return <section className="hrx-fiscal-page" aria-label="Gestão fiscal de clientes">
     <header className="hrx-fiscal-header">

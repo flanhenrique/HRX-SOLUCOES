@@ -5,7 +5,7 @@
   "description": "Ambiente administrativo da HRX Solutions para orçamentos, documentos, operações e acompanhamento de projetos.",
   "lang": "pt-BR",
   "dir": "ltr",
-  "start_url": "/admin/orcamentos",
+  "start_url": "/admin/",
   "scope": "/admin/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
@@ -35,7 +35,7 @@
     {
       "name": "Painéis HRX",
       "short_name": "Painéis",
-      "url": "/admin/orcamentos#admin/painels"
+      "url": "/admin/paineis"
     }
   ]
 }

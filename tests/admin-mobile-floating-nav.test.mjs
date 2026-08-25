@@ -4,16 +4,22 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('mobile admin uses a dedicated PWA shell with safe areas and a lower floating nav', async () => {
-  const [root, css] = await Promise.all([
+test('mobile admin usa o shell PWA canônico com quatro módulos primários e Mais', async () => {
+  const [root, modules, css] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
+    read('src/quotes/adminModules.ts'),
     read('src/quotes/admin-unified-shell.css'),
   ])
 
   assert.match(root, /function PwaShell/)
   assert.match(root, /<img src="\/hrx-logo\.svg"/)
   assert.match(root, /hrx-unified-mobile-nav/)
-  assert.match(root, /const pwaPrimary/)
+  assert.match(root, /ADMIN_MOBILE_PRIMARY_MODULES\.map/)
+  assert.match(root, /<span>Mais<\/span>/)
+  for (const id of ['executive', 'quotes', 'clients', 'finance']) {
+    const block = modules.slice(modules.indexOf(`id: '${id}'`), modules.indexOf(`id: '${id}'`) + 500)
+    assert.match(block, /mobileNavigation: 'primary'/, `${id} deve permanecer no dock primário`)
+  }
   assert.match(css, /--hrx-safe-top:env\(safe-area-inset-top,0px\)/)
   assert.match(css, /--hrx-safe-right:env\(safe-area-inset-right,0px\)/)
   assert.match(css, /--hrx-safe-bottom:env\(safe-area-inset-bottom,0px\)/)

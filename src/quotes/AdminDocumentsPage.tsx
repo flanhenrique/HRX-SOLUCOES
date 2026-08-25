@@ -1,6 +1,6 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, useMemo, useState } from 'react'
 import { hrxSupabase } from './supabaseClient'
-import { navigateAdmin, onAdminNavigate } from './adminNavigation'
+import { navigateAdmin } from './adminNavigation'
 import VoltDocumentsWorkspace from './VoltDocumentsWorkspace'
 import './admin-documents-page.css'
 

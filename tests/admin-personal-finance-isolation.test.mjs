@@ -16,12 +16,15 @@ test('financeiro pessoal usa armazenamento isolado e não altera o ledger empres
 })
 
 test('Financeiro mantém visão HRX e adiciona visão Pessoal sem segundo shell', async () => {
-  const [root, scoped, personal] = await Promise.all([
+  const [root, modules, scoped, personal] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
+    read('src/quotes/adminModules.ts'),
     read('src/quotes/AdminFinanceScopedPage.tsx'),
     read('src/quotes/AdminPersonalFinancePage.tsx'),
   ])
-  assert.match(root, /import\('\.\/AdminFinanceScopedPage'\)/)
+  const financeModule = modules.slice(modules.indexOf("id: 'finance'"), modules.indexOf("id: 'finance'") + 650)
+  assert.match(financeModule, /component: lazy\(\(\) => import\('\.\/AdminFinanceScopedPage'\)\)/)
+  assert.match(root, /const ActiveView = module\.component/)
   assert.match(scoped, /<AdminFinancePage \/>/)
   assert.match(scoped, /<AdminPersonalFinancePage \/>/)
   assert.match(scoped, /HRX Solutions/)
