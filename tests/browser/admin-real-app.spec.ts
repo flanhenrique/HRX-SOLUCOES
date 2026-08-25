@@ -161,11 +161,38 @@ test('views administrativas operam em fluxo normal dentro de hrx-unified-content
   }
 })
 
-test('subrota futura é resolvida pelo módulo pai sem colapsar o pathname', async ({ page }) => {
+test('subrota registrada preserva pathname, módulo pai e título sem criar tela paralela', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/admin/clientes/cliente-demo?hrx-preview=1')
+
   await expect(page.locator('.hrx-clients-page')).toBeVisible()
   await expect(page).toHaveURL(/\/admin\/clientes\/cliente-demo\?hrx-preview=1$/)
+  await expect(page.locator('[data-admin-shell]')).toHaveCount(1)
+  await expect(page.locator('.hrx-unified-title span')).toHaveText('HRX ADMIN · Clientes')
+  await expect(page.locator('.hrx-unified-title strong')).toHaveText('Cliente')
+  await expect(page.getByRole('button', { name: 'Clientes' })).toHaveAttribute('aria-current', 'page')
+  await expect(page).toHaveTitle('Cliente · HRX Admin')
+
+  await page.goto('/admin/orcamentos/ORC-DEMO/editar?hrx-preview=1')
+  await expect(page.locator('.quote-module-loading')).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/orcamentos\/ORC-DEMO\/editar\?hrx-preview=1$/)
+  await expect(page.locator('.hrx-unified-title span')).toHaveText('HRX ADMIN · Orçamentos')
+  await expect(page.locator('.hrx-unified-title strong')).toHaveText('Editar orçamento')
+  await expect(page.getByRole('button', { name: 'Orçamentos' })).toHaveAttribute('aria-current', 'page')
+  await expect(page).toHaveTitle('Editar orçamento · HRX Admin')
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/admin\/clientes\/cliente-demo\?hrx-preview=1$/)
+  await expect(page.locator('.hrx-clients-page')).toBeVisible()
+  await expect(page.locator('.hrx-unified-title strong')).toHaveText('Cliente')
+})
+
+test('subpath não registrado continua no módulo pai sem ser convertido em subrota fictícia', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/admin/clientes/cliente-demo/historico?hrx-preview=1')
+  await expect(page.locator('.hrx-clients-page')).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/clientes\/cliente-demo\/historico\?hrx-preview=1$/)
+  await expect(page.locator('.hrx-unified-title strong')).toHaveText('Clientes')
   await expect(page.locator('[data-admin-shell]')).toHaveCount(1)
 })
 
