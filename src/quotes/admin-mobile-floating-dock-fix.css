@@ -6,7 +6,8 @@
  * 2. somente .hrx-unified-content rola;
  * 3. o dock é fixed e usa a safe area UMA única vez;
  * 4. páginas internas não criam uma segunda reserva inferior;
- * 5. modais portados ao body cobrem a viewport inteira.
+ * 5. modais portados ao body cobrem a viewport inteira;
+ * 6. a área de respiro sob o dock usa o MESMO canvas do tema, nunca o fundo azul do shell.
  */
 
 @media(max-width:760px){
@@ -26,6 +27,7 @@
     --hrx-phone-topbar:calc(64px + env(safe-area-inset-top));
     --hrx-dock-height:64px;
     --hrx-dock-bottom:max(8px,env(safe-area-inset-bottom));
+    --hrx-pwa-canvas:#081a2f;
     position:fixed!important;
     inset:0!important;
     display:flex!important;
@@ -37,6 +39,7 @@
     margin:0!important;
     padding:0!important;
     overflow:hidden!important;
+    background:var(--hrx-pwa-canvas)!important;
   }
 
   /* Safe area superior pertence ao header, não ao shell inteiro. */
@@ -48,7 +51,8 @@
     padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left))!important;
   }
 
-  /* Esta é a ÚNICA área rolável do PWA. */
+  /* Esta é a ÚNICA área rolável do PWA. O padding do dock pertence a este
+     canvas e, por isso, não pode revelar o fundo estrutural azul do shell. */
   .hrx-unified-shell.is-pwa>.hrx-unified-content{
     flex:1 1 0!important;
     min-width:0!important;
@@ -62,6 +66,8 @@
     overscroll-behavior-y:contain!important;
     padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 16px)!important;
     scroll-padding-bottom:calc(var(--hrx-dock-height) + var(--hrx-dock-bottom) + 16px)!important;
+    background:var(--hrx-pwa-canvas)!important;
+    background-clip:border-box!important;
   }
 
   /* Dock no comportamento de app nativo/WhatsApp: preso à viewport. */
@@ -85,11 +91,7 @@
     content:none!important;
   }
 
-  /*
-   * A correção anterior reservava espaço no conteúdo E dentro da página
-   * financeira, duplicando a safe area e criando a faixa azul/branca.
-   * Agora a reserva existe somente no scroll container acima.
-   */
+  /* A reserva inferior existe somente no scroll container. */
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
     min-height:100%!important;
     padding-bottom:18px!important;
@@ -152,6 +154,22 @@
   html.hrx-finance-modal-open .hrx-unified-shell.is-pwa>.hrx-unified-content,
   body.hrx-finance-modal-open .hrx-unified-shell.is-pwa>.hrx-unified-content{
     overflow:hidden!important;
+  }
+
+  /* Tema claro: o fundo do documento, shell e scroll container é contínuo.
+     Isso elimina a faixa azul que aparecia depois do último conteúdo ao rolar
+     até o fim, inclusive em Orçamentos e demais áreas do PWA. */
+  html[data-hrx-theme-resolved="light"].hrx-admin-pwa:has(.hrx-unified-shell),
+  html[data-hrx-theme-resolved="light"].hrx-admin-pwa:has(.hrx-unified-shell) body,
+  html[data-hrx-theme-resolved="light"].hrx-admin-pwa:has(.hrx-unified-shell) #root{
+    background:#f3f7fa!important;
+  }
+  html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa{
+    --hrx-pwa-canvas:#f3f7fa;
+    background:#f3f7fa!important;
+  }
+  html[data-hrx-theme-resolved="light"] .hrx-unified-shell.is-pwa>.hrx-unified-content{
+    background:#f3f7fa!important;
   }
 }
 
