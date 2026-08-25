@@ -3,3 +3,286 @@
 html[data-theme="dark"] .finance-scope-selector,.hrx-theme-dark .finance-scope-selector{background:rgba(21,31,43,.88);border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .finance-scope-selector strong,.hrx-theme-dark .finance-scope-selector strong{color:#f3f6f8}html[data-theme="dark"] .finance-scope-buttons,.hrx-theme-dark .finance-scope-buttons{background:rgba(255,255,255,.07)}html[data-theme="dark"] .finance-scope-buttons button,.hrx-theme-dark .finance-scope-buttons button{color:#aebccc}html[data-theme="dark"] .finance-scope-buttons button.is-active,.hrx-theme-dark .finance-scope-buttons button.is-active{background:#eef4f7;color:#13263c}html[data-theme="dark"] .personal-finance-boundary,.hrx-theme-dark .personal-finance-boundary{background:rgba(27,102,80,.16);border-color:rgba(77,190,153,.2);color:#c8e6dc}
 
 @media(max-width:900px){.personal-finance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.finance-scope-root{gap:8px}.finance-scope-selector{position:relative;z-index:2;align-items:stretch;flex-direction:column;padding:10px 12px;border-radius:14px}.finance-scope-selector>div:first-child{display:none}.finance-scope-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%}.finance-scope-buttons button{width:100%;min-height:38px}.personal-finance-boundary{flex-direction:column;gap:4px}.personal-finance-boundary strong{white-space:normal}.personal-finance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/*
+ * 2026-08-25 — correção de usabilidade do Financeiro Pessoal no PWA.
+ * Mantém a lógica financeira intacta e corrige leitura, CTA, rolagem e safe area no iPhone.
+ */
+@media(max-width:760px){
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
+    padding:8px 10px calc(188px + env(safe-area-inset-bottom));
+    background:transparent;
+  }
+
+  /* O título já existe no chrome do PWA. No conteúdo, preservamos apenas a ação principal. */
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-header{
+    min-height:0;
+    margin:0;
+    padding:0;
+    display:block;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-header>div:first-child{
+    display:none;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions{
+    display:block;
+    width:0;
+    height:0;
+    margin:0;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button:not(.is-primary){
+    display:none;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button.is-primary{
+    position:fixed;
+    z-index:1950;
+    left:max(16px,env(safe-area-inset-left));
+    right:max(16px,env(safe-area-inset-right));
+    bottom:calc(104px + env(safe-area-inset-bottom));
+    width:auto;
+    min-height:50px;
+    padding:0 18px;
+    border-radius:14px;
+    border-color:rgba(67,137,255,.75);
+    background:linear-gradient(180deg,#4389ff,#2868cf);
+    color:#fff;
+    box-shadow:0 14px 32px rgba(35,91,173,.30),0 4px 12px rgba(15,43,79,.18);
+    font-size:.82rem;
+    font-weight:850;
+  }
+
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-boundary{
+    margin:0 0 9px;
+    padding:10px 12px;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-boundary strong,
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-boundary span{
+    font-size:.72rem;
+    line-height:1.4;
+  }
+
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics article{
+    min-height:86px;
+    padding:12px;
+    border-radius:13px;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics span{
+    font-size:.7rem;
+    line-height:1.25;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics strong{
+    margin:6px 0 4px;
+    font-size:1.05rem;
+    line-height:1.1;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics small{
+    font-size:.66rem;
+    line-height:1.35;
+  }
+
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs{
+    position:sticky;
+    z-index:45;
+    top:0;
+    margin:0 0 10px;
+    padding:5px;
+    gap:5px;
+    border-radius:13px;
+    overflow:visible;
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs button{
+    flex:1 1 0;
+    justify-content:center;
+    min-height:46px;
+    padding:0 10px;
+    font-size:.76rem;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs button span{
+    min-width:24px;
+    height:24px;
+    font-size:.64rem;
+  }
+
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table tbody{
+    gap:10px;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table tr{
+    padding:13px 14px;
+    border-radius:15px;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td{
+    grid-template-columns:96px minmax(0,1fr);
+    gap:10px;
+    padding:9px 0;
+    font-size:.78rem;
+    line-height:1.35;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td::before{
+    font-size:.65rem;
+    line-height:1.25;
+    letter-spacing:.025em;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td strong{
+    font-size:.84rem;
+    line-height:1.3;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td small{
+    margin-top:4px;
+    font-size:.7rem;
+    line-height:1.35;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-status{
+    width:max-content;
+    min-height:30px;
+    padding:0 11px;
+    font-size:.68rem;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-row-actions{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:8px;
+    width:100%;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-row-actions button{
+    width:100%;
+    min-height:44px;
+    padding:0 10px;
+    border-radius:11px;
+    font-size:.7rem;
+    line-height:1.2;
+  }
+
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-footer{
+    margin-top:12px;
+    padding:0 2px;
+    font-size:.68rem;
+    line-height:1.4;
+  }
+
+  /* Modal mobile: conteúdo e botões continuam acima da safe area e do teclado. */
+  .finance-scope-root[data-finance-scope="personal"] .finance-modal{
+    max-height:min(92dvh,760px);
+    overflow:auto;
+    overscroll-behavior:contain;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .finance-modal-body label{
+    font-size:.74rem;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .finance-modal-body input,
+  .finance-scope-root[data-finance-scope="personal"] .finance-modal-body select,
+  .finance-scope-root[data-finance-scope="personal"] .finance-modal-body textarea{
+    font-size:.8rem;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .finance-modal>footer button{
+    min-height:46px;
+    font-size:.74rem;
+  }
+}
+
+/* Tema claro: superfícies opacas e contraste real para leitura em tela pequena. */
+@media(max-width:760px){
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
+    color:#102235;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-boundary{
+    background:#eef8f4;
+    border-color:#c8e6da;
+    color:#24493e;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics article{
+    background:#fff;
+    border-color:#d5e1ec;
+    box-shadow:0 8px 22px rgba(28,61,91,.08);
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics span{
+    color:#52687c;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics strong{
+    color:#102235;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-metrics small{
+    color:#687d90;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs{
+    background:rgba(247,250,253,.98);
+    border-color:#d2deea;
+    box-shadow:0 6px 18px rgba(28,61,91,.08);
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs button{
+    color:#5a6f82;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs button span{
+    background:#edf2f7;
+    color:#536b80;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-tabs button.is-active{
+    background:#e7f0ff;
+    color:#174d91;
+    box-shadow:inset 0 0 0 1px #bdd3f2;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table tr{
+    background:#fff;
+    border-color:#d5e1ec;
+    box-shadow:0 8px 22px rgba(28,61,91,.08);
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td{
+    color:#31475b;
+    border-bottom-color:#e3ebf2;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td::before{
+    color:#61768a;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td strong{
+    color:#102235;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td small{
+    color:#61778b;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-status.is-overdue{
+    background:#ffe7e9;
+    color:#a52d3b;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-status.is-open{
+    background:#e7f0ff;
+    color:#235fa8;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-status.is-paid{
+    background:#e8f7ec;
+    color:#26763c;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-row-actions button{
+    background:#f6f9fc;
+    border-color:#cbd9e6;
+    color:#244660;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-row-actions button:first-child{
+    background:#edf4ff;
+    border-color:#bed3f0;
+    color:#1f5799;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-row-actions button.is-danger{
+    background:#fff4f5;
+    border-color:#efc6cb;
+    color:#a13642;
+  }
+  html[data-hrx-theme-resolved="light"] .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-footer{
+    color:#64798c;
+  }
+}
+
+@media(max-width:430px){
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
+    padding-inline:8px;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table td{
+    grid-template-columns:88px minmax(0,1fr);
+    gap:8px;
+  }
+}
