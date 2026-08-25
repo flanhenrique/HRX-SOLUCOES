@@ -1,17 +1,18 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode, Ref } from 'react'
 import AdminPersonalizationBridge from './AdminPersonalizationBridge'
+import { AdminRouteProvider } from './AdminRouteContext'
 import {
   ADMIN_DESKTOP_MODULES,
   ADMIN_MOBILE_MORE_MODULES,
   ADMIN_MOBILE_PRIMARY_MODULES,
-  getAdminModule,
+  type AdminResolvedRoute,
 } from './adminModules'
 import {
   canonicalizeAdminLocation,
   navigateAdmin,
-  onAdminNavigate,
-  resolveAdminDestination,
+  onAdminRouteChange,
+  resolveAdminRoute,
   type AdminDestination,
 } from './adminNavigation'
 import { hrxSupabase } from './supabaseClient'
@@ -72,10 +73,9 @@ function RouteLoading() {
   return <section className="hrx-route-loading" role="status" aria-live="polite">Carregando área administrativa…</section>
 }
 
-function RouteContent({ destination }: { destination: AdminDestination }) {
-  const module = getAdminModule(destination)
-  const ActiveView = module.component
-  return <Suspense fallback={<RouteLoading />}><ActiveView /></Suspense>
+function RouteContent({ route }: { route: AdminResolvedRoute }) {
+  const ActiveView = route.module.component
+  return <AdminRouteProvider route={route}><Suspense fallback={<RouteLoading />}><ActiveView /></Suspense></AdminRouteProvider>
 }
 
 function totalAlerts(alerts: AlertSnapshot) {
@@ -150,10 +150,11 @@ function NotificationPanel({ alerts, onClose, onNavigate }: { alerts: AlertSnaps
   </aside>
 }
 
-function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { active: AdminDestination; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
+function DesktopShell({ route, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { route: AdminResolvedRoute; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
-  const current = getAdminModule(active)
+  const active = route.module.id
+  const contextLabel = route.subroute ? `HRX ADMIN · ${route.module.title}` : 'HRX ADMIN'
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setProfileOpen(false) }
@@ -185,7 +186,7 @@ function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef,
       <nav>{ADMIN_DESKTOP_MODULES.map((item) => <button type="button" key={item.id} className={active === item.id ? 'is-active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => navigateAdmin(item.id)}><i aria-hidden="true">{item.icon}</i><span>{item.title}</span></button>)}</nav>
     </aside>
     <header className="hrx-glass-topbar hrx-unified-topbar">
-      <div className="hrx-unified-title"><span>HRX ADMIN</span><strong>{current.title}</strong></div>
+      <div className="hrx-unified-title"><span>{contextLabel}</span><strong>{route.title}</strong></div>
       <div className="hrx-unified-actions">
         <NotificationButton buttonRef={notificationButtonRef} alerts={alerts} open={notificationOpen} onClick={onToggleNotifications} />
         <div ref={profileRef} className="hrx-profile-wrapper">
@@ -214,17 +215,18 @@ function DesktopShell({ active, alerts, notificationOpen, notificationButtonRef,
   </div>
 }
 
-function PwaShell({ active, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { active: AdminDestination; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
+function PwaShell({ route, alerts, notificationOpen, notificationButtonRef, onToggleNotifications, children, runtime, viewport }: { route: AdminResolvedRoute; alerts: AlertSnapshot; notificationOpen: boolean; notificationButtonRef: Ref<HTMLButtonElement>; onToggleNotifications: () => void; children: ReactNode; runtime: RuntimeMode; viewport: ViewportClass }) {
   const [moreOpen, setMoreOpen] = useState(false)
-  const current = getAdminModule(active)
+  const active = route.module.id
   const moreActive = moreOpen || ADMIN_MOBILE_MORE_MODULES.some((item) => item.id === active)
   const go = (destination: AdminDestination) => { setMoreOpen(false); navigateAdmin(destination) }
+  const contextLabel = route.subroute ? `HRX ADMIN · ${route.module.shortTitle ?? route.module.title}` : 'HRX ADMIN'
 
   useEffect(() => setMoreOpen(false), [active])
 
   return <div className="hrx-unified-shell is-pwa" data-admin-shell="pwa" data-runtime={runtime} data-viewport={viewport}>
     <header className="hrx-glass-topbar hrx-unified-topbar hrx-pwa-topbar">
-      <div className="hrx-pwa-brand"><img src="/hrx-logo.svg" alt="HRX Solutions" /><div><span>HRX ADMIN</span><strong>{current.shortTitle || current.title}</strong></div></div>
+      <div className="hrx-pwa-brand"><img src="/hrx-logo.svg" alt="HRX Solutions" /><div><span>{contextLabel}</span><strong>{route.shortTitle}</strong></div></div>
       <div className="hrx-unified-actions">
         <NotificationButton buttonRef={notificationButtonRef} alerts={alerts} open={notificationOpen} onClick={onToggleNotifications} />
       </div>
@@ -239,24 +241,25 @@ function PwaShell({ active, alerts, notificationOpen, notificationButtonRef, onT
 }
 
 export default function AdminUnifiedRoot() {
-  const [active, setActive] = useState<AdminDestination>(() => resolveAdminDestination())
+  const [route, setRoute] = useState<AdminResolvedRoute>(() => resolveAdminRoute())
   const [alerts, setAlerts] = useState<AlertSnapshot>(EMPTY_ALERTS)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const notificationButtonRef = useRef<HTMLButtonElement>(null)
   const environment = useAdminEnvironment()
   const compactShell = environment.viewport !== 'desktop'
+  const active = route.module.id
 
   useEffect(() => {
     canonicalizeAdminLocation(active)
-    return onAdminNavigate((destination) => {
-      setActive(destination)
+    return onAdminRouteChange((nextRoute) => {
+      setRoute(nextRoute)
       setNotificationOpen(false)
     })
   }, [])
 
   useEffect(() => {
-    document.title = `${getAdminModule(active).title} · HRX Admin`
-  }, [active])
+    document.title = `${route.title} · HRX Admin`
+  }, [route.title])
 
   useEffect(() => {
     document.documentElement.dataset.hrxRuntime = environment.runtime
@@ -319,7 +322,7 @@ export default function AdminUnifiedRoot() {
     }
   }, [])
 
-  const content = useMemo(() => <RouteContent destination={active} />, [active])
+  const content = useMemo(() => <RouteContent route={route} />, [route])
   const closeNotifications = () => {
     setNotificationOpen(false)
     window.requestAnimationFrame(() => notificationButtonRef.current?.focus())
@@ -327,8 +330,8 @@ export default function AdminUnifiedRoot() {
 
   return <>
     {compactShell
-      ? <PwaShell active={active} alerts={alerts} notificationOpen={notificationOpen} notificationButtonRef={notificationButtonRef} onToggleNotifications={() => setNotificationOpen((current) => !current)} runtime={environment.runtime} viewport={environment.viewport}>{content}</PwaShell>
-      : <DesktopShell active={active} alerts={alerts} notificationOpen={notificationOpen} notificationButtonRef={notificationButtonRef} onToggleNotifications={() => setNotificationOpen((current) => !current)} runtime={environment.runtime} viewport={environment.viewport}>{content}</DesktopShell>}
+      ? <PwaShell route={route} alerts={alerts} notificationOpen={notificationOpen} notificationButtonRef={notificationButtonRef} onToggleNotifications={() => setNotificationOpen((current) => !current)} runtime={environment.runtime} viewport={environment.viewport}>{content}</PwaShell>
+      : <DesktopShell route={route} alerts={alerts} notificationOpen={notificationOpen} notificationButtonRef={notificationButtonRef} onToggleNotifications={() => setNotificationOpen((current) => !current)} runtime={environment.runtime} viewport={environment.viewport}>{content}</DesktopShell>}
     {notificationOpen && <NotificationPanel alerts={alerts} onClose={closeNotifications} onNavigate={(destination) => navigateAdmin(destination)} />}
     <AdminPersonalizationBridge settingsActive={active === 'settings'} />
   </>

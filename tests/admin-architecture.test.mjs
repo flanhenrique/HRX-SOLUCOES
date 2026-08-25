@@ -42,21 +42,28 @@ test('admin autenticado preserva a cadeia canônica e monta exatamente uma raiz'
   }
 })
 
-test('registro modular possui a responsabilidade de lazy loading e metadados', async () => {
-  const [root, modules] = await Promise.all([
+test('registro modular possui lazy loading, metadados e contrato de subrotas', async () => {
+  const [root, modules, routeContext] = await Promise.all([
     read('src/quotes/AdminUnifiedRoot.tsx'),
     read('src/quotes/adminModules.ts'),
+    read('src/quotes/AdminRouteContext.tsx'),
   ])
 
   assert.match(modules, /export type AdminModule/)
+  assert.match(modules, /export type AdminResolvedRoute/)
+  assert.match(modules, /export type AdminSubroute/)
   assert.match(modules, /export const ADMIN_MODULES/)
   assert.match(modules, /component: lazy\(\(\) => import/)
   assert.match(modules, /navigationGroup:/)
   assert.match(modules, /mobileNavigation:/)
   assert.match(modules, /permissions:/)
   assert.match(modules, /resolveAdminModuleFromPath/)
-  assert.match(root, /const module = getAdminModule\(destination\)/)
-  assert.match(root, /const ActiveView = module\.component/)
+  assert.match(modules, /resolveAdminRouteFromPath/)
+  assert.match(modules, /buildAdminSubroutePath/)
+  assert.match(root, /const ActiveView = route\.module\.component/)
+  assert.match(root, /<AdminRouteProvider route=\{route\}>/)
+  assert.match(routeContext, /createContext<AdminResolvedRoute \| null>/)
+  assert.match(routeContext, /export function useAdminRoute/)
   assert.doesNotMatch(root, /import\('\.\/AdminQuotes'\)|import\('\.\/AdminSettingsPage'\)|const navItems|const pwaPrimary/)
 })
 
@@ -66,7 +73,7 @@ test('módulos de negócio permanecem views puras dentro do workspace canônico'
     const source = views[index]
     const path = pureViewPaths[index]
     assert.doesNotMatch(source, /<AdminUnifiedRoot|function DesktopShell|function PwaShell|hrx-unified-sidebar|hrx-unified-mobile-nav/, `${path} não pode criar shell ou navegação global`)
-    assert.doesNotMatch(source, /onAdminNavigate|window\.location\.hash|const\s+\[open,\s*setOpen\]/, `${path} não pode controlar sua própria ativação de rota`)
+    assert.doesNotMatch(source, /onAdminNavigate|onAdminRouteChange|resolveAdminRoute\(|window\.location\.hash|const\s+\[open,\s*setOpen\]/, `${path} não pode controlar sua própria ativação de rota`)
   }
 
   const quotes = views[pureViewPaths.indexOf('src/quotes/AdminQuotes.tsx')]

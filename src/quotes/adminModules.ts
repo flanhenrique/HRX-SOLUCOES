@@ -15,6 +15,20 @@ export type AdminDestination =
 
 export type AdminNavigationGroup = 'principal' | 'management' | 'governance'
 export type AdminMobileNavigation = 'primary' | 'more'
+export type AdminSubrouteId =
+  | 'client-detail'
+  | 'quote-detail'
+  | 'quote-edit'
+  | 'finance-receivable'
+  | 'finance-payable'
+
+export type AdminSubroute = {
+  id: AdminSubrouteId
+  pattern: string
+  title: string
+  shortTitle?: string
+  breadcrumbTitle?: string
+}
 
 export type AdminModule = {
   id: AdminDestination
@@ -28,8 +42,24 @@ export type AdminModule = {
   mobileOrder: number
   permissions: readonly string[]
   component: LazyExoticComponent<ComponentType>
+  subroutes?: readonly AdminSubroute[]
   legacyHashes?: readonly string[]
   legacyPaths?: readonly string[]
+}
+
+export type AdminBreadcrumb = {
+  label: string
+  path: string
+}
+
+export type AdminResolvedRoute = {
+  module: AdminModule
+  subroute: AdminSubroute | null
+  pathname: string
+  params: Readonly<Record<string, string>>
+  title: string
+  shortTitle: string
+  breadcrumbs: readonly AdminBreadcrumb[]
 }
 
 export const ADMIN_MODULES: readonly AdminModule[] = [
@@ -59,6 +89,10 @@ export const ADMIN_MODULES: readonly AdminModule[] = [
     mobileOrder: 20,
     permissions: [],
     component: lazy(() => import('./AdminQuotes')),
+    subroutes: [
+      { id: 'quote-edit', pattern: ':orcamentoId/editar', title: 'Editar orçamento', breadcrumbTitle: 'Editar' },
+      { id: 'quote-detail', pattern: ':orcamentoId', title: 'Orçamento', breadcrumbTitle: 'Detalhe' },
+    ],
     legacyHashes: ['orcamentos', 'quotes'],
   },
   {
@@ -72,6 +106,9 @@ export const ADMIN_MODULES: readonly AdminModule[] = [
     mobileOrder: 30,
     permissions: [],
     component: lazy(() => import('./AdminClientsPage')),
+    subroutes: [
+      { id: 'client-detail', pattern: ':clienteId', title: 'Cliente', breadcrumbTitle: 'Detalhe' },
+    ],
     legacyHashes: ['clientes', 'clients'],
   },
   {
@@ -85,6 +122,10 @@ export const ADMIN_MODULES: readonly AdminModule[] = [
     mobileOrder: 40,
     permissions: [],
     component: lazy(() => import('./AdminFinanceScopedPage')),
+    subroutes: [
+      { id: 'finance-receivable', pattern: 'receber', title: 'Contas a receber', shortTitle: 'A receber', breadcrumbTitle: 'A receber' },
+      { id: 'finance-payable', pattern: 'pagar', title: 'Contas a pagar', shortTitle: 'A pagar', breadcrumbTitle: 'A pagar' },
+    ],
     legacyHashes: ['financeiro', 'finance'],
   },
   {
@@ -208,6 +249,78 @@ export function resolveAdminModuleFromPath(pathname: string): AdminModule | null
     .filter((module) => module.path !== '/admin')
     .sort((left, right) => right.path.length - left.path.length)
     .find((module) => moduleMatchesSubroute(module, normalized)) ?? null
+}
+
+function decodeRouteParam(value: string): string {
+  try { return decodeURIComponent(value) } catch { return value }
+}
+
+function matchSubroute(pattern: string, relativePath: string): Record<string, string> | null {
+  const patternSegments = pattern.split('/').filter(Boolean)
+  const pathSegments = relativePath.split('/').filter(Boolean)
+  if (patternSegments.length !== pathSegments.length) return null
+
+  const params: Record<string, string> = {}
+  for (let index = 0; index < patternSegments.length; index += 1) {
+    const expected = patternSegments[index]
+    const actual = pathSegments[index]
+    if (expected.startsWith(':')) {
+      if (!actual) return null
+      params[expected.slice(1)] = decodeRouteParam(actual)
+      continue
+    }
+    if (expected !== actual) return null
+  }
+  return params
+}
+
+function canonicalRelativePath(module: AdminModule, pathname: string): string | null {
+  if (pathname === module.path) return ''
+  if (pathname.startsWith(`${module.path}/`)) return pathname.slice(module.path.length + 1)
+  return null
+}
+
+export function resolveAdminRouteFromPath(pathname: string): AdminResolvedRoute | null {
+  const normalized = normalizeAdminPath(pathname)
+  const module = resolveAdminModuleFromPath(normalized)
+  if (!module) return null
+
+  const relativePath = canonicalRelativePath(module, normalized)
+  let subroute: AdminSubroute | null = null
+  let params: Record<string, string> = {}
+
+  if (relativePath) {
+    for (const candidate of module.subroutes ?? []) {
+      const matched = matchSubroute(candidate.pattern, relativePath)
+      if (!matched) continue
+      subroute = candidate
+      params = matched
+      break
+    }
+  }
+
+  const title = subroute?.title ?? module.title
+  const shortTitle = subroute?.shortTitle ?? subroute?.title ?? module.shortTitle ?? module.title
+  const breadcrumbs: AdminBreadcrumb[] = [{ label: module.title, path: module.path }]
+  if (subroute) breadcrumbs.push({ label: subroute.breadcrumbTitle ?? subroute.title, path: normalized })
+
+  return { module, subroute, pathname: normalized, params, title, shortTitle, breadcrumbs }
+}
+
+export function buildAdminSubroutePath(destination: AdminDestination, subrouteId: AdminSubrouteId, params: Record<string, string>): string {
+  const module = getAdminModule(destination)
+  const subroute = module.subroutes?.find((candidate) => candidate.id === subrouteId)
+  if (!subroute) throw new Error(`admin_subroute_not_found:${destination}:${subrouteId}`)
+
+  const relative = subroute.pattern.split('/').map((segment) => {
+    if (!segment.startsWith(':')) return segment
+    const key = segment.slice(1)
+    const value = params[key]
+    if (!value) throw new Error(`admin_subroute_param_required:${key}`)
+    return encodeURIComponent(value)
+  }).join('/')
+
+  return `${module.path}/${relative}`
 }
 
 export function resolveAdminModuleFromLegacyHash(hash: string): AdminModule | null {

@@ -46,8 +46,24 @@ test('registro canônico concentra módulos, rotas, lazy views e metadados de na
   assert.match(root, /ADMIN_DESKTOP_MODULES/)
   assert.match(root, /ADMIN_MOBILE_PRIMARY_MODULES/)
   assert.match(root, /ADMIN_MOBILE_MORE_MODULES/)
-  assert.match(root, /getAdminModule\(destination\)/)
+  assert.match(root, /const ActiveView = route\.module\.component/)
+  assert.match(root, /<AdminRouteProvider route=\{route\}>/)
   assert.doesNotMatch(root, /const navItems|const pwaPrimary|lazy\(\(\) => import/)
+})
+
+test('registro canônico descreve as subrotas estruturais sem criar views de negócio paralelas', () => {
+  for (const contract of [
+    "id: 'client-detail', pattern: ':clienteId'",
+    "id: 'quote-detail', pattern: ':orcamentoId'",
+    "id: 'quote-edit', pattern: ':orcamentoId/editar'",
+    "id: 'finance-receivable', pattern: 'receber'",
+    "id: 'finance-payable', pattern: 'pagar'",
+  ]) assert.ok(modules.includes(contract), `subrota estrutural ausente: ${contract}`)
+
+  assert.match(modules, /resolveAdminRouteFromPath/)
+  assert.match(modules, /matchSubroute/)
+  assert.match(modules, /params\[expected\.slice\(1\)\]/)
+  assert.match(modules, /buildAdminSubroutePath/)
 })
 
 test('orçamentos permanece view pura sem sidebar, dock ou router próprios', () => {
@@ -61,15 +77,18 @@ test('pathname é a fonte de verdade e hashes antigos são apenas aliases de ent
   assert.match(navigation, /history\.replaceState/)
   assert.match(navigation, /popstate/)
   assert.match(navigation, /hashchange/)
-  assert.match(navigation, /resolveAdminModuleFromPath\(window\.location\.pathname\)/)
+  assert.match(navigation, /resolveAdminRouteFromPath\(window\.location\.pathname\)/)
   assert.match(navigation, /resolveAdminModuleFromLegacyHash\(window\.location\.hash\)/)
   assert.match(navigation, /canonicalizeAdminLocation/)
+  assert.match(navigation, /export function navigateAdminPath/)
+  assert.match(navigation, /export function onAdminRouteChange/)
   assert.doesNotMatch(navigation, /#admin\//)
   assert.match(modules, /pathname\.startsWith\(`\$\{module\.path\}\//)
   assert.ok(modules.includes("legacyHashes: ['paineis', 'painels', 'projetos', 'panels']"))
 })
 
-test('GitHub Pages materializa todos os módulos para refresh e acesso direto', () => {
+test('GitHub Pages materializa módulos e possui fallback SPA para deep links dinâmicos', () => {
+  assert.match(deploy, /cp dist\/index\.html dist\/404\.html/)
   assert.match(deploy, /cp dist\/index\.html dist\/admin\/index\.html/)
   for (const slug of ['orcamentos', 'clientes', 'financeiro', 'fiscal', 'suspensoes', 'atividades', 'documentos', 'paineis', 'configuracoes']) {
     assert.ok(deploy.includes(slug), `rota não preparada no artifact do Pages: ${slug}`)
