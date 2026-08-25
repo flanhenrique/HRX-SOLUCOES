@@ -17,7 +17,7 @@ test('PWA mobile keeps the dock fixed while only content scrolls', async () => {
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*overflow-y:auto!important/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-mobile-nav\{[\s\S]*position:fixed!important/)
   assert.match(css, /bottom:var\(--hrx-dock-bottom\)!important/)
-  assert.match(css, /\.personal-finance-page\{[\s\S]*padding-bottom:18px!important/)
+  assert.match(css, /\.personal-finance-page\{[\s\S]*padding-bottom:0!important/)
   assert.match(css, /button\.is-primary\{[\s\S]*position:static!important/)
   assert.match(css, /html\.hrx-finance-modal-open[\s\S]*\.hrx-unified-mobile-nav[\s\S]*visibility:hidden!important/)
 
@@ -26,6 +26,15 @@ test('PWA mobile keeps the dock fixed while only content scrolls', async () => {
   assert.match(finance, /document\.documentElement\.classList\.add\('hrx-finance-modal-open'\)/)
   assert.match(finance, /return createPortal\(<div className="finance-modal-backdrop"/)
   assert.match(finance, /, document\.body\)/)
+})
+
+test('dock is a true overlay and does not create permanent dead space at page end', async () => {
+  const css = await read('src/quotes/admin-mobile-floating-dock-fix.css')
+
+  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*padding-bottom:0!important/)
+  assert.match(css, /scroll-padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\) \+ 12px\)!important/)
+  assert.match(css, /:focus\{[\s\S]*scroll-margin-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\) \+ 12px\)!important/)
+  assert.doesNotMatch(css, /padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\)/)
 })
 
 test('light PWA canvas continues behind the dock without a navy bottom strip', async () => {
