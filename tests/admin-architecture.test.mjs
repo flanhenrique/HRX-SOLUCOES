@@ -66,6 +66,7 @@ test('módulos de negócio permanecem views puras dentro do workspace canônico'
     const source = views[index]
     const path = pureViewPaths[index]
     assert.doesNotMatch(source, /<AdminUnifiedRoot|function DesktopShell|function PwaShell|hrx-unified-sidebar|hrx-unified-mobile-nav/, `${path} não pode criar shell ou navegação global`)
+    assert.doesNotMatch(source, /onAdminNavigate|window\.location\.hash|const\s+\[open,\s*setOpen\]/, `${path} não pode controlar sua própria ativação de rota`)
   }
 
   const quotes = views[pureViewPaths.indexOf('src/quotes/AdminQuotes.tsx')]
