@@ -18,9 +18,10 @@ test('PWA exposes one visible settings entry through the floating bottom navigat
   assert.match(root, /'settings'/)
   assert.match(root, /hrx-unified-mobile-nav/)
   assert.match(chrome, /\.hrx-unified-shell\.is-pwa \.hrx-pwa-settings\{display:none!important\}/)
-  assert.match(chrome, /position:fixed!important/)
-  assert.match(chrome, /left:50%!important/)
-  assert.match(chrome, /transform:translateX\(-50%\)!important/)
+  const shell = await read('src/quotes/admin-unified-shell.css')
+  assert.match(shell, /position:fixed!important/)
+  assert.match(shell, /left:50%!important/)
+  assert.match(shell, /transform:translateX\(-50%\)!important/)
 })
 
 test('mobile overlays remain below the iOS safe area in the canonical shell', async () => {
@@ -30,6 +31,7 @@ test('mobile overlays remain below the iOS safe area in the canonical shell', as
   ])
 
   assert.match(css, /\.hrx-pwa-secondary\{[\s\S]*top:calc\(64px \+ env\(safe-area-inset-top\)\)/)
-  assert.match(chrome, /bottom:max\(12px,calc\(env\(safe-area-inset-bottom\) \+ 8px\)\)!important/)
-  assert.match(css, /padding-top:env\(safe-area-inset-top\)/)
+  assert.match(css, /--hrx-dock-bottom:6px/)
+  assert.match(css, /--hrx-dock-control-lift:max\(0px,calc\(var\(--hrx-safe-bottom\) - 28px\)\)/)
+  assert.match(css, /padding:var\(--hrx-safe-top\)/)
 })

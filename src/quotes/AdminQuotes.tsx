@@ -7,6 +7,7 @@ import type { CommercialStatus, DiscountLevel, PaymentMode, RetentionInput } fro
 import { hrxPublishableKey, hrxSupabase, quoteAdminEndpoint } from './supabaseClient'
 import './quotes.css'
 import './quote-commercial.css'
+import './admin-quotes-mobile.css'
 
 type ProviderRule = { provider: 'nubank' | 'mercadopago'; display_name: string; boleto_fee_per_paid: number }
 type PricingRule = { service_key: string; service_name: string; category: string; base_amount: number; minimum_amount: number; invoice_description?: string | null }

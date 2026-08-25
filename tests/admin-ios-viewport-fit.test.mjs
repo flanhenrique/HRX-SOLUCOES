@@ -4,23 +4,22 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('iPhone PWA covers the physical safe area and makes the dock own the bottom inset', async () => {
+test('iPhone PWA applies the safe area once without increasing dock height', async () => {
   const [index, app, css] = await Promise.all([
     read('index.html'),
     read('src/quotes/AdminApp.tsx'),
-    read('src/quotes/admin-ios-viewport-dock-fix.css'),
+    read('src/quotes/admin-unified-shell.css'),
   ])
 
   assert.match(index, /name="viewport"[^>]*viewport-fit=cover/)
-  assert.match(app, /import '\.\/admin-mobile-floating-dock-fix\.css'/)
-  assert.match(app, /import '\.\/admin-ios-viewport-dock-fix\.css'/)
-  assert.ok(app.indexOf("admin-ios-viewport-dock-fix.css") > app.indexOf("admin-mobile-floating-dock-fix.css"))
-
-  assert.match(css, /--hrx-ios-tabbar-safe-bottom:env\(safe-area-inset-bottom\)/)
-  assert.match(css, /--hrx-ios-tabbar-total-height:calc\(var\(--hrx-ios-tabbar-content-height\) \+ var\(--hrx-ios-tabbar-safe-bottom\)\)/)
-  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-mobile-nav\{[\s\S]*bottom:0!important/)
-  assert.match(css, /height:var\(--hrx-ios-tabbar-total-height\)!important/)
-  assert.match(css, /padding:4px 6px calc\(4px \+ var\(--hrx-ios-tabbar-safe-bottom\)\)!important/)
-  assert.match(css, /border-radius:20px 20px 0 0!important/)
-  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*padding-bottom:0!important/)
+  assert.match(app, /import '\.\/admin-unified-shell\.css'/)
+  assert.doesNotMatch(app, /admin-(mobile-safe-area-fixes|mobile-floating-dock-fix|ios-viewport-dock-fix)/)
+  assert.match(css, /--hrx-safe-bottom:env\(safe-area-inset-bottom,0px\)/)
+  assert.match(css, /--hrx-dock-height:64px/)
+  assert.match(css, /--hrx-dock-bottom:6px/)
+  assert.match(css, /--hrx-dock-control-lift:max\(0px,calc\(var\(--hrx-safe-bottom\) - 28px\)\)/)
+  assert.match(css, /height:var\(--hrx-dock-height\)!important/)
+  assert.match(css, /padding:4px 6px!important/)
+  assert.match(css, /translateY\(calc\(0px - var\(--hrx-dock-control-lift\)\)\)/)
+  assert.doesNotMatch(css, /height:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-safe-bottom\)\)/)
 })

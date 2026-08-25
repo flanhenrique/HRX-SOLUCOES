@@ -16,7 +16,7 @@ test('novo cliente usa portal modal e não participa do fluxo da página', async
   assert.match(component, /document\.body\.style\.overflow = 'hidden'/)
   assert.match(component, /event\.key === 'Escape'/)
   assert.match(css, /\.admin-client-modal-backdrop\{position:fixed;inset:0;/)
-  assert.match(css, /z-index:2400/)
+  assert.match(css, /z-index:5200/)
   assert.match(css, /\.admin-client-modal\{width:min\(760px,100%\);max-height:/)
   assert.match(css, /\.admin-client-modal-body\{[^}]*overflow:auto/)
 })

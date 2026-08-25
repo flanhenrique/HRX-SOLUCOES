@@ -4,13 +4,10 @@ html[data-theme="dark"] .finance-scope-selector,.hrx-theme-dark .finance-scope-s
 
 @media(max-width:900px){.personal-finance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.finance-scope-root{gap:8px}.finance-scope-selector{position:relative;z-index:2;align-items:stretch;flex-direction:column;padding:10px 12px;border-radius:14px}.finance-scope-selector>div:first-child{display:none}.finance-scope-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%}.finance-scope-buttons button{width:100%;min-height:38px}.personal-finance-boundary{flex-direction:column;gap:4px}.personal-finance-boundary strong{white-space:normal}.personal-finance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/*
- * 2026-08-25 — correção de usabilidade do Financeiro Pessoal no PWA.
- * Mantém a lógica financeira intacta e corrige leitura, CTA, rolagem e safe area no iPhone.
- */
+/* Financeiro pessoal: responsividade da view, sem assumir a geometria do shell. */
 @media(max-width:760px){
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
-    padding:8px 10px calc(188px + env(safe-area-inset-bottom));
+    padding:8px 10px 12px;
     background:transparent;
   }
 
@@ -26,20 +23,16 @@ html[data-theme="dark"] .finance-scope-selector,.hrx-theme-dark .finance-scope-s
   }
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions{
     display:block;
-    width:0;
-    height:0;
+    width:100%;
+    height:auto;
     margin:0;
   }
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button:not(.is-primary){
     display:none;
   }
   .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button.is-primary{
-    position:fixed;
-    z-index:1950;
-    left:max(16px,env(safe-area-inset-left));
-    right:max(16px,env(safe-area-inset-right));
-    bottom:calc(104px + env(safe-area-inset-bottom));
-    width:auto;
+    position:static;
+    width:100%;
     min-height:50px;
     padding:0 18px;
     border-radius:14px;
@@ -166,9 +159,9 @@ html[data-theme="dark"] .finance-scope-selector,.hrx-theme-dark .finance-scope-s
     line-height:1.4;
   }
 
-  /* Modal mobile: conteúdo e botões continuam acima da safe area e do teclado. */
+  /* O modal usa a camada global e preserva a rolagem interna. */
   .finance-scope-root[data-finance-scope="personal"] .finance-modal{
-    max-height:min(92dvh,760px);
+    max-height:calc(100% - env(safe-area-inset-top));
     overflow:auto;
     overscroll-behavior:contain;
   }
