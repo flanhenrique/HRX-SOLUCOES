@@ -44,6 +44,7 @@ jobs:
       - name: Prepare direct admin PWA routes and atomic release
         run: |
           mkdir -p dist/admin
+          cp dist/index.html dist/404.html
           cp dist/index.html dist/admin/index.html
           for route in orcamentos clientes financeiro fiscal suspensoes atividades documentos paineis configuracoes visao-geral painels projetos; do
             mkdir -p "dist/admin/$route"
