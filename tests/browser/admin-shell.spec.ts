@@ -42,21 +42,19 @@ function compactShell(kind: 'phone' | 'tablet') {
       <header class="hrx-glass-topbar hrx-unified-topbar hrx-pwa-topbar">
         <div class="hrx-pwa-brand">
           <img alt="HRX Solutions" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='44'%3E%3Crect width='90' height='44' fill='%2307182d'/%3E%3C/svg%3E" />
-          <div><span>HRX ADMIN</span><strong>Orçamentos e propostas</strong></div>
+          <div><span>HRX ADMIN</span><strong>Visão Geral</strong></div>
         </div>
         <div class="hrx-unified-actions">
           <button class="hrx-notifications" type="button" aria-label="12 notificações" aria-haspopup="dialog" aria-expanded="false"><i aria-hidden="true">♢</i><span aria-hidden="true">12</span></button>
-          <button class="hrx-pwa-settings" type="button" aria-label="Abrir configurações">⚙</button>
-          <button class="hrx-pwa-more" type="button" aria-label="Abrir mais áreas" aria-expanded="false" aria-controls="fixture-secondary">•••</button>
         </div>
       </header>
       <main class="hrx-unified-content" data-admin-workspace="true"><section style="min-height:900px;padding:16px"><h1>HRX Admin</h1><p>Conteúdo administrativo de validação responsiva.</p></section></main>
       <nav class="hrx-mobile-nav hrx-unified-mobile-nav" aria-label="Navegação principal do aplicativo">
         <button type="button" class="is-active" aria-current="page"><i aria-hidden="true">⌂</i><span>Início</span></button>
         <button type="button"><i aria-hidden="true">◫</i><span>Orçamentos</span></button>
-        <button type="button"><i aria-hidden="true">▣</i><span>Projetos</span></button>
-        <button type="button"><i aria-hidden="true">▤</i><span>Docs</span></button>
-        <button type="button"><i aria-hidden="true">⚙</i><span>Perfil</span></button>
+        <button type="button"><i aria-hidden="true">♙</i><span>Clientes</span></button>
+        <button type="button"><i aria-hidden="true">¤</i><span>Financeiro</span></button>
+        <button class="hrx-mobile-more" type="button" aria-label="Abrir mais áreas" aria-expanded="false" aria-controls="fixture-secondary"><i aria-hidden="true">•••</i><span>Mais</span></button>
       </nav>
       <aside id="fixture-secondary" class="hrx-pwa-secondary" aria-label="Mais áreas do HRX Admin" hidden></aside>
     </div>`
@@ -109,7 +107,7 @@ for (const viewport of viewports) {
 
     if (viewport.width <= 1100) {
       await expect(page.locator('.hrx-pwa-settings')).toBeHidden()
-      for (const selector of ['.hrx-pwa-more', '.hrx-unified-mobile-nav']) {
+      for (const selector of ['.hrx-mobile-more', '.hrx-unified-mobile-nav']) {
         const box = await page.locator(selector).boundingBox()
         expect(box, selector).not.toBeNull()
         expect(box!.x, selector).toBeGreaterThanOrEqual(0)
@@ -119,6 +117,7 @@ for (const viewport of viewports) {
       const nav = await page.locator('.hrx-unified-mobile-nav').boundingBox()
       expect(nav!.width).toBeLessThan(viewport.width)
       expect(viewport.height - (nav!.y + nav!.height)).toBeGreaterThanOrEqual(4)
+      await expect(page.locator('.hrx-unified-mobile-nav span')).toHaveText(['Início', 'Orçamentos', 'Clientes', 'Financeiro', 'Mais'])
     } else {
       await expect(page.locator('.hrx-unified-sidebar')).toBeVisible()
       await expect(page.locator('.hrx-unified-topbar')).toBeVisible()
