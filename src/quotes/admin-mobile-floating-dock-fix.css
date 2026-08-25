@@ -1,1 +1,121 @@
-TEMP
+/*
+ * HRX Admin PWA — dock mobile persistente no estilo de app nativo.
+ * O dock permanece fixo enquanto somente a área de conteúdo rola.
+ * Carregado por último para neutralizar regras legadas que criavam faixas
+ * inferiores, excesso de padding e competição com o Financeiro Pessoal.
+ */
+
+@media(max-width:760px){
+  html.hrx-admin-pwa,
+  html.hrx-admin-pwa body,
+  html.hrx-admin-pwa #root{
+    width:100%;
+    height:100%;
+    min-height:100%;
+    overflow:hidden;
+  }
+
+  .hrx-unified-shell.is-pwa{
+    width:100%!important;
+    height:100dvh!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+
+  .hrx-unified-shell.is-pwa>.hrx-pwa-topbar{
+    flex:0 0 auto!important;
+  }
+
+  /*
+   * Só o conteúdo rola. O dock não participa do fluxo, por isso não sobe,
+   * não some e não gera uma terceira faixa visual no fim da página.
+   */
+  .hrx-unified-shell.is-pwa>.hrx-unified-content{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    height:auto!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-y:contain;
+    scroll-padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+    padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+  }
+
+  .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
+    position:fixed!important;
+    z-index:2400!important;
+    left:50%!important;
+    right:auto!important;
+    bottom:max(10px,calc(env(safe-area-inset-bottom) + 8px))!important;
+    transform:translateX(-50%)!important;
+    width:min(560px,calc(100vw - max(22px,env(safe-area-inset-left) + env(safe-area-inset-right) + 16px)))!important;
+    margin:0!important;
+    isolation:isolate;
+    contain:layout paint;
+  }
+
+  /* Nenhuma superfície adicional é permitida abaixo/atrás do dock. */
+  .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav::before,
+  .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav::after{
+    display:none!important;
+    content:none!important;
+  }
+
+  /* Financeiro Pessoal: remove a reserva exagerada criada pela correção anterior. */
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
+    min-height:100%!important;
+    padding-bottom:calc(112px + env(safe-area-inset-bottom))!important;
+  }
+
+  /* O CTA continua fácil de encontrar, mas volta ao fluxo da página.
+     Ele não deve criar uma segunda barra fixa acima do menu principal. */
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-page-header{
+    display:block!important;
+    min-height:0!important;
+    margin:0 0 10px!important;
+    padding:0!important;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    margin:0!important;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page .finance-header-actions button.is-primary{
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    width:100%!important;
+    min-height:48px!important;
+    margin:0!important;
+  }
+
+  /* Modal financeiro cobre a interface inteira. O dock volta ao fechar o modal. */
+  .hrx-unified-shell.is-pwa:has(.finance-modal-backdrop)>.hrx-unified-mobile-nav{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  .hrx-unified-shell.is-pwa:has(.finance-modal-backdrop)>.hrx-unified-content{
+    overscroll-behavior:none!important;
+  }
+  .finance-modal-backdrop{
+    position:fixed!important;
+    inset:0!important;
+    z-index:5200!important;
+  }
+}
+
+@media(max-width:360px){
+  .hrx-unified-shell.is-pwa>.hrx-unified-content{
+    padding-bottom:calc(98px + env(safe-area-inset-bottom))!important;
+    scroll-padding-bottom:calc(98px + env(safe-area-inset-bottom))!important;
+  }
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-page{
+    padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;
+  }
+}
