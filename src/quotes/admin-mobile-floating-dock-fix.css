@@ -4,18 +4,22 @@
  * Regra canônica no telefone:
  * 1. viewport/shell NÃO rolam;
  * 2. somente .hrx-unified-content rola;
- * 3. o dock é fixed e usa a safe area UMA única vez;
- * 4. páginas internas não criam uma segunda reserva inferior;
- * 5. modais portados ao body cobrem a viewport inteira;
- * 6. o conteúdo passa por trás do dock; não existe faixa/respiro físico após o último item.
+ * 3. o dock é fixed e ancorado na viewport física, não em 100dvh;
+ * 4. a safe area inferior é limitada ao valor realista do iPhone;
+ * 5. páginas internas não criam uma segunda reserva inferior;
+ * 6. modais portados ao body cobrem a viewport inteira;
+ * 7. o conteúdo passa por trás do dock; não existe faixa/respiro físico após o último item.
  */
 
 @media(max-width:760px){
   html.hrx-admin-pwa:has(.hrx-unified-shell),
   html.hrx-admin-pwa:has(.hrx-unified-shell) body,
   html.hrx-admin-pwa:has(.hrx-unified-shell) #root{
-    width:100%!important;
-    height:100%!important;
+    position:fixed!important;
+    inset:0!important;
+    width:auto!important;
+    height:auto!important;
+    min-width:0!important;
     min-height:0!important;
     margin:0!important;
     overflow:hidden!important;
@@ -26,16 +30,21 @@
   .hrx-unified-shell.is-pwa{
     --hrx-phone-topbar:calc(64px + env(safe-area-inset-top));
     --hrx-dock-height:64px;
-    --hrx-dock-bottom:max(8px,env(safe-area-inset-bottom));
+    /* iOS pode expor um inset exagerado em standalone durante mudanças de viewport.
+       O home indicator usa ~34 CSS px em portrait; não deixamos esse valor empurrar
+       o dock dezenas de pixels para cima. */
+    --hrx-dock-bottom:clamp(8px,env(safe-area-inset-bottom),34px);
     --hrx-pwa-canvas:#081a2f;
     position:fixed!important;
     inset:0!important;
     display:flex!important;
     flex-direction:column!important;
-    width:100vw!important;
-    height:100dvh!important;
-    min-height:100dvh!important;
-    max-height:100dvh!important;
+    width:auto!important;
+    height:auto!important;
+    min-width:0!important;
+    min-height:0!important;
+    max-width:none!important;
+    max-height:none!important;
     margin:0!important;
     padding:0!important;
     overflow:hidden!important;
@@ -68,7 +77,7 @@
     background-clip:border-box!important;
   }
 
-  /* Dock no comportamento de app nativo/WhatsApp: preso à viewport. */
+  /* Dock no comportamento de app nativo/WhatsApp: preso à viewport real. */
   .hrx-unified-shell.is-pwa>.hrx-unified-mobile-nav{
     position:fixed!important;
     z-index:2400!important;
@@ -128,8 +137,8 @@
     position:fixed!important;
     z-index:5200!important;
     inset:0!important;
-    width:100vw!important;
-    height:100dvh!important;
+    width:auto!important;
+    height:auto!important;
     margin:0!important;
     padding:0!important;
     align-items:flex-end!important;
@@ -138,11 +147,11 @@
   .finance-modal-backdrop>.finance-modal,
   .finance-modal-backdrop>.finance-modal.is-small{
     width:100%!important;
-    max-height:calc(100dvh - env(safe-area-inset-top))!important;
+    max-height:calc(100% - env(safe-area-inset-top))!important;
     margin:0!important;
     border-radius:20px 20px 0 0!important;
     border-bottom:0!important;
-    padding-bottom:env(safe-area-inset-bottom)!important;
+    padding-bottom:clamp(0px,env(safe-area-inset-bottom),34px)!important;
     overflow:auto!important;
     overscroll-behavior:contain!important;
   }
@@ -182,6 +191,6 @@
   .hrx-unified-shell.is-pwa{
     --hrx-phone-topbar:calc(56px + env(safe-area-inset-top));
     --hrx-dock-height:54px;
-    --hrx-dock-bottom:max(5px,env(safe-area-inset-bottom));
+    --hrx-dock-bottom:clamp(5px,env(safe-area-inset-bottom),21px);
   }
 }
