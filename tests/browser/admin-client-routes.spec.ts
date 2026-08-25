@@ -105,6 +105,6 @@ test('ID de cliente inexistente não abre outro cadastro por fallback silencioso
 
   await expect(page).toHaveURL(/\/admin\/clientes\/client-missing\?hrx-preview=1$/)
   await expect(page.getByRole('heading', { name: 'Cliente não encontrado' })).toBeVisible()
-  await expect(page.locator('.hrx-client-detail h2')).toHaveCount(0)
+  await expect(page.locator('.hrx-client-title')).toHaveCount(0)
   await expect(page.locator('[data-admin-shell]')).toHaveCount(1)
 })
