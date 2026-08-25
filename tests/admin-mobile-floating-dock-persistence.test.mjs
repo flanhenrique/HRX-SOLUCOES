@@ -13,7 +13,7 @@ test('PWA mobile keeps the dock fixed while only content scrolls', async () => {
 
   assert.match(app, /import '\.\/admin-mobile-floating-dock-fix\.css'/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa\{[\s\S]*padding:0!important/)
-  assert.match(css, /--hrx-dock-bottom:clamp\(8px,env\(safe-area-inset-bottom\),34px\)/)
+  assert.match(css, /--hrx-dock-bottom:8px/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*overflow-y:auto!important/)
   assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-mobile-nav\{[\s\S]*position:fixed!important/)
   assert.match(css, /bottom:var\(--hrx-dock-bottom\)!important/)
@@ -37,17 +37,26 @@ test('iPhone standalone shell is anchored by inset instead of 100dvh', async () 
   assert.match(shellBlock, /height:auto!important/)
   assert.match(shellBlock, /max-height:none!important/)
   assert.doesNotMatch(shellBlock, /100dvh/)
-  assert.match(css, /--hrx-dock-bottom:clamp\(8px,env\(safe-area-inset-bottom\),34px\)/)
-  assert.match(css, /--hrx-dock-bottom:clamp\(5px,env\(safe-area-inset-bottom\),21px\)/)
+  assert.match(css, /--hrx-dock-bottom:8px/)
+  assert.match(css, /--hrx-dock-bottom:5px/)
 })
 
 test('dock is a true overlay and does not create permanent dead space at page end', async () => {
   const css = await read('src/quotes/admin-mobile-floating-dock-fix.css')
 
-  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*padding-bottom:0!important/)
-  assert.match(css, /scroll-padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\) \+ 12px\)!important/)
-  assert.match(css, /:focus\{[\s\S]*scroll-margin-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\) \+ 12px\)!important/)
-  assert.doesNotMatch(css, /\n\s+padding-bottom:calc\(var\(--hrx-dock-height\) \+ var\(--hrx-dock-bottom\)/)
+  assert.match(css, /\.hrx-unified-shell\.is-pwa>\.hrx-unified-content\{[\s\S]*padding:0!important/)
+  assert.match(css, /scroll-padding-bottom:calc\(var\(--hrx-dock-height\) \+ 20px\)!important/)
+  assert.match(css, /:focus\{[\s\S]*scroll-margin-bottom:calc\(var\(--hrx-dock-height\) \+ 20px\)!important/)
+  assert.doesNotMatch(css, /\n\s+padding-bottom:calc\(var\(--hrx-dock-height\)/)
+})
+
+test('lazy-loaded quote CSS cannot restore the obsolete bottom reservation', async () => {
+  const css = await read('src/quotes/admin-mobile-floating-dock-fix.css')
+
+  assert.match(css, /html\.hrx-admin-pwa \.hrx-unified-shell\.is-pwa>\.hrx-unified-content>\.admin-live-shell\.quote-commercial-shell>\.admin-exec-main\{[\s\S]*padding:0!important/)
+  assert.match(css, /\.admin-workspace\.quote-workspace\{[\s\S]*padding:0 12px!important/)
+  assert.match(css, /\.admin-queue-list\{[\s\S]*padding:7px!important/)
+  assert.match(css, /\.admin-lead:last-child\{[\s\S]*margin-bottom:0!important/)
 })
 
 test('light PWA canvas continues behind the dock without a navy bottom strip', async () => {
