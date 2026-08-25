@@ -1,62 +1,50 @@
-export type AdminDestination = 'executive' | 'quotes' | 'clients' | 'suspensions' | 'documents' | 'panels' | 'activities' | 'fiscal' | 'finance' | 'settings'
+import {
+  getAdminModule,
+  normalizeAdminPath,
+  resolveAdminModuleFromLegacyHash,
+  resolveAdminModuleFromPath,
+  type AdminDestination,
+} from './adminModules'
+
+export type { AdminDestination } from './adminModules'
 
 export const ADMIN_NAVIGATE_EVENT = 'hrx:admin-navigate'
 
-const hashes: Record<AdminDestination, string> = {
-  executive: '#admin/visao-geral',
-  panels: '#admin/painels',
-  activities: '#admin/atividades',
-  clients: '#admin/clientes',
-  documents: '#admin/documentos',
-  settings: '#admin/configuracoes',
-  quotes: '#admin/orcamentos',
-  suspensions: '#admin/suspensoes',
-  fiscal: '#admin/fiscal',
-  finance: '#admin/financeiro',
-}
-
-const hashDestinations: Record<string, AdminDestination> = {
-  'visao-geral': 'executive',
-  paineis: 'panels',
-  painels: 'panels',
-  projetos: 'panels',
-  atividades: 'activities',
-  clientes: 'clients',
-  documentos: 'documents',
-  configuracoes: 'settings',
-  orcamentos: 'quotes',
-  suspensoes: 'suspensions',
-  fiscal: 'fiscal',
-  financeiro: 'finance',
-}
-
-const pathDestinations: Record<string, AdminDestination> = {
-  '/admin': 'executive',
-  '/admin/visao-geral': 'executive',
-  '/admin/paineis': 'panels',
-  '/admin/painels': 'panels',
-  '/admin/projetos': 'panels',
-  '/admin/atividades': 'activities',
-  '/admin/clientes': 'clients',
-  '/admin/documentos': 'documents',
-  '/admin/configuracoes': 'settings',
-  '/admin/orcamentos': 'quotes',
-  '/admin/suspensoes': 'suspensions',
-  '/admin/fiscal': 'fiscal',
-  '/admin/financeiro': 'finance',
-}
-
 export function resolveAdminDestination(): AdminDestination {
-  const hash = window.location.hash.replace(/^#admin\//, '').replace(/\/+$/, '')
-  if (hashDestinations[hash]) return hashDestinations[hash]
+  const legacyHashModule = resolveAdminModuleFromLegacyHash(window.location.hash)
+  if (legacyHashModule) return legacyHashModule.id
 
-  const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
-  return pathDestinations[pathname] ?? 'executive'
+  return resolveAdminModuleFromPath(window.location.pathname)?.id ?? 'executive'
+}
+
+function canonicalAdminUrl(destination: AdminDestination): string {
+  const module = getAdminModule(destination)
+  return `${module.path}${window.location.search}`
+}
+
+function currentAdminUrl(): string {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`
+}
+
+function isCanonicalPathFor(destination: AdminDestination): boolean {
+  const pathname = normalizeAdminPath(window.location.pathname)
+  const module = getAdminModule(destination)
+  if (pathname === module.path) return true
+  return module.path !== '/admin' && pathname.startsWith(`${module.path}/`)
+}
+
+export function canonicalizeAdminLocation(destination: AdminDestination = resolveAdminDestination()): boolean {
+  const hasLegacyHash = Boolean(resolveAdminModuleFromLegacyHash(window.location.hash))
+  if (!hasLegacyHash && isCanonicalPathFor(destination)) return false
+
+  const nextUrl = canonicalAdminUrl(destination)
+  if (nextUrl !== currentAdminUrl()) history.replaceState({ hrxAdmin: destination }, '', nextUrl)
+  return true
 }
 
 export function navigateAdmin(destination: AdminDestination, options: { replace?: boolean } = {}) {
-  const nextUrl = `${window.location.pathname}${window.location.search}${hashes[destination]}`
-  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  const nextUrl = canonicalAdminUrl(destination)
+  const currentUrl = currentAdminUrl()
 
   if (nextUrl !== currentUrl) {
     if (options.replace) history.replaceState({ hrxAdmin: destination }, '', nextUrl)
@@ -68,7 +56,11 @@ export function navigateAdmin(destination: AdminDestination, options: { replace?
 
 export function onAdminNavigate(handler: (destination: AdminDestination) => void) {
   const onNavigate = (event: Event) => handler((event as CustomEvent<AdminDestination>).detail)
-  const onHistory = () => handler(resolveAdminDestination())
+  const onHistory = () => {
+    const destination = resolveAdminDestination()
+    canonicalizeAdminLocation(destination)
+    handler(destination)
+  }
 
   window.addEventListener(ADMIN_NAVIGATE_EVENT, onNavigate)
   window.addEventListener('popstate', onHistory)
