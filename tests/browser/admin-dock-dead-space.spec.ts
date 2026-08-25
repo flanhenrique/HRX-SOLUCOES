@@ -71,7 +71,7 @@ async function mount(page: import('@playwright/test').Page) {
   </html>`)
 }
 
-test('Orçamentos não cria faixa vazia de 58px/ safe-area depois do último card', async ({ page }) => {
+test('Orçamentos não cria faixa física abaixo do dock mesmo com lista curta', async ({ page }) => {
   await page.setViewportSize({ width: 402, height: 874 })
   await mount(page)
 
@@ -83,11 +83,13 @@ test('Orçamentos não cria faixa vazia de 58px/ safe-area depois do último car
     const queueList = document.querySelector('.admin-queue-list') as HTMLElement
     const last = document.querySelector('.admin-lead:last-child') as HTMLElement
     const dock = document.querySelector('.hrx-unified-mobile-nav') as HTMLElement
+    const shell = document.querySelector('.hrx-unified-shell.is-pwa') as HTMLElement
     content.scrollTop = content.scrollHeight
     const lastRect = last.getBoundingClientRect()
     const dockRect = dock.getBoundingClientRect()
+    const shellRect = shell.getBoundingClientRect()
+    const contentRect = content.getBoundingClientRect()
     return {
-      viewportHeight: window.innerHeight,
       contentPaddingBottom: parseFloat(getComputedStyle(content).paddingBottom),
       routePaddingBottom: parseFloat(getComputedStyle(route).paddingBottom),
       execPaddingBottom: parseFloat(getComputedStyle(exec).paddingBottom),
@@ -95,8 +97,10 @@ test('Orçamentos não cria faixa vazia de 58px/ safe-area depois do último car
       queuePaddingBottom: parseFloat(getComputedStyle(queueList).paddingBottom),
       lastMarginBottom: parseFloat(getComputedStyle(last).marginBottom),
       lastBottom: lastRect.bottom,
+      dockBottom: dockRect.bottom,
       dockBottomGap: window.innerHeight - dockRect.bottom,
-      deadSpaceAfterLast: window.innerHeight - lastRect.bottom,
+      shellBottomGap: window.innerHeight - shellRect.bottom,
+      contentBottomGap: window.innerHeight - contentRect.bottom,
     }
   })
 
@@ -106,6 +110,12 @@ test('Orçamentos não cria faixa vazia de 58px/ safe-area depois do último car
   expect(geometry.workspacePaddingBottom).toBe(0)
   expect(geometry.queuePaddingBottom).toBeLessThanOrEqual(8)
   expect(geometry.lastMarginBottom).toBe(0)
+
+  // Uma lista curta pode deixar canvas livre acima do dock. O bug do iPhone era
+  // o próprio dock terminar dezenas de pixels antes da borda física.
+  expect(geometry.dockBottomGap).toBeGreaterThanOrEqual(0)
   expect(geometry.dockBottomGap).toBeLessThanOrEqual(10)
-  expect(geometry.deadSpaceAfterLast).toBeLessThanOrEqual(12)
+  expect(Math.abs(geometry.shellBottomGap)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.contentBottomGap)).toBeLessThanOrEqual(1)
+  expect(geometry.dockBottom).toBeGreaterThan(geometry.lastBottom)
 })
