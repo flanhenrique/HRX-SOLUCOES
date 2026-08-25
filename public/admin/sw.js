@@ -10,8 +10,18 @@ const INSTALL_FETCH_TIMEOUT_MS = 15_000
 const RUNTIME_FETCH_TIMEOUT_MS = 5_000
 const INSTALL_CONCURRENCY = 4
 
+// Migração de emergência do PWA iOS: builds anteriores podiam permanecer vivos em
+// uma janela standalone restaurada pelo sistema, mantendo o CSS antigo do dock mesmo
+// depois de vários deploys. Este worker assume o controle assim que o pacote novo está
+// completo e faz uma única navegação dos clientes /admin/ para trocar o documento e
+// seus chunks de forma atômica.
+const FORCE_IOS_STALE_CLIENT_TAKEOVER = true
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(cacheApplicationShell())
+  event.waitUntil((async () => {
+    await cacheApplicationShell()
+    if (FORCE_IOS_STALE_CLIENT_TAKEOVER) await self.skipWaiting()
+  })())
 })
 
 async function notifyClients(message) {
@@ -75,6 +85,20 @@ async function cacheApplicationShell() {
   await notifyClients({ type: 'HRX_UPDATE_PROGRESS', phase: 'install', progress: 74, completed, total })
 }
 
+async function refreshAdminClients(clients) {
+  if (!FORCE_IOS_STALE_CLIENT_TAKEOVER) return
+  await Promise.all(clients.map(async (client) => {
+    if (typeof client.navigate !== 'function') return
+    try {
+      const url = new URL(client.url)
+      if (url.origin !== self.location.origin || !url.pathname.startsWith('/admin/')) return
+      await client.navigate(client.url)
+    } catch {
+      // Uma janela pode desaparecer durante a ativação. Isso não invalida o pacote.
+    }
+  }))
+}
+
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys()
@@ -92,6 +116,8 @@ self.addEventListener('activate', (event) => {
       client.postMessage({ type: 'HRX_UPDATE_PROGRESS', phase: 'complete', progress: 100 })
       client.postMessage({ type: 'HRX_UPDATED', build: BUILD })
     })
+
+    await refreshAdminClients(clients)
   })())
 })
 
