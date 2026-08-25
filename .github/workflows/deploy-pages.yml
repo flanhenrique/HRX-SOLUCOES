@@ -43,9 +43,12 @@ jobs:
 
       - name: Prepare direct admin PWA routes and atomic release
         run: |
-          mkdir -p dist/admin/orcamentos dist/admin/financeiro
-          cp dist/index.html dist/admin/orcamentos/index.html
-          cp dist/index.html dist/admin/financeiro/index.html
+          mkdir -p dist/admin
+          cp dist/index.html dist/admin/index.html
+          for route in orcamentos clientes financeiro fiscal suspensoes atividades documentos paineis configuracoes visao-geral painels projetos; do
+            mkdir -p "dist/admin/$route"
+            cp dist/index.html "dist/admin/$route/index.html"
+          done
           python - <<'PY'
           from datetime import datetime, timezone
           from pathlib import Path
@@ -86,9 +89,24 @@ jobs:
               build_tag,
           ]
           tags_html = '\n    '.join(tags)
+          admin_routes = (
+              '',
+              'orcamentos',
+              'clientes',
+              'financeiro',
+              'fiscal',
+              'suspensoes',
+              'atividades',
+              'documentos',
+              'paineis',
+              'configuracoes',
+              'visao-geral',
+              'painels',
+              'projetos',
+          )
 
-          for route in ('orcamentos', 'financeiro'):
-              path = Path(f'dist/admin/{route}/index.html')
+          for route in admin_routes:
+              path = Path('dist/admin/index.html') if not route else Path(f'dist/admin/{route}/index.html')
               html = path.read_text()
               if re.search(viewport_pattern, html, flags=re.IGNORECASE):
                   html = re.sub(viewport_pattern, admin_viewport, html, count=1, flags=re.IGNORECASE)
