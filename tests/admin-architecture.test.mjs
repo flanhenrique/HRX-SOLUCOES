@@ -84,7 +84,9 @@ test('módulos de negócio permanecem views puras dentro do workspace canônico'
 
   assert.match(quotes, /action: 'save_quote'/)
   assert.match(quotes, /generateProposalPdf/)
-  assert.doesNotMatch(quotes, /className="admin-exec-sidebar"|className="admin-mobile-nav"|from '\.\/adminNavigation'/)
+  assert.doesNotMatch(quotes, /className="admin-exec-sidebar"|className="admin-mobile-nav"/)
+  assert.match(quotes, /useAdminRoute\(\)/)
+  assert.match(quotes, /navigateAdminPath\(buildAdminSubroutePath/)
   assert.match(suspensions, /hrx_suspend_quote/)
   assert.match(suspensions, /hrx_resume_quote/)
   assert.match(fiscal, /cnpj-lookup/)
