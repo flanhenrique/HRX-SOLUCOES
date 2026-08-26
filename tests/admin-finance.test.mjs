@@ -116,3 +116,22 @@ test('financeiro tem tratamento mobile e rota direta no deploy', async () => {
   assert.match(workflow, /mkdir -p "dist\/admin\/\$route"/)
   assert.match(workflow, /cp dist\/index\.html "dist\/admin\/\$route\/index\.html"/)
 })
+
+test('financeiro corporativo persiste competência, separa pendências e edita com validação server-side', async () => {
+  const [page, backend, migration] = await Promise.all([
+    read('src/quotes/AdminFinancePage.tsx'),
+    read('supabase/functions/finance-admin/index.ts'),
+    read('supabase/migrations/20260826185818_financial_competence_periods.sql'),
+  ])
+  assert.match(page, /selectedCompetence/)
+  assert.match(page, /Pendências anteriores/)
+  assert.match(page, /Editar lançamento/i)
+  assert.match(page, /Parcela \$\{entry\.installment_number\} de/)
+  assert.match(page, /Recorrente mensal/)
+  assert.match(backend, /action: 'update_entry'/)
+  assert.match(backend, /gross_amount_below_paid_amount/)
+  assert.match(backend, /financial_period_closed/)
+  assert.match(backend, /entry_changed_reload/)
+  assert.match(backend, /event_type: 'entry_updated'/)
+  assert.match(migration, /financial_entries_closed_period_guard/)
+})

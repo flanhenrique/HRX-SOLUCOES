@@ -13,17 +13,21 @@ test('finance GET is read-only and derives overdue state without mutating rows',
   assert.match(getBlock, /status: effectiveStatus\(entry, currentDate\)/)
 })
 
-test('finance KPIs page through the complete ledger', () => {
+test('finance KPIs page through only the selected competence', () => {
   assert.match(backend, /async function loadFinanceMetrics/)
   assert.match(backend, /METRIC_PAGE_SIZE = 1000/)
   assert.match(backend, /\.range\(offset, offset \+ METRIC_PAGE_SIZE - 1\)/)
-  assert.match(backend, /metricsPromise = loadFinanceMetrics/)
+  assert.match(backend, /metricsPromise = loadFinanceMetrics\(db, currentDate, monthStart, monthEnd\)/)
+  assert.match(backend, /\.gte\('competence_date', monthStart\)/)
+  assert.match(backend, /\.lt\('competence_date', monthEnd\)/)
   assert.match(backend, /metrics,/)
 })
 
-test('finance UI prefers global backend metrics over limited visible lists', () => {
+test('finance UI uses backend metrics scoped to the selected competence', () => {
   assert.match(frontend, /type FinanceMetrics/)
   assert.match(frontend, /metrics\?: FinanceMetrics/)
   assert.match(frontend, /const fallbackMetrics = useMemo<FinanceMetrics>/)
-  assert.match(frontend, /const metrics = data\.metrics \?\? fallbackMetrics/)
+  assert.match(frontend, /data\.competence === selectedCompetence \? \(data\.metrics \?\? fallbackMetrics\) : fallbackMetrics/)
+  assert.match(frontend, /selectedCompetence/)
+  assert.match(frontend, /competencia=\$\{value\}/)
 })

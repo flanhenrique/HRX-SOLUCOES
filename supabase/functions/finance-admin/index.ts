@@ -15,6 +15,9 @@ type ActionPayload =
   | { action: 'add_account'; name: string }
   | { action: 'record_settlement'; entryId: string; amount: number; accountId: string; settledAt?: string; paymentMethod?: string; note?: string; receipt?: ReceiptInput | null }
   | { action: 'reverse_settlement'; settlementId: string; reason: string }
+  | { action: 'update_entry'; entryId: string; expectedUpdatedAt: string; counterpartyName?: string; description: string; category?: string; amount: number; competenceDate: string; dueDate: string; referenceNumber?: string; notes?: string }
+  | { action: 'close_period'; competence: string }
+  | { action: 'reopen_period'; competence: string; reason: string }
 
 const defaultOrigins = ['http://localhost:5173', 'https://flanhenrique.github.io', 'https://hrxsolutions.com.br', 'https://www.hrxsolutions.com.br']
 const clean = (value: unknown, max = 1000) => String(value ?? '').trim().slice(0, max)
@@ -85,7 +88,7 @@ function nextMonthStart(currentDate: string) {
   return date.toISOString().slice(0, 10)
 }
 
-async function loadFinanceMetrics(db: any, currentDate: string) {
+async function loadFinanceMetrics(db: any, currentDate: string, monthStart: string, monthEnd: string) {
   let offset = 0
   let outstandingCents = 0
   let payableCents = 0
@@ -96,7 +99,9 @@ async function loadFinanceMetrics(db: any, currentDate: string) {
 
   while (true) {
     const { data, error } = await db.from('financial_entries')
-      .select('id,entry_type,status,gross_amount,paid_amount,tax_reserve_amount,due_date')
+      .select('id,entry_type,status,gross_amount,paid_amount,tax_reserve_amount,due_date,competence_date')
+      .gte('competence_date', monthStart)
+      .lt('competence_date', monthEnd)
       .order('id', { ascending: true })
       .range(offset, offset + METRIC_PAGE_SIZE - 1)
     if (error) throw error
@@ -122,8 +127,6 @@ async function loadFinanceMetrics(db: any, currentDate: string) {
     offset += METRIC_PAGE_SIZE
   }
 
-  const monthStart = `${currentDate.slice(0, 7)}-01`
-  const monthEnd = nextMonthStart(currentDate)
   offset = 0
   let receivedMonthCents = 0
   while (true) {
@@ -180,10 +183,16 @@ Deno.serve(async (req) => {
 
   if (req.method === 'GET') {
     const currentDate = new Date().toISOString().slice(0, 10)
-    const metricsPromise = loadFinanceMetrics(db, currentDate)
+    const url = new URL(req.url)
+    const competence = /^\d{4}-\d{2}$/.test(url.searchParams.get('competence') || '') ? url.searchParams.get('competence')! : currentDate.slice(0, 7)
+    const monthStart = `${competence}-01`
+    const monthEnd = nextMonthStart(monthStart)
+    const metricsPromise = loadFinanceMetrics(db, currentDate, monthStart, monthEnd)
 
-    const [{ data: rawEntries, error: entriesError }, { data: accounts }, { data: drafts }, { data: settlements }, { data: audits }] = await Promise.all([
-      db.from('financial_entries').select('*').order('due_date', { ascending: true }).limit(800),
+    const [{ data: rawEntries, error: entriesError }, { data: previousEntries }, { data: period }, { data: accounts }, { data: drafts }, { data: settlements }, { data: audits }] = await Promise.all([
+      db.from('financial_entries').select('*').gte('competence_date', monthStart).lt('competence_date', monthEnd).order('due_date', { ascending: true }).limit(800),
+      db.from('financial_entries').select('*').lt('competence_date', monthStart).in('status', ['open', 'partial', 'overdue']).order('due_date', { ascending: true }).limit(200),
+      db.from('financial_periods').select('*').eq('competence_month', monthStart).maybeSingle(),
       db.from('financial_accounts').select('id,name,active,sort_order,created_at').order('sort_order').order('name'),
       db.from('quote_drafts').select('id,request_id,commercial_status,final_amount,tax_percent,tax_amount,approved_version,current_version,payment_mode,installments,first_due_date,valid_until,updated_at').in('commercial_status', ['approved', 'invoiced', 'received']).order('updated_at', { ascending: false }).limit(300),
       db.from('financial_settlements').select('*').order('settled_at', { ascending: false }).order('created_at', { ascending: false }).limit(1600),
@@ -232,6 +241,9 @@ Deno.serve(async (req) => {
     try { metrics = await metricsPromise } catch { return json({ error: 'metrics_query_failed' }, 500, headers) }
     return json({
       entries,
+      previousEntries: (previousEntries ?? []).map((entry: any) => ({ ...entry, status: effectiveStatus(entry, currentDate) })),
+      competence,
+      period: period ?? { competence_month: monthStart, status: 'open' },
       accounts: accounts ?? [],
       drafts: financeDrafts,
       settlements: settlements ?? [],
@@ -256,6 +268,57 @@ Deno.serve(async (req) => {
     if (error?.code === '23505') return json({ error: 'account_already_exists' }, 409, headers)
     if (error) return json({ error: 'account_create_failed' }, 500, headers)
     return json({ account: data }, 201, headers)
+  }
+
+  if (body.action === 'update_entry') {
+    const entryId = clean(body.entryId, 80)
+    const expectedUpdatedAt = clean(body.expectedUpdatedAt, 40)
+    const description = clean(body.description, 240)
+    const counterpartyName = clean(body.counterpartyName, 160) || null
+    const category = clean(body.category, 120) || null
+    const referenceNumber = clean(body.referenceNumber, 120) || null
+    const notes = clean(body.notes, 1200) || null
+    const amountCents = cents(body.amount)
+    const competenceDate = isoDate(body.competenceDate)
+    const dueDate = isoDate(body.dueDate)
+    if (!entryId || !expectedUpdatedAt || description.length < 2 || amountCents <= 0 || !competenceDate || !dueDate) return json({ error: 'invalid_entry_update' }, 400, headers)
+
+    const { data: entry } = await db.from('financial_entries').select('*').eq('id', entryId).maybeSingle()
+    if (!entry) return json({ error: 'entry_not_found' }, 404, headers)
+    if (entry.updated_at !== expectedUpdatedAt) return json({ error: 'entry_changed_reload' }, 409, headers)
+    if (['paid', 'cancelled'].includes(entry.status)) return json({ error: 'entry_not_editable' }, 409, headers)
+    if (amountCents < cents(entry.paid_amount)) return json({ error: 'gross_amount_below_paid_amount' }, 409, headers)
+    const { data: closed } = await db.from('financial_periods').select('competence_month').eq('competence_month', `${String(entry.competence_date).slice(0, 7)}-01`).eq('status', 'closed').maybeSingle()
+    if (closed) return json({ error: 'financial_period_closed' }, 409, headers)
+
+    const before = entry
+    const { data: updated, error } = await db.from('financial_entries').update({
+      description, counterparty_name: counterpartyName, category, gross_amount: money(amountCents), competence_date: competenceDate,
+      due_date: dueDate, invoice_number: referenceNumber, notes, updated_at: new Date().toISOString(),
+    }).eq('id', entryId).eq('updated_at', expectedUpdatedAt).select('*').maybeSingle()
+    if (error || !updated) return json({ error: 'entry_changed_reload' }, 409, headers)
+    await db.from('financial_audit_log').insert({ entry_id: entryId, actor_user_id: user.id, event_type: 'entry_updated', event_data: { scope: 'occurrence', before, after: updated } })
+    return json({ entry: updated }, 200, headers)
+  }
+
+  if (body.action === 'close_period' || body.action === 'reopen_period') {
+    const competence = clean(body.competence, 7)
+    if (!/^\d{4}-\d{2}$/.test(competence)) return json({ error: 'invalid_competence' }, 400, headers)
+    const competenceMonth = `${competence}-01`
+    if (body.action === 'reopen_period') {
+      const reason = clean(body.reason, 500)
+      if (reason.length < 5) return json({ error: 'reopen_reason_required' }, 400, headers)
+      const { data, error } = await db.from('financial_periods').upsert({ competence_month: competenceMonth, status: 'open', reopened_at: new Date().toISOString(), reopened_by: user.id, reopen_reason: reason, updated_at: new Date().toISOString() }).select('*').single()
+      if (error) return json({ error: 'period_reopen_failed' }, 500, headers)
+      await db.from('financial_audit_log').insert({ actor_user_id: user.id, event_type: 'financial_period_reopened', event_data: { competence, reason } })
+      return json({ period: data }, 200, headers)
+    }
+    const pending = await db.from('financial_entries').select('id', { count: 'exact', head: true }).gte('competence_date', competenceMonth).lt('competence_date', nextMonthStart(competenceMonth)).in('status', ['open', 'partial', 'overdue'])
+    if ((pending.count ?? 0) > 0) return json({ error: 'period_has_pending_entries' }, 409, headers)
+    const { data, error } = await db.from('financial_periods').upsert({ competence_month: competenceMonth, status: 'closed', closed_at: new Date().toISOString(), closed_by: user.id, updated_at: new Date().toISOString() }).select('*').single()
+    if (error) return json({ error: 'period_close_failed' }, 500, headers)
+    await db.from('financial_audit_log').insert({ actor_user_id: user.id, event_type: 'financial_period_closed', event_data: { competence } })
+    return json({ period: data }, 200, headers)
   }
 
   if (body.action === 'create_payable') {
@@ -413,9 +476,11 @@ Deno.serve(async (req) => {
       gross_amount: Number(item.amount),
       paid_amount: 0,
       due_date: item.due_date,
-      competence_date: invoiceIssuedAt,
+      competence_date: `${item.due_date.slice(0, 7)}-01`,
       category: 'Receita de serviços',
       source: 'quote',
+      entry_kind: schedule.length > 1 ? 'installment' : 'one_time',
+      installment_total: schedule.length > 1 ? schedule.length : null,
       invoice_number: invoiceNumber,
       invoice_issued_at: invoiceIssuedAt,
       tax_reserve_amount: money(taxParts[index]),

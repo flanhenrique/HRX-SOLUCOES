@@ -23,6 +23,9 @@ type FinancialEntry = {
   category?: string | null
   notes?: string | null
   source?: string | null
+  updated_at: string
+  entry_kind?: 'one_time' | 'installment' | 'recurrence_occurrence'
+  installment_total?: number | null
 }
 type FinancialAccount = { id: string; name: string; active: boolean; sort_order: number }
 type Settlement = { id: string; entry_id: string; amount: number; settled_at: string; account_id: string; payment_method?: string | null; note?: string | null; receipt_document_id?: string | null; receipt_object_path?: string | null }
@@ -32,7 +35,7 @@ type Client = { id: string; name: string; company?: string | null; document?: st
 type PlannedInstallment = { id: string; draft_id: string; installment_number: number; amount: number; due_date: string; status: string }
 type Version = { id: string; request_id: string; version_number: number; commercial_status: string; document_id?: string | null; pdf_object_path?: string | null }
 type FinanceMetrics = { outstanding: number; payable: number; projected: number; overdueReceivable: number; overduePayable: number; reserve: number; receivedMonth: number }
-type FinanceResponse = { entries: FinancialEntry[]; accounts: FinancialAccount[]; settlements: Settlement[]; drafts: Draft[]; requests: Request[]; clients: Client[]; installments: PlannedInstallment[]; versions: Version[]; metrics?: FinanceMetrics }
+type FinanceResponse = { competence?: string; period?: { status: 'open' | 'closed'; closed_at?: string | null }; entries: FinancialEntry[]; previousEntries: FinancialEntry[]; accounts: FinancialAccount[]; settlements: Settlement[]; drafts: Draft[]; requests: Request[]; clients: Client[]; installments: PlannedInstallment[]; versions: Version[]; metrics?: FinanceMetrics }
 type View = 'billing' | 'receivables' | 'received' | 'payables' | 'paidPayables' | 'cashflow'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -41,8 +44,13 @@ const today = () => new Date().toISOString().slice(0, 10)
 const safeFileName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 120)
 const expenseCategories = ['Software e assinaturas', 'Serviços profissionais', 'Marketing', 'Infraestrutura', 'Impostos e taxas', 'Operacional', 'Reembolso', 'Outros']
 
-async function financeFetch<T>(session: Session, body?: Record<string, unknown>): Promise<T> {
-  const response = await fetch(financeAdminEndpoint, {
+const currentCompetence = () => new URLSearchParams(window.location.search).get('competencia')?.match(/^\d{4}-\d{2}$/)?.[0] || new Date().toISOString().slice(0, 7)
+const competenceLabel = (value: string) => new Date(`${value}-01T12:00:00`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+const moveCompetence = (value: string, amount: number) => { const next = new Date(`${value}-01T12:00:00`); next.setMonth(next.getMonth() + amount); return next.toISOString().slice(0, 7) }
+
+async function financeFetch<T>(session: Session, body?: Record<string, unknown>, competence?: string): Promise<T> {
+  const endpoint = body ? financeAdminEndpoint : `${financeAdminEndpoint}?competence=${encodeURIComponent(competence || currentCompetence())}`
+  const response = await fetch(endpoint, {
     method: body ? 'PATCH' : 'GET',
     headers: { 'Content-Type': 'application/json', apikey: hrxPublishableKey, Authorization: `Bearer ${session.access_token}` },
     body: body ? JSON.stringify(body) : undefined,
@@ -58,12 +66,14 @@ export default function AdminFinancePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [view, setView] = useState<View>('billing')
-  const [data, setData] = useState<FinanceResponse>({ entries: [], accounts: [], settlements: [], drafts: [], requests: [], clients: [], installments: [], versions: [] })
+  const [selectedCompetence, setSelectedCompetence] = useState(currentCompetence)
+  const [data, setData] = useState<FinanceResponse>({ entries: [], previousEntries: [], accounts: [], settlements: [], drafts: [], requests: [], clients: [], installments: [], versions: [] })
   const [invoiceDraft, setInvoiceDraft] = useState<Draft | null>(null)
   const [settlementEntry, setSettlementEntry] = useState<FinancialEntry | null>(null)
   const [payableOpen, setPayableOpen] = useState(false)
   const [cancelEntry, setCancelEntry] = useState<FinancialEntry | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [editEntry, setEditEntry] = useState<FinancialEntry | null>(null)
 
   useEffect(() => {
     void hrxSupabase.auth.getSession().then(({ data: auth }) => { setSession(auth.session); setChecking(false) })
@@ -71,26 +81,47 @@ export default function AdminFinancePage() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  const load = async (current = session) => {
+  const load = async (current = session, competence = selectedCompetence) => {
     if (!current) return
     setLoading(true); setError('')
-    try { setData(await financeFetch<FinanceResponse>(current)) }
+    try { const response = await financeFetch<FinanceResponse>(current, undefined, competence); setData({ ...response, previousEntries: response.previousEntries ?? [] }) }
     catch (cause) {
       const code = cause instanceof Error ? cause.message : ''
       setError(code === 'mfa_required' ? 'Confirme o MFA/AAL2 para acessar o Financeiro.' : 'Não foi possível carregar o financeiro.')
     } finally { setLoading(false) }
   }
-  useEffect(() => { if (session) void load(session) }, [session])
+  useEffect(() => { if (session) void load(session, selectedCompetence) }, [session, selectedCompetence])
+  useEffect(() => {
+    const onPopState = () => setSelectedCompetence(currentCompetence())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+  const selectCompetence = (value: string) => {
+    if (!/^\d{4}-\d{2}$/.test(value)) return
+    window.history.pushState({}, '', `/admin/financeiro?competencia=${value}`)
+    setSelectedCompetence(value)
+  }
+  const togglePeriod = async () => {
+    if (!session) return
+    const closed = data.period?.status === 'closed'
+    const reason = closed ? window.prompt('Justificativa obrigatória para reabrir a competência:')?.trim() : ''
+    if (closed && (!reason || reason.length < 5)) return
+    setLoading(true); setError('')
+    try { await financeFetch(session, closed ? { action: 'reopen_period', competence: selectedCompetence, reason } : { action: 'close_period', competence: selectedCompetence }); await load(session, selectedCompetence) }
+    catch (cause) { const code = cause instanceof Error ? cause.message : ''; setError(code === 'period_has_pending_entries' ? 'Quite ou cancele as pendências da competência antes de fechá-la.' : 'Não foi possível alterar o fechamento da competência.') }
+    finally { setLoading(false) }
+  }
 
+  const monthlyEntries = useMemo(() => data.entries.filter((item) => (item.competence_date || item.due_date).slice(0, 7) === selectedCompetence), [data.entries, selectedCompetence])
   const requestById = useMemo(() => new Map(data.requests.map((item) => [item.id, item])), [data.requests])
   const clientById = useMemo(() => new Map(data.clients.map((item) => [item.id, item])), [data.clients])
-  const entryById = useMemo(() => new Map(data.entries.map((item) => [item.id, item])), [data.entries])
-  const entryRequestIds = useMemo(() => new Set(data.entries.filter((item) => item.entry_type === 'receivable' && item.quote_request_id).map((item) => item.quote_request_id as string)), [data.entries])
+  const entryById = useMemo(() => new Map(monthlyEntries.map((item) => [item.id, item])), [monthlyEntries])
+  const entryRequestIds = useMemo(() => new Set(monthlyEntries.filter((item) => item.entry_type === 'receivable' && item.quote_request_id).map((item) => item.quote_request_id as string)), [monthlyEntries])
   const billingCandidates = useMemo(() => data.drafts.filter((draft) => draft.commercial_status === 'approved' && !entryRequestIds.has(draft.request_id)), [data.drafts, entryRequestIds])
-  const receivables = useMemo(() => data.entries.filter((item) => item.entry_type === 'receivable' && item.status !== 'cancelled'), [data.entries])
+  const receivables = useMemo(() => monthlyEntries.filter((item) => item.entry_type === 'receivable' && item.status !== 'cancelled'), [monthlyEntries])
   const openReceivables = useMemo(() => receivables.filter((item) => item.status !== 'paid'), [receivables])
   const paidReceivables = useMemo(() => receivables.filter((item) => item.status === 'paid'), [receivables])
-  const payables = useMemo(() => data.entries.filter((item) => item.entry_type === 'payable' && item.status !== 'cancelled'), [data.entries])
+  const payables = useMemo(() => monthlyEntries.filter((item) => item.entry_type === 'payable' && item.status !== 'cancelled'), [monthlyEntries])
   const openPayables = useMemo(() => payables.filter((item) => item.status !== 'paid'), [payables])
   const paidPayables = useMemo(() => payables.filter((item) => item.status === 'paid'), [payables])
 
@@ -105,9 +136,12 @@ export default function AdminFinancePage() {
     const receivedMonth = data.settlements.filter((item) => item.settled_at.startsWith(month) && entryById.get(item.entry_id)?.entry_type === 'receivable').reduce((sum, item) => sum + Number(item.amount), 0)
     return { outstanding, payable, projected, overdueReceivable, overduePayable, reserve, receivedMonth }
   }, [data.settlements, entryById, openPayables, openReceivables])
-  const metrics = data.metrics ?? fallbackMetrics
+  const metrics = data.competence === selectedCompetence ? (data.metrics ?? fallbackMetrics) : fallbackMetrics
 
   if (checking || !session) return <section className="finance-loading">Validando acesso financeiro…</section>
+
+  const previousEntries = data.previousEntries ?? []
+  const previousBalance = previousEntries.reduce((sum, item) => sum + Math.max(0, Number(item.gross_amount) - Number(item.paid_amount)), 0)
 
   return <section className="finance-page">
     <header className="finance-page-header">
@@ -115,11 +149,20 @@ export default function AdminFinancePage() {
       <div className="finance-header-actions"><button type="button" onClick={() => void load()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar'}</button><button type="button" className="is-primary" onClick={() => setPayableOpen(true)}>+ Nova despesa</button></div>
     </header>
 
+    <section className="finance-competence" aria-label="Competência financeira">
+      <button type="button" aria-label="Mês anterior" onClick={() => selectCompetence(moveCompetence(selectedCompetence, -1))}>‹</button>
+      <label><span>COMPETÊNCIA</span><input aria-label="Selecionar competência" type="month" value={selectedCompetence} onChange={(event) => selectCompetence(event.target.value)} /></label>
+      <button type="button" aria-label="Próximo mês" onClick={() => selectCompetence(moveCompetence(selectedCompetence, 1))}>›</button>
+      <button type="button" className="is-today" onClick={() => selectCompetence(new Date().toISOString().slice(0, 7))}>Hoje</button>
+      <span className={`finance-period-status is-${data.period?.status || 'open'}`}>{data.period?.status === 'closed' ? `Fechado${data.period.closed_at ? ` em ${date(data.period.closed_at)}` : ''}` : 'Aberto'}</span>
+      <button type="button" className="is-period-action" onClick={() => void togglePeriod()}>{data.period?.status === 'closed' ? 'Reabrir mês' : 'Fechar mês'}</button>
+    </section>
+
     {error && <div className="finance-error" role="alert">{error}</div>}
 
     <div className="finance-metrics">
-      <article><span>A receber</span><strong>{currency.format(metrics.outstanding)}</strong><small>Saldo dos recebíveis abertos</small></article>
-      <article><span>A pagar</span><strong>{currency.format(metrics.payable)}</strong><small>Despesas ainda não liquidadas</small></article>
+      <article><span>A receber</span><strong>{currency.format(metrics.outstanding)}</strong><small>{competenceLabel(selectedCompetence)}</small></article>
+      <article><span>A pagar</span><strong>{currency.format(metrics.payable)}</strong><small>{competenceLabel(selectedCompetence)}</small></article>
       <article><span>Saldo previsto</span><strong>{currency.format(metrics.projected)}</strong><small>A receber menos A pagar</small></article>
       <article><span>Impostos a reservar</span><strong>{currency.format(metrics.reserve)}</strong><small>Reserva das propostas faturadas</small></article>
       <article><span>Recebido no mês</span><strong>{currency.format(metrics.receivedMonth)}</strong><small>Baixas de recebíveis no período</small></article>
@@ -136,11 +179,13 @@ export default function AdminFinancePage() {
     </nav>
 
     {view === 'billing' && <BillingList drafts={billingCandidates} requestById={requestById} clientById={clientById} installments={data.installments} onInvoice={setInvoiceDraft} />}
-    {view === 'receivables' && <ReceivablesList entries={openReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} />}
-    {view === 'received' && <ReceivablesList entries={paidReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
-    {view === 'payables' && <PayablesList entries={openPayables} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onCancel={setCancelEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} />}
-    {view === 'paidPayables' && <PayablesList entries={paidPayables} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onCancel={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
-    {view === 'cashflow' && <CashFlowView entries={data.entries} settlements={data.settlements} accounts={data.accounts} requestById={requestById} clientById={clientById} />}
+    {view === 'receivables' && <ReceivablesList entries={openReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onEdit={setEditEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly={data.period?.status === 'closed'} />}
+    {view === 'received' && <ReceivablesList entries={paidReceivables} requestById={requestById} clientById={clientById} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onEdit={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
+    {view === 'payables' && <PayablesList entries={openPayables} settlements={data.settlements} accounts={data.accounts} onSettle={setSettlementEntry} onEdit={setEditEntry} onCancel={setCancelEntry} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly={data.period?.status === 'closed'} />}
+    {view === 'paidPayables' && <PayablesList entries={paidPayables} settlements={data.settlements} accounts={data.accounts} onSettle={() => {}} onEdit={() => {}} onCancel={() => {}} onOpenReceipt={(path) => void openReceipt(path, setError)} readOnly />}
+    {view === 'cashflow' && <CashFlowView entries={monthlyEntries} settlements={data.settlements} accounts={data.accounts} requestById={requestById} clientById={clientById} />}
+
+    {previousEntries.length > 0 && <details className="finance-previous"><summary>Pendências anteriores <strong>{previousEntries.length} contas • {currency.format(previousBalance)}</strong></summary><div>{previousEntries.map((entry) => <span key={entry.id}>{entry.description} · {date(entry.due_date)} · {currency.format(Math.max(0, Number(entry.gross_amount) - Number(entry.paid_amount)))}</span>)}</div></details>}
 
     <footer className="finance-page-footer"><span>Todos os lançamentos usam o ledger financeiro oficial da HRX e exigem sessão administrativa com MFA/AAL2.</span><button type="button" onClick={() => setAccountOpen(true)}>Configurar contas financeiras</button></footer>
 
@@ -149,6 +194,7 @@ export default function AdminFinancePage() {
     {settlementEntry && <SettlementModal session={session} entry={settlementEntry} accounts={data.accounts.filter((item) => item.active)} onClose={() => setSettlementEntry(null)} onNeedAccount={() => setAccountOpen(true)} onDone={async () => { const type = settlementEntry.entry_type; setSettlementEntry(null); await load(session); setView(type === 'payable' ? 'payables' : 'receivables') }} onError={setError} />}
     {cancelEntry && <CancelPayableModal session={session} entry={cancelEntry} onClose={() => setCancelEntry(null)} onDone={async () => { setCancelEntry(null); await load(session); setView('payables') }} onError={setError} />}
     {accountOpen && <AccountModal session={session} onClose={() => setAccountOpen(false)} onDone={async () => { setAccountOpen(false); await load(session) }} onError={setError} />}
+    {editEntry && <EditEntryModal session={session} entry={editEntry} onClose={() => setEditEntry(null)} onDone={async () => { setEditEntry(null); await load(session, selectedCompetence) }} onError={setError} />}
   </section>
 }
 
@@ -165,29 +211,30 @@ function BillingList({ drafts, requestById, clientById, installments, onInvoice 
   })}</div>
 }
 
-function ReceivablesList({ entries, requestById, clientById, settlements, accounts, onSettle, onOpenReceipt, readOnly = false }: { entries: FinancialEntry[]; requestById: Map<string, Request>; clientById: Map<string, Client>; settlements: Settlement[]; accounts: FinancialAccount[]; onSettle: (entry: FinancialEntry) => void; onOpenReceipt: (path: string) => void; readOnly?: boolean }) {
+function ReceivablesList({ entries, requestById, clientById, settlements, accounts, onSettle, onEdit, onOpenReceipt, readOnly = false }: { entries: FinancialEntry[]; requestById: Map<string, Request>; clientById: Map<string, Client>; settlements: Settlement[]; accounts: FinancialAccount[]; onSettle: (entry: FinancialEntry) => void; onEdit: (entry: FinancialEntry) => void; onOpenReceipt: (path: string) => void; readOnly?: boolean }) {
   const accountById = new Map(accounts.map((item) => [item.id, item]))
   if (!entries.length) return <EmptyState title={readOnly ? 'Nenhum recebimento concluído' : 'Nenhum recebível em aberto'} text={readOnly ? 'As parcelas quitadas aparecerão aqui.' : 'Registre o faturamento de uma proposta aprovada para criar as parcelas.'} />
-  return <div className="finance-table-wrap"><table className="finance-table"><thead><tr><th>Cliente / proposta</th><th>Parcela</th><th>Vencimento</th><th>Nota/Fatura</th><th>Valor</th><th>Recebido</th><th>Status</th><th>Ações</th></tr></thead><tbody>{entries.map((entry) => {
+  return <div className="finance-table-wrap"><table className="finance-table"><thead><tr><th>Lançamento</th><th>Tipo / competência</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>{entries.map((entry) => {
     const request = entry.quote_request_id ? requestById.get(entry.quote_request_id) : undefined
     const client = entry.client_id ? clientById.get(entry.client_id) : undefined
     const entrySettlements = settlements.filter((item) => item.entry_id === entry.id)
     const latest = entrySettlements[0]
     const remaining = Math.max(0, Number(entry.gross_amount) - Number(entry.paid_amount))
     const statusLabel = entry.status === 'paid' ? 'Recebido' : entry.status === 'partial' ? 'Recebido parcial' : entry.status === 'overdue' ? (Number(entry.paid_amount) > 0 ? 'Vencido • parcial' : 'Vencido') : 'A receber'
-    return <tr key={entry.id}><td data-label="Cliente / proposta"><strong>{client?.company || client?.name || request?.company || request?.name || 'Lançamento'}</strong><small>{request?.proposal_number || entry.description}</small></td><td data-label="Parcela">{entry.installment_number || '—'}</td><td data-label="Vencimento">{date(entry.due_date)}</td><td data-label="Nota/Fatura"><strong>{entry.invoice_number || '—'}</strong><small>{date(entry.invoice_issued_at)}</small></td><td data-label="Valor"><strong>{currency.format(Number(entry.gross_amount))}</strong><small>Saldo {currency.format(remaining)}</small></td><td data-label="Recebido"><strong>{currency.format(Number(entry.paid_amount))}</strong>{latest && <small>{accountById.get(latest.account_id)?.name || 'Conta'} • {new Date(latest.settled_at).toLocaleDateString('pt-BR')}</small>}</td><td data-label="Status"><span className={`finance-status is-${entry.status}`}>{statusLabel}</span>{Number(entry.tax_reserve_amount || 0) > 0 && <small>Reserva {currency.format(Number(entry.tax_reserve_amount))}</small>}</td><td data-label="Ações"><div className="finance-row-actions">{!readOnly && <button type="button" onClick={() => onSettle(entry)}>Registrar recebimento</button>}{latest?.receipt_object_path && <button type="button" className="is-secondary" onClick={() => onOpenReceipt(latest.receipt_object_path!)}>Comprovante</button>}</div></td></tr>
+    const installmentTotal = entry.installment_total || entries.filter((item) => item.quote_request_id && item.quote_request_id === entry.quote_request_id).length
+    return <tr key={entry.id}><td data-label="Lançamento"><strong>{client?.company || client?.name || request?.company || request?.name || 'Lançamento'}</strong><small>{request?.proposal_number || entry.description}</small></td><td data-label="Tipo">{entry.installment_number ? `Parcela ${entry.installment_number} de ${installmentTotal}` : entry.entry_kind === 'recurrence_occurrence' ? 'Recorrente mensal' : 'Único'}<small>{entry.competence_date?.slice(0, 7)}</small></td><td data-label="Vencimento">{date(entry.due_date)}</td><td data-label="Valor"><strong>{currency.format(Number(entry.gross_amount))}</strong><small>Saldo {currency.format(remaining)}</small></td><td data-label="Status"><span className={`finance-status is-${entry.status}`}>{statusLabel}</span></td><td data-label="Ações"><div className="finance-row-actions">{!readOnly && <button type="button" onClick={() => onSettle(entry)}>Registrar recebimento</button>}{!readOnly && <button type="button" className="is-secondary" onClick={() => onEdit(entry)}>Editar</button>}{latest?.receipt_object_path && <button type="button" className="is-secondary" onClick={() => onOpenReceipt(latest.receipt_object_path!)}>Comprovante</button>}</div></td></tr>
   })}</tbody></table></div>
 }
 
-function PayablesList({ entries, settlements, accounts, onSettle, onCancel, onOpenReceipt, readOnly = false }: { entries: FinancialEntry[]; settlements: Settlement[]; accounts: FinancialAccount[]; onSettle: (entry: FinancialEntry) => void; onCancel: (entry: FinancialEntry) => void; onOpenReceipt: (path: string) => void; readOnly?: boolean }) {
+function PayablesList({ entries, settlements, accounts, onSettle, onEdit, onCancel, onOpenReceipt, readOnly = false }: { entries: FinancialEntry[]; settlements: Settlement[]; accounts: FinancialAccount[]; onSettle: (entry: FinancialEntry) => void; onEdit: (entry: FinancialEntry) => void; onCancel: (entry: FinancialEntry) => void; onOpenReceipt: (path: string) => void; readOnly?: boolean }) {
   const accountById = new Map(accounts.map((item) => [item.id, item]))
   if (!entries.length) return <EmptyState title={readOnly ? 'Nenhuma despesa paga' : 'Nenhuma conta a pagar'} text={readOnly ? 'As despesas quitadas aparecerão aqui.' : 'Use “Nova despesa” para registrar compromissos, fornecedores e vencimentos.'} />
-  return <div className="finance-table-wrap"><table className="finance-table"><thead><tr><th>Favorecido / despesa</th><th>Vencimento</th><th>Categoria</th><th>Documento</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead><tbody>{entries.map((entry) => {
+  return <div className="finance-table-wrap"><table className="finance-table"><thead><tr><th>Lançamento</th><th>Tipo / competência</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>{entries.map((entry) => {
     const entrySettlements = settlements.filter((item) => item.entry_id === entry.id)
     const latest = entrySettlements[0]
     const remaining = Math.max(0, Number(entry.gross_amount) - Number(entry.paid_amount))
     const statusLabel = entry.status === 'paid' ? 'Pago' : entry.status === 'partial' ? 'Pago parcial' : entry.status === 'overdue' ? (Number(entry.paid_amount) > 0 ? 'Vencido • parcial' : 'Vencido') : 'A pagar'
-    return <tr key={entry.id}><td data-label="Favorecido / despesa"><strong>{entry.counterparty_name || 'Favorecido'}</strong><small>{entry.description}</small></td><td data-label="Vencimento">{date(entry.due_date)}</td><td data-label="Categoria"><strong>{entry.category || '—'}</strong><small>Competência {date(entry.competence_date)}</small></td><td data-label="Documento">{entry.invoice_number || '—'}</td><td data-label="Valor"><strong>{currency.format(Number(entry.gross_amount))}</strong><small>Saldo {currency.format(remaining)}</small></td><td data-label="Pago"><strong>{currency.format(Number(entry.paid_amount))}</strong>{latest && <small>{accountById.get(latest.account_id)?.name || 'Conta'} • {new Date(latest.settled_at).toLocaleDateString('pt-BR')}</small>}</td><td data-label="Status"><span className={`finance-status is-${entry.status}`}>{statusLabel}</span></td><td data-label="Ações"><div className="finance-row-actions">{!readOnly && <button type="button" onClick={() => onSettle(entry)}>Registrar pagamento</button>}{!readOnly && Number(entry.paid_amount) === 0 && <button type="button" className="is-danger" onClick={() => onCancel(entry)}>Cancelar</button>}{latest?.receipt_object_path && <button type="button" className="is-secondary" onClick={() => onOpenReceipt(latest.receipt_object_path!)}>Comprovante</button>}</div></td></tr>
+    return <tr key={entry.id}><td data-label="Lançamento"><strong>{entry.counterparty_name || 'Favorecido'}</strong><small>{entry.description}</small></td><td data-label="Tipo">{entry.installment_number ? `Parcela ${entry.installment_number} de ${entry.installment_total || '?'}` : entry.entry_kind === 'recurrence_occurrence' ? 'Recorrente mensal' : 'Único'}<small>{entry.competence_date?.slice(0, 7)}</small></td><td data-label="Vencimento">{date(entry.due_date)}</td><td data-label="Valor"><strong>{currency.format(Number(entry.gross_amount))}</strong><small>Saldo {currency.format(remaining)}</small></td><td data-label="Status"><span className={`finance-status is-${entry.status}`}>{statusLabel}</span></td><td data-label="Ações"><div className="finance-row-actions">{!readOnly && <button type="button" onClick={() => onSettle(entry)}>Registrar pagamento</button>}{!readOnly && <button type="button" className="is-secondary" onClick={() => onEdit(entry)}>Editar</button>}{!readOnly && Number(entry.paid_amount) === 0 && <button type="button" className="is-danger" onClick={() => onCancel(entry)}>Cancelar</button>}{latest?.receipt_object_path && <button type="button" className="is-secondary" onClick={() => onOpenReceipt(latest.receipt_object_path!)}>Comprovante</button>}</div></td></tr>
   })}</tbody></table></div>
 }
 
@@ -360,6 +407,23 @@ function CancelPayableModal({ session, entry, onClose, onDone, onError }: { sess
     } finally { setBusy(false) }
   }
   return <div className="finance-modal-backdrop"><div className="finance-modal is-small"><header><div><span>CONTAS A PAGAR</span><h2>Cancelar despesa?</h2><p>{entry.counterparty_name || 'Favorecido'} • {entry.description}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-modal-body"><div className="finance-cancel-warning">O lançamento será mantido no histórico com status cancelado. Despesas com pagamentos já registrados não podem ser canceladas por este fluxo.</div></div><footer><button type="button" className="is-secondary" onClick={onClose}>Manter</button><button type="button" className="is-danger" disabled={busy} onClick={() => void confirm()}>{busy ? 'Cancelando…' : 'Cancelar despesa'}</button></footer></div></div>
+}
+
+function EditEntryModal({ session, entry, onClose, onDone, onError }: { session: Session; entry: FinancialEntry; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ counterpartyName: entry.counterparty_name || '', description: entry.description, category: entry.category || '', amount: String(entry.gross_amount), competenceDate: entry.competence_date?.slice(0, 10) || entry.due_date, dueDate: entry.due_date, referenceNumber: entry.invoice_number || '', notes: entry.notes || '' })
+  const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }))
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setSaving(true); onError('')
+    try {
+      await financeFetch(session, { action: 'update_entry', entryId: entry.id, expectedUpdatedAt: entry.updated_at, ...form, amount: Number(form.amount) })
+      await onDone()
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : ''
+      onError(code === 'gross_amount_below_paid_amount' ? 'O valor total não pode ser menor que o valor já pago.' : code === 'financial_period_closed' ? 'A competência está fechada e precisa ser reaberta antes da edição.' : code === 'entry_changed_reload' ? 'Este lançamento mudou. Atualize a tela antes de editar novamente.' : 'Não foi possível editar o lançamento.')
+    } finally { setSaving(false) }
+  }
+  return <div className="finance-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><form className="finance-modal" onSubmit={submit}><header><div><span>EDITAR LANÇAMENTO</span><h2>{entry.description}</h2><p>{entry.entry_kind === 'recurrence_occurrence' ? 'Ocorrência recorrente' : entry.installment_number ? `Parcela ${entry.installment_number} de ${entry.installment_total || '?'}` : 'Lançamento único'} · Pago {currency.format(Number(entry.paid_amount))} · Saldo {currency.format(Math.max(0, Number(entry.gross_amount) - Number(entry.paid_amount)))}</p></div><button type="button" onClick={onClose}>×</button></header><div className="finance-form-grid"><label>Favorecido<input value={form.counterpartyName} onChange={(event) => update('counterpartyName', event.target.value)} /></label><label>Descrição<input required value={form.description} onChange={(event) => update('description', event.target.value)} /></label><label>Categoria<input value={form.category} onChange={(event) => update('category', event.target.value)} /></label><label>Valor total<input required type="number" min={Number(entry.paid_amount)} step="0.01" value={form.amount} onChange={(event) => update('amount', event.target.value)} /></label><label>Competência<input required type="date" value={form.competenceDate} onChange={(event) => update('competenceDate', event.target.value)} /></label><label>Vencimento<input required type="date" value={form.dueDate} onChange={(event) => update('dueDate', event.target.value)} /></label><label>Referência<input value={form.referenceNumber} onChange={(event) => update('referenceNumber', event.target.value)} /></label><label className="is-wide">Observações<textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} /></label></div><footer><button type="button" className="is-secondary" onClick={onClose}>Cancelar</button><button type="submit" disabled={saving}>{saving ? 'Salvando…' : 'Salvar alterações'}</button></footer></form></div>
 }
 
 function AccountModal({ session, onClose, onDone, onError }: { session: Session; onClose: () => void; onDone: () => Promise<void>; onError: (value: string) => void }) {

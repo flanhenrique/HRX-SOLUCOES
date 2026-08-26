@@ -154,7 +154,7 @@ export default function AdminPersonalFinancePage() {
       </div>
     </div>
 
-    <div className="personal-finance-boundary"><strong>Separação financeira ativa</strong><span>Nenhum valor desta visão entra nos indicadores empresariais da HRX Solutions.</span></div>
+    <div className="personal-finance-boundary"><strong>Separação financeira ativa</strong><span>Este conteúdo não será usado nos indicadores empresariais da HRX Solutions.</span></div>
     {error && <div className="finance-error" role="alert">{error}</div>}
 
     <div className="finance-metrics personal-finance-metrics">
