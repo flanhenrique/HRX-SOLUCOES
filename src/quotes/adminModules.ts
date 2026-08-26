@@ -307,7 +307,7 @@ export function resolveAdminRouteFromPath(pathname: string): AdminResolvedRoute 
   return { module, subroute, pathname: normalized, params, title, shortTitle, breadcrumbs }
 }
 
-export function buildAdminSubroutePath(destination: AdminDestination, subrouteId: AdminSubrouteId, params: Record<string, string>): string {
+export function buildAdminSubroutePath(destination: AdminDestination, subrouteId: AdminSubrouteId, params: Record<string, string> = {}): string {
   const module = getAdminModule(destination)
   const subroute = module.subroutes?.find((candidate) => candidate.id === subrouteId)
   if (!subroute) throw new Error(`admin_subroute_not_found:${destination}:${subrouteId}`)
