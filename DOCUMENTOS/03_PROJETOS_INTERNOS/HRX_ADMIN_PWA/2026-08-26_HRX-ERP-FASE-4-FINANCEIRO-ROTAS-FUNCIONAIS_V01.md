@@ -1,14 +1,14 @@
 # HRX Solutions — ERP Modular — Fase 4
 
 **Documento:** Auditoria e implementação — Financeiro com rotas funcionais  
-**Versão:** 1.0  
+**Versão:** 1.1  
 **Data:** 26/08/2026  
 **Projeto:** HRX Solutions  
 **Repositório canônico:** `flanhenrique/HRX-SOLUCOES`  
 **Branch:** `agent/erp-functional-finance-routes`  
 **PR:** `#90`  
 **Baseline:** `main @ 8e1f7edfa8aa0f0106f27b1388351f6d99bff000`  
-**Status:** implementação em validação; não integrada e não publicada.
+**Status:** implementação estrutural concluída; integração e publicação bloqueadas pela ausência dos gates do GitHub Actions.
 
 ## 1. Objetivo
 
@@ -72,10 +72,25 @@ Os fluxos existentes que terminam nessas áreas também utilizam a mesma funçã
 
 Nenhuma regra de negócio desses fluxos foi alterada.
 
+### 3.4 Builder de subrotas estáticas
+
+A auditoria posterior à implementação encontrou uma falha de tipagem antes da integração: `buildAdminSubroutePath()` exigia o argumento `params` mesmo para padrões estáticos como `receber` e `pagar`.
+
+As chamadas do Financeiro, portanto, não compilariam enquanto o terceiro argumento estivesse ausente.
+
+A correção foi aplicada no contrato central:
+
+```text
+params: Record<string, string> = {}
+```
+
+Isso permite construir subrotas sem parâmetros dinâmicos e preserva a validação `admin_subroute_param_required` para padrões com `:clienteId`, `:orcamentoId` e outros parâmetros obrigatórios.
+
 ## 4. Arquivos de produção alterados
 
 - `src/quotes/AdminFinanceScopedPage.tsx`;
-- `src/quotes/AdminFinancePage.tsx`.
+- `src/quotes/AdminFinancePage.tsx`;
+- `src/quotes/adminModules.ts` — ajuste compatível do builder para subrotas estáticas.
 
 Não foram alterados:
 
@@ -101,6 +116,8 @@ Não foram alterados:
 - consumo de `useAdminRoute()`;
 - navegação pelos helpers canônicos;
 - precedência do escopo empresarial sobre preferência Pessoal;
+- builder de subrotas estáticas com parâmetros opcionais;
+- manutenção do erro obrigatório para parâmetros dinâmicos;
 - ausência de History API/router/shell local nas views.
 
 ### Navegador real
@@ -111,6 +128,8 @@ Não foram alterados:
 2. deep link `/pagar` com preferência Pessoal prévia → HRX Solutions + Contas a pagar;
 3. clique receber ↔ pagar + back/forward;
 4. troca para Pessoal a partir de subrota empresarial → raiz `/admin/financeiro` + visão Pessoal.
+
+O inventário esperado, quando o gate voltar a executar, é de **93 testes estáticos** e **49 cenários Playwright**, considerando o baseline já integrado da Fase 3B e os novos casos desta fase. Esses números não devem ser tratados como aprovados até existir execução real.
 
 ## 6. Critérios de aceite
 
@@ -126,7 +145,33 @@ Não foram alterados:
 
 ## 7. Resultado da validação
 
-_A preencher após conclusão dos gates oficiais do PR #90._
+### 7.1 Evidência disponível
+
+- `main` permanece em `8e1f7edfa8aa0f0106f27b1388351f6d99bff000` durante esta fase;
+- último GitHub Actions observado no repositório: `Validate HRX site` run `32973434960`, `main`, criado em `2026-08-26T13:18:39Z`, conclusão `success`;
+- PR funcional `#90` não gerou run de `pull_request` ao abrir;
+- novo commit no PR `#90` também não gerou run de `synchronize`;
+- fechamento/reabertura do PR não gerou novo run;
+- PR-gate temporário `#91`, apontando para o mesmo head, também não gerou run ao abrir ou sincronizar;
+- workflow temporário com `on: push` criado somente na branch-gate também não gerou run;
+- Vercel e Render conectados não possuem projeto/serviço HRX utilizável para substituir esse gate; apenas ambientes de outro projeto foram encontrados e não foram usados.
+
+### 7.2 Correção encontrada pela auditoria manual
+
+Antes de qualquer merge, a revisão do contrato detectou que as novas chamadas de `buildAdminSubroutePath()` para rotas estáticas não compilariam pela assinatura anterior. O builder foi corrigido e um teste estático específico foi adicionado.
+
+Essa ocorrência reforça que **não é seguro integrar sem execução real do build e dos testes**.
+
+### 7.3 Estado atual
+
+Não existe evidência válida para declarar:
+
+- `npm run test:pwa` aprovado;
+- TypeScript/Vite build aprovado;
+- Playwright aprovado;
+- `HRX Admin PWA Quality Gate` aprovado.
+
+Por isso a Fase 4 permanece fora da `main` e fora de produção.
 
 ## 8. Gate de integração
 
@@ -137,3 +182,5 @@ Nenhum merge ou deploy deve ocorrer enquanto o head final do PR #90 não repetir
 - TypeScript/Vite build;
 - `HRX Admin PWA Quality Gate`;
 - Playwright completo.
+
+Assim que o GitHub Actions voltar a processar eventos do repositório, o PR deve ser sincronizado e os gates repetidos no head final antes de qualquer integração.
