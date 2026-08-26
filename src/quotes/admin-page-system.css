@@ -89,6 +89,82 @@
 .hrx-fiscal-header button[aria-label="Fechar"]{display:none}
 .hrx-documents-page-actions button:last-child{display:none}
 
+/* Tema claro: uma única gramática visual para as rotas administrativas. */
+html[data-hrx-theme-resolved="light"]{
+  --hrx-page-bg:#f5f8fb;
+  --hrx-page-surface:rgba(255,255,255,.9);
+  --hrx-page-border:#d9e3ec;
+  --hrx-page-text:#102235;
+  --hrx-page-muted:#607488;
+  --hrx-page-accent:#1674d8;
+}
+html[data-hrx-theme-resolved="light"] .hrx-executive-page,
+html[data-hrx-theme-resolved="light"] .hrx-clients-page,
+html[data-hrx-theme-resolved="light"] .hrx-suspensions-page,
+html[data-hrx-theme-resolved="light"] .hrx-documents-page,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-page,
+html[data-hrx-theme-resolved="light"] .admin-projects-shell{background:var(--hrx-page-bg);color:var(--hrx-page-text)}
+html[data-hrx-theme-resolved="light"] .hrx-executive-header,
+html[data-hrx-theme-resolved="light"] .hrx-clients-header,
+html[data-hrx-theme-resolved="light"] .hrx-suspensions-header,
+html[data-hrx-theme-resolved="light"] .hrx-documents-page-header,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-header,
+html[data-hrx-theme-resolved="light"] .admin-projects-header,
+html[data-hrx-theme-resolved="light"] .admin-exec-topbar{
+  background:rgba(248,251,253,.92);
+  border-color:var(--hrx-page-border);
+  color:var(--hrx-page-text);
+  box-shadow:none;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+html[data-hrx-theme-resolved="light"] .admin-exec-topbar h1,
+html[data-hrx-theme-resolved="light"] .hrx-executive-header h1,
+html[data-hrx-theme-resolved="light"] .hrx-clients-header h1,
+html[data-hrx-theme-resolved="light"] .hrx-suspensions-header h1,
+html[data-hrx-theme-resolved="light"] .hrx-documents-page-header h1,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-header h2,
+html[data-hrx-theme-resolved="light"] .admin-projects-header h2{color:var(--hrx-page-text)}
+html[data-hrx-theme-resolved="light"] .hrx-executive-kpis article,
+html[data-hrx-theme-resolved="light"] .hrx-executive-panel,
+html[data-hrx-theme-resolved="light"] .hrx-executive-quick-actions>button,
+html[data-hrx-theme-resolved="light"] .hrx-clients-list,
+html[data-hrx-theme-resolved="light"] .hrx-client-title,
+html[data-hrx-theme-resolved="light"] .hrx-client-kpis article,
+html[data-hrx-theme-resolved="light"] .hrx-client-info article,
+html[data-hrx-theme-resolved="light"] .hrx-client-notes,
+html[data-hrx-theme-resolved="light"] .hrx-client-history,
+html[data-hrx-theme-resolved="light"] .hrx-suspensions-summary article,
+html[data-hrx-theme-resolved="light"] .hrx-suspensions-list>article,
+html[data-hrx-theme-resolved="light"] .hrx-documents-page-summary article,
+html[data-hrx-theme-resolved="light"] .hrx-documents-page-grid>button,
+html[data-hrx-theme-resolved="light"] .hrx-documents-folder-grid>button,
+html[data-hrx-theme-resolved="light"] .hrx-documents-page-context,
+html[data-hrx-theme-resolved="light"] .hrx-documents-contract-check,
+html[data-hrx-theme-resolved="light"] .hrx-documents-storage-bar,
+html[data-hrx-theme-resolved="light"] .hrx-documents-file-list>button,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-list,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-metrics article,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-card,
+html[data-hrx-theme-resolved="light"] .hrx-fiscal-empty,
+html[data-hrx-theme-resolved="light"] .admin-projects-overview article,
+html[data-hrx-theme-resolved="light"] .admin-project-detail,
+html[data-hrx-theme-resolved="light"] .admin-projects-list>button,
+html[data-hrx-theme-resolved="light"] .admin-project-columns section{
+  background:var(--hrx-page-surface);
+  border-color:var(--hrx-page-border);
+  color:var(--hrx-page-text);
+  box-shadow:0 8px 24px rgba(31,61,87,.055);
+}
+html[data-hrx-theme-resolved="light"] .admin-projects-list>button.is-active{
+  border-color:#9fc5ef;
+  background:#eaf3ff;
+}
+html[data-hrx-theme-resolved="light"] .admin-project-progress{background:#e6edf4}
+html[data-hrx-theme-resolved="light"] .admin-project-priority{background:#eef5ff;border-color:#d4e4f5}
+html[data-hrx-theme-resolved="light"] .admin-project-columns p i{background:#edf2f7;color:#27435e}
+html[data-hrx-theme-resolved="light"] .admin-project-links a{background:#f7fafc;border-color:#d7e2ec;color:#27435e}
+
 @media(max-width:760px){
   :root{--hrx-page-header-x:16px;--hrx-page-content-x:14px}
   .admin-live-shell{grid-template-columns:1fr;padding-left:0}
