@@ -279,3 +279,22 @@ html[data-theme="dark"] .finance-scope-selector,.hrx-theme-dark .finance-scope-s
     gap:8px;
   }
 }
+
+/* Competência e arquitetura de informação do Financeiro pessoal. */
+.personal-finance-period{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 12px;padding:16px 18px;border:1px solid rgba(39,91,142,.14);border-radius:16px;background:rgba(255,255,255,.92);box-shadow:0 10px 30px rgba(26,57,88,.07);backdrop-filter:blur(18px)}
+.personal-finance-period-copy{display:grid;gap:3px;min-width:0}.personal-finance-period-copy>span,.personal-finance-prior span{font-size:10px;font-weight:850;letter-spacing:.13em;color:#6e8295}.personal-finance-period-copy>strong{font-size:19px;line-height:1.2;text-transform:capitalize;color:#14283d}.personal-finance-period-copy>small{font-size:11px;line-height:1.35;color:#718599}.personal-finance-period-controls{display:flex;align-items:center;gap:7px}.personal-finance-period-controls button,.personal-finance-period-controls input{height:40px;border:1px solid #cedbe7;border-radius:10px;background:#f8fbfd;color:#1d3853;font:inherit;font-size:12px;font-weight:750}.personal-finance-period-controls button{min-width:40px;padding:0 12px;cursor:pointer}.personal-finance-period-controls button:hover{background:#edf4ff;border-color:#b8cdea}.personal-finance-period-controls input{min-width:156px;padding:0 10px}.personal-finance-period-controls .is-today{min-width:auto;color:#2362a8;background:#edf4ff;border-color:#c5d8ef}.personal-finance-prior{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 12px;padding:11px 14px;border:1px solid #ead9b8;border-radius:13px;background:#fff9ed;color:#5e4a28}.personal-finance-prior>div{display:flex;align-items:baseline;gap:10px;min-width:0}.personal-finance-prior strong{font-size:12px}.personal-finance-prior small{font-size:11px;line-height:1.4;color:#806d4d;text-align:right}.personal-finance-page .personal-finance-table{min-width:1120px}.personal-finance-page .personal-finance-table th{white-space:nowrap}.personal-finance-page .personal-finance-table td[data-label="Valor do mês"] strong{font-size:.72rem}
+html[data-theme="dark"] .personal-finance-period,.hrx-theme-dark .personal-finance-period{background:rgba(20,33,47,.9);border-color:rgba(255,255,255,.1)}html[data-theme="dark"] .personal-finance-period-copy>strong,.hrx-theme-dark .personal-finance-period-copy>strong{color:#f2f6f9}html[data-theme="dark"] .personal-finance-period-controls button,html[data-theme="dark"] .personal-finance-period-controls input,.hrx-theme-dark .personal-finance-period-controls button,.hrx-theme-dark .personal-finance-period-controls input{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#e6eef5}html[data-theme="dark"] .personal-finance-prior,.hrx-theme-dark .personal-finance-prior{background:rgba(137,97,28,.15);border-color:rgba(233,184,95,.22);color:#f0d9ab}
+
+@media(max-width:900px){.personal-finance-period{align-items:stretch;flex-direction:column}.personal-finance-period-controls{width:100%}.personal-finance-period-controls input{flex:1 1 auto}}
+@media(max-width:760px){
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-period{margin:0 0 9px;padding:12px;border-radius:14px;gap:11px}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-period-copy>strong{font-size:1rem}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-period-copy>small{font-size:.68rem}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-period-controls{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:6px}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-period-controls button,.finance-scope-root[data-finance-scope="personal"] .personal-finance-period-controls input{width:100%;min-width:0;height:44px}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-period-controls .is-today{grid-column:1/-1}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-prior{align-items:flex-start;flex-direction:column;gap:4px;padding:10px 12px}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-prior>div{align-items:flex-start;flex-direction:column;gap:2px}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-prior small{text-align:left;font-size:.68rem}
+  .finance-scope-root[data-finance-scope="personal"] .personal-finance-table .finance-row-actions{grid-template-columns:1fr}
+}
