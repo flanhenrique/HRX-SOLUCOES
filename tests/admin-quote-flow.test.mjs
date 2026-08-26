@@ -10,7 +10,8 @@ test('cálculo comercial usa centavos, imposto e ajuste de valor final', async (
   assert.match(math, /taxCents/)
   assert.match(math, /customAdjustmentAmount/)
   assert.match(math, /buildInstallmentSchedule/)
-  assert.match(editor, /RESUMO FINANCEIRO/)
+  assert.match(editor, /<small>Valor total<\/small>/)
+  assert.doesNotMatch(editor, /<aside className="quote-summary"/)
   assert.match(editor, /Imposto estimado/)
   assert.match(editor, /Definir valor final/)
   assert.match(editor, /getAuthenticatorAssuranceLevel/)
@@ -64,6 +65,18 @@ test('mobile separa lista e editor e usa fluxo comercial por etapas', async () =
   assert.match(routeCss, /\.quote-stage\{order:1!important/)
   assert.match(routeCss, /\.quote-summary\{[^}]*order:2!important/)
   assert.match(routeCss, /\.quote-steps\{[\s\S]*display:flex!important/)
+})
+
+test('orçamentos usa mestre detalhe limpo e remove ações impossíveis no modo somente leitura', async () => {
+  const [editor, css] = await Promise.all([read('src/quotes/AdminQuotes.tsx'), read('src/quotes/quote-commercial.css')])
+  assert.match(editor, /Crie, negocie e acompanhe propostas comerciais/)
+  assert.match(editor, /Proposta aprovada — somente leitura/)
+  assert.match(editor, /\{!isReadOnly && <footer className="quote-editor-footer"/)
+  assert.doesNotMatch(editor, /<aside className="quote-summary"/)
+  assert.match(css, /\.quote-editor-main\{display:block/)
+  assert.match(css, /\.quote-editor-scroll\{height:auto;overflow:visible/)
+  assert.match(css, /\.quote-history\{max-height:none;overflow:visible/)
+  assert.match(css, /@media\(max-width:860px\).*\.quote-back\{display:grid/s)
 })
 
 test('ações de finalizar e excluir orçamento permanecem acessíveis acima do menu flutuante', async () => {
