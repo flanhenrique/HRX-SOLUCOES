@@ -5,6 +5,9 @@ import { generateProposalPdf, type ProposalPdfData } from './proposalPdf'
 import { buildInstallmentSchedule, calculateQuotePreview, toCents } from './quoteMath'
 import type { CommercialStatus, DiscountLevel, PaymentMode, RetentionInput } from './types'
 import { hrxPublishableKey, hrxSupabase, quoteAdminEndpoint } from './supabaseClient'
+import { buildAdminSubroutePath } from './adminModules'
+import { navigateAdmin, navigateAdminPath } from './adminNavigation'
+import { useAdminRoute } from './AdminRouteContext'
 import './quotes.css'
 import './quote-commercial.css'
 import './admin-quotes-mobile.css'
@@ -128,6 +131,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const futureDate = (days: number) => { const value = new Date(); value.setDate(value.getDate() + days); return value.toISOString().slice(0, 10) }
 const normalizeWhatsApp = (phone: string) => { const digits = phone.replace(/\D/g, ''); return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits }
 const safeFileName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_.-]+/g, '_')
+const isQuoteReadOnly = (request: Request) => ['approved', 'invoiced', 'received', 'lost', 'cancelled'].includes(request.draft.commercial_status) || request.draft.status === 'suspended'
 
 function Icon({ children, size = 20 }: { children: ReactNode; size?: number }) {
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
@@ -219,6 +223,8 @@ function payloadFrom(state: EditorState) {
 }
 
 export default function AdminQuotes() {
+  const route = useAdminRoute()
+  const routeQuoteId = route.subroute?.id === 'quote-detail' || route.subroute?.id === 'quote-edit' ? route.params.orcamentoId ?? null : null
   const [session, setSession] = useState<Session | null>(null)
   const [checking, setChecking] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -227,7 +233,7 @@ export default function AdminQuotes() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | CommercialStatus>('all')
-  const [mobileDetail, setMobileDetail] = useState(false)
+  const [mobileDetail, setMobileDetail] = useState(Boolean(routeQuoteId))
   const [newOpen, setNewOpen] = useState(false)
   useEffect(() => {
     void hrxSupabase.auth.getSession().then(({ data: auth }) => { setSession(auth.session); setChecking(false) })
@@ -240,13 +246,23 @@ export default function AdminQuotes() {
     try {
       const response = await adminFetch<AdminResponse>(current)
       setData(response)
-      setSelectedId((currentId) => select || (currentId && response.requests.some((item) => item.id === currentId) ? currentId : response.requests[0]?.id || null))
+      const targetId = select || routeQuoteId
+      setSelectedId((currentId) => targetId ? (response.requests.some((item) => item.id === targetId) ? targetId : null) : (currentId && response.requests.some((item) => item.id === currentId) ? currentId : response.requests[0]?.id || null))
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : ''
       setError(code === 'mfa_required' ? 'Confirme o MFA para acessar o módulo comercial.' : 'Não foi possível carregar os orçamentos.')
     } finally { setLoading(false) }
   }
   useEffect(() => { if (session) void load(session) }, [session])
+  useEffect(() => {
+    if (routeQuoteId) {
+      setSelectedId(data.requests.some((item) => item.id === routeQuoteId) ? routeQuoteId : null)
+      setMobileDetail(true)
+      return
+    }
+    setMobileDetail(false)
+    setSelectedId((currentId) => currentId && data.requests.some((item) => item.id === currentId) ? currentId : data.requests[0]?.id || null)
+  }, [data.requests, routeQuoteId])
   const selected = data.requests.find((item) => item.id === selectedId) || null
   const visible = useMemo(() => {
     const term = query.trim().toLocaleLowerCase('pt-BR')
@@ -267,8 +283,20 @@ export default function AdminQuotes() {
     const result = await adminFetch<T>(session, body)
     const createdId = (result as { request?: { id?: string } })?.request?.id
     await load(session, select || createdId)
+    if (body.action === 'delete_draft') navigateAdmin('quotes')
     return result
   }
+  const openQuote = (request: Request) => {
+    setSelectedId(request.id)
+    setMobileDetail(true)
+    const subroute = isQuoteReadOnly(request) ? 'quote-detail' : 'quote-edit'
+    navigateAdminPath(buildAdminSubroutePath('quotes', subroute, { orcamentoId: request.id }))
+  }
+  const returnToQuoteList = () => {
+    setMobileDetail(false)
+    navigateAdmin('quotes')
+  }
+  const quoteNotFound = Boolean(routeQuoteId && !loading && !selected)
   if (checking || !session) return <section className="quote-module-loading" role="status">Validando acesso administrativo…</section>
   return <section className={`admin-live-shell quote-commercial-shell${mobileDetail ? ' is-mobile-detail-open' : ''}`}>
     <section className="admin-exec-main">
@@ -278,12 +306,12 @@ export default function AdminQuotes() {
       <div className="admin-workspace quote-workspace">
         <aside className="admin-queue quote-queue">
           <div className="admin-queue-header"><div><strong>Propostas</strong><span>{visible.length}</span></div><label className="admin-search">{icons.search}<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cliente, CNPJ ou número" /></label><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">Todos os estados</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-          <div className="admin-queue-list">{visible.map((request) => <button type="button" className={selectedId === request.id ? 'admin-lead is-active' : 'admin-lead'} key={request.id} onClick={() => { setSelectedId(request.id); setMobileDetail(true) }}><div className="admin-lead-top"><span className={`quote-status-dot is-${request.draft.commercial_status}`}/><span>{statusLabels[request.draft.commercial_status]}</span><time>{new Date(request.draft.updated_at || request.created_at).toLocaleDateString('pt-BR')}</time></div><strong>{request.company || request.name}</strong><small>{request.draft.proposal_title || 'Proposta ainda sem título'}</small><div className="admin-lead-bottom"><span>{request.proposal_number}</span><b>{currency.format(Number(request.draft.final_amount || 0))}</b></div></button>)}{!loading && !visible.length && <div className="quote-empty">{icons.file}<strong>Nenhuma proposta encontrada</strong><span>Crie um orçamento usando um cliente real.</span></div>}</div>
+          <div className="admin-queue-list">{visible.map((request) => <button type="button" className={selectedId === request.id ? 'admin-lead is-active' : 'admin-lead'} key={request.id} onClick={() => openQuote(request)}><div className="admin-lead-top"><span className={`quote-status-dot is-${request.draft.commercial_status}`}/><span>{statusLabels[request.draft.commercial_status]}</span><time>{new Date(request.draft.updated_at || request.created_at).toLocaleDateString('pt-BR')}</time></div><strong>{request.company || request.name}</strong><small>{request.draft.proposal_title || 'Proposta ainda sem título'}</small><div className="admin-lead-bottom"><span>{request.proposal_number}</span><b>{currency.format(Number(request.draft.final_amount || 0))}</b></div></button>)}{!loading && !visible.length && <div className="quote-empty">{icons.file}<strong>Nenhuma proposta encontrada</strong><span>Crie um orçamento usando um cliente real.</span></div>}</div>
         </aside>
-        <section className="admin-detail quote-detail">{selected ? <QuoteEditor key={selected.id} request={selected} clients={data.clients} providers={data.providers} pricingRules={data.pricingRules} session={session} onMutate={mutate} onError={setError} onBack={() => setMobileDetail(false)} /> : <div className="quote-empty">{icons.file}<strong>Selecione uma proposta</strong><span>Abra um orçamento para continuar o fluxo comercial.</span></div>}</section>
+        <section className="admin-detail quote-detail">{selected ? <QuoteEditor key={selected.id} request={selected} clients={data.clients} providers={data.providers} pricingRules={data.pricingRules} session={session} onMutate={mutate} onError={setError} onBack={returnToQuoteList} /> : quoteNotFound ? <div className="quote-empty"><strong>Orçamento não encontrado</strong><span>A proposta informada na URL não existe ou não está disponível para este acesso.</span><button type="button" className="quote-secondary" onClick={returnToQuoteList}>Voltar para propostas</button></div> : <div className="quote-empty">{icons.file}<strong>Selecione uma proposta</strong><span>Abra um orçamento para continuar o fluxo comercial.</span></div>}</section>
       </div>
     </section>
-    {newOpen && <NewQuoteModal clients={data.clients} onClose={() => setNewOpen(false)} onCreate={async (payload) => { const result = await mutate<{ request: { id: string } }>({ action: 'create_quote', ...payload }); setNewOpen(false); setSelectedId(result.request.id); setMobileDetail(true) }} onClientCreated={async () => { await load(session) }}/>} 
+    {newOpen && <NewQuoteModal clients={data.clients} onClose={() => setNewOpen(false)} onCreate={async (payload) => { const result = await mutate<{ request: { id: string } }>({ action: 'create_quote', ...payload }); setNewOpen(false); setSelectedId(result.request.id); setMobileDetail(true); navigateAdminPath(buildAdminSubroutePath('quotes', 'quote-edit', { orcamentoId: result.request.id })) }} onClientCreated={async () => { await load(session) }}/>} 
   </section>
 }
 
@@ -315,7 +343,7 @@ function QuoteEditor({ request, clients, providers, pricingRules, session, onMut
   const hydrated = useRef(false)
   const linkedClient = clients.find((item) => item.id === request.client_id)
   const client = { name: linkedClient?.name || request.name, company: linkedClient?.company || request.company, email: linkedClient?.email || request.email, phone: linkedClient?.phone || request.phone, document: linkedClient?.document || null }
-  const isReadOnly = ['approved', 'invoiced', 'received', 'lost', 'cancelled'].includes(request.draft.commercial_status) || request.draft.status === 'suspended'
+  const isReadOnly = isQuoteReadOnly(request)
   const baseAmount = state.items.reduce((sum, item) => sum + (toCents(item.unitAmount) * item.quantity) / 100, 0)
   const preview = calculateQuotePreview({ baseAmount, complexityMultiplier: state.complexityMultiplier, urgencyMultiplier: state.urgencyMultiplier, discountPercent: state.discountPercent, taxPercent: state.taxPercent, desiredFinalAmount: state.desiredFinalAmount, paymentProvider: state.paymentProvider, installments: state.paymentMode === 'cash' ? 1 : state.installments, providers, retentions: state.retentions, retentionPricingMode: state.retentionPricingMode, fiscalReviewConfirmed: state.fiscalReviewConfirmed })
   const schedule = buildInstallmentSchedule({ total: preview.finalAmount, count: state.paymentMode === 'cash' ? 1 : state.installments, firstDueDate: state.firstDueDate, intervalDays: state.installmentIntervalDays })

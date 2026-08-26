@@ -69,7 +69,9 @@ test('registro canônico descreve as subrotas estruturais sem criar views de neg
 test('orçamentos permanece view pura sem sidebar, dock ou router próprios', () => {
   assert.ok(!quotes.includes('className="admin-exec-sidebar"'))
   assert.ok(!quotes.includes('className="admin-mobile-nav"'))
-  assert.ok(!quotes.includes("from './adminNavigation'"))
+  assert.match(quotes, /useAdminRoute\(\)/)
+  assert.doesNotMatch(quotes, /onAdminRouteChange|resolveAdminRoute\(|window\.location\.(pathname|hash)|history\.(pushState|replaceState)/)
+  assert.match(quotes, /navigateAdminPath\(buildAdminSubroutePath/)
 })
 
 test('pathname é a fonte de verdade e hashes antigos são apenas aliases de entrada', () => {

@@ -4,13 +4,14 @@ import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 
-const [modules, navigation, routeContext, root, deploy, clients] = await Promise.all([
+const [modules, navigation, routeContext, root, deploy, clients, quotes] = await Promise.all([
   read('src/quotes/adminModules.ts'),
   read('src/quotes/adminNavigation.ts'),
   read('src/quotes/AdminRouteContext.tsx'),
   read('src/quotes/AdminUnifiedRoot.tsx'),
   read('.github/workflows/deploy-pages.yml'),
   read('src/quotes/AdminClientsPage.tsx'),
+  read('src/quotes/AdminQuotes.tsx'),
 ])
 
 test('subrotas pertencem ao módulo pai e extraem parâmetros sem router local nas views', () => {
@@ -57,6 +58,20 @@ test('Clientes usa a subrota como fonte de verdade sem criar uma segunda tela de
   assert.match(clients, /Cliente não encontrado/)
   assert.doesNotMatch(clients, /window\.location|history\.(pushState|replaceState)/)
   assert.equal((clients.match(/className="hrx-client-detail"/g) ?? []).length, 1)
+})
+
+test('Orçamentos usa as subrotas para selecionar e abrir o único editor existente', () => {
+  assert.match(quotes, /const route = useAdminRoute\(\)/)
+  assert.match(quotes, /route\.subroute\?\.id === 'quote-detail'/)
+  assert.match(quotes, /route\.subroute\?\.id === 'quote-edit'/)
+  assert.match(quotes, /route\.params\.orcamentoId/)
+  assert.match(quotes, /isQuoteReadOnly\(request\) \? 'quote-detail' : 'quote-edit'/)
+  assert.match(quotes, /navigateAdminPath\(buildAdminSubroutePath\('quotes', subroute, \{ orcamentoId: request\.id \}\)\)/)
+  assert.match(quotes, /buildAdminSubroutePath\('quotes', 'quote-edit', \{ orcamentoId: result\.request\.id \}\)/)
+  assert.match(quotes, /if \(body\.action === 'delete_draft'\) navigateAdmin\('quotes'\)/)
+  assert.match(quotes, /Orçamento não encontrado/)
+  assert.doesNotMatch(quotes, /history\.(pushState|replaceState)/)
+  assert.equal((quotes.match(/function QuoteEditor\(/g) ?? []).length, 1)
 })
 
 test('fallback do Pages permite bootstrap da SPA em path dinâmico sem substituir entradas principais', () => {
