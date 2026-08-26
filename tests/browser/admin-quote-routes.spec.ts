@@ -198,7 +198,7 @@ test('criação navega para o novo rascunho e exclusão retorna à lista canôni
 
   await activateButton(page.getByRole('button', { name: /Novo orçamento/ }))
   await page.locator('.quote-client-results button').first().click()
-  await page.getByLabel('Título da proposta').fill('Nova proposta por rota')
+  await page.getByPlaceholder('Ex.: Implantação e consultoria').fill('Nova proposta por rota')
   await page.getByRole('button', { name: 'Criar rascunho' }).click()
 
   await expect(page).toHaveURL(/\/admin\/orcamentos\/quote-new\/editar\?hrx-preview=1$/)
