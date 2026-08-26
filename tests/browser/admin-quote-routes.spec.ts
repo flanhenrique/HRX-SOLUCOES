@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 
 const AUTH_KEY = 'sb-tgcdkofplegmjvvkheyd-auth-token'
 
@@ -29,6 +29,11 @@ const client = {
   document: '11111111111',
   notes: null,
   active: true,
+}
+
+async function activateButton(button: Locator) {
+  await button.focus()
+  await button.press('Enter')
 }
 
 function makeQuote(id: string, status: 'draft' | 'approved', title: string, number: string) {
@@ -158,12 +163,12 @@ test('cliques escolhem rota de edição ou detalhe e back/forward restaura a pro
   await page.goto('/admin/orcamentos?hrx-preview=1')
   await expect(page.locator('.quote-editor-header h2')).toHaveText('Proposta Draft')
 
-  await page.locator('.admin-lead').filter({ hasText: 'HRX-2026-002' }).click()
+  await activateButton(page.locator('.admin-lead').filter({ hasText: 'HRX-2026-002' }))
   await expect(page).toHaveURL(/\/admin\/orcamentos\/quote-readonly\?hrx-preview=1$/)
   await expect(page.locator('.quote-editor-header h2')).toHaveText('Proposta Aprovada')
   await expect(page.locator('.quote-readonly-banner')).toBeVisible()
 
-  await page.locator('.admin-lead').filter({ hasText: 'HRX-2026-001' }).click()
+  await activateButton(page.locator('.admin-lead').filter({ hasText: 'HRX-2026-001' }))
   await expect(page).toHaveURL(/\/admin\/orcamentos\/quote-draft\/editar\?hrx-preview=1$/)
   await expect(page.locator('.quote-editor-header h2')).toHaveText('Proposta Draft')
 
@@ -191,7 +196,7 @@ test('criação navega para o novo rascunho e exclusão retorna à lista canôni
   await page.goto('/admin/orcamentos?hrx-preview=1')
   await expect(page.locator('.quote-editor')).toHaveCount(1)
 
-  await page.getByRole('button', { name: /Novo orçamento/ }).click()
+  await activateButton(page.getByRole('button', { name: /Novo orçamento/ }))
   await page.locator('.quote-client-results button').first().click()
   await page.getByLabel('Título da proposta').fill('Nova proposta por rota')
   await page.getByRole('button', { name: 'Criar rascunho' }).click()
