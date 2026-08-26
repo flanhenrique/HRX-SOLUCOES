@@ -11,6 +11,15 @@ create table if not exists public.financial_periods (
   constraint financial_period_reopen_reason check (reopen_reason is null or char_length(trim(reopen_reason)) >= 5)
 );
 
+alter table public.financial_periods
+  add column if not exists reopen_reason text;
+
+alter table public.financial_periods
+  drop constraint if exists financial_period_reopen_reason;
+alter table public.financial_periods
+  add constraint financial_period_reopen_reason
+  check (reopen_reason is null or char_length(trim(reopen_reason)) >= 5);
+
 alter table public.financial_entries
   add column if not exists entry_kind text not null default 'one_time',
   add column if not exists installment_total integer,
@@ -53,13 +62,32 @@ language plpgsql
 security invoker
 set search_path = ''
 as $$
+declare
+  old_month date;
+  new_month date;
 begin
-  if exists (
-    select 1 from public.financial_periods
-    where competence_month = date_trunc('month', coalesce(old.competence_date, new.competence_date))::date
-      and status = 'closed'
-  ) then
-    raise exception 'financial_period_closed';
+  if tg_op in ('UPDATE', 'DELETE') and old.competence_date is not null then
+    old_month := date_trunc('month', old.competence_date)::date;
+    if exists (
+      select 1 from public.financial_periods
+      where competence_month = old_month and status = 'closed'
+    ) then
+      raise exception 'financial_period_closed';
+    end if;
+  end if;
+
+  if tg_op = 'UPDATE' and new.competence_date is not null then
+    new_month := date_trunc('month', new.competence_date)::date;
+    if exists (
+      select 1 from public.financial_periods
+      where competence_month = new_month and status = 'closed'
+    ) then
+      raise exception 'financial_period_closed';
+    end if;
+  end if;
+
+  if tg_op = 'DELETE' then
+    return old;
   end if;
   return new;
 end;
