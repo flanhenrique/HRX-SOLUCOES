@@ -18,6 +18,12 @@ test('Financeiro mantém os contratos canônicos de receber e pagar registrados 
   assert.match(financeModule, /title: 'Contas a pagar'/)
 })
 
+test('builder aceita subrotas estáticas sem relaxar parâmetros de rotas dinâmicas', () => {
+  assert.match(modules, /buildAdminSubroutePath\(destination: AdminDestination, subrouteId: AdminSubrouteId, params: Record<string, string> = \{\}\)/)
+  assert.match(modules, /admin_subroute_param_required/)
+  assert.match(modules, /const value = params\[key\]/)
+})
+
 test('AdminFinancePage usa a subrota como fonte de verdade das abas receber e pagar', () => {
   assert.match(finance, /const route = useAdminRoute\(\)/)
   assert.match(finance, /financeViewFromRoute\(route\.subroute\?\.id\)/)
