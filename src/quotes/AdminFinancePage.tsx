@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { useAdminRoute } from './AdminRouteContext'
+import { buildAdminSubroutePath } from './adminModules'
+import { navigateAdmin, navigateAdminPath } from './adminNavigation'
 import { financeAdminEndpoint, hrxPublishableKey, hrxSupabase } from './supabaseClient'
 import './admin-finance.css'
 
@@ -41,6 +44,12 @@ const today = () => new Date().toISOString().slice(0, 10)
 const safeFileName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 120)
 const expenseCategories = ['Software e assinaturas', 'Serviços profissionais', 'Marketing', 'Infraestrutura', 'Impostos e taxas', 'Operacional', 'Reembolso', 'Outros']
 
+function financeViewFromRoute(subrouteId?: string): View | null {
+  if (subrouteId === 'finance-receivable') return 'receivables'
+  if (subrouteId === 'finance-payable') return 'payables'
+  return null
+}
+
 async function financeFetch<T>(session: Session, body?: Record<string, unknown>): Promise<T> {
   const response = await fetch(financeAdminEndpoint, {
     method: body ? 'PATCH' : 'GET',
@@ -53,11 +62,13 @@ async function financeFetch<T>(session: Session, body?: Record<string, unknown>)
 }
 
 export default function AdminFinancePage() {
+  const route = useAdminRoute()
+  const routedView = financeViewFromRoute(route.subroute?.id)
   const [session, setSession] = useState<Session | null>(null)
   const [checking, setChecking] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [view, setView] = useState<View>('billing')
+  const [view, setView] = useState<View>(() => routedView ?? 'billing')
   const [data, setData] = useState<FinanceResponse>({ entries: [], accounts: [], settlements: [], drafts: [], requests: [], clients: [], installments: [], versions: [] })
   const [invoiceDraft, setInvoiceDraft] = useState<Draft | null>(null)
   const [settlementEntry, setSettlementEntry] = useState<FinancialEntry | null>(null)
@@ -70,6 +81,10 @@ export default function AdminFinancePage() {
     const { data: listener } = hrxSupabase.auth.onAuthStateChange((_event, next) => { setSession(next); setChecking(false) })
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (routedView && routedView !== view) setView(routedView)
+  }, [routedView, view])
 
   const load = async (current = session) => {
     if (!current) return
@@ -107,6 +122,19 @@ export default function AdminFinancePage() {
   }, [data.settlements, entryById, openPayables, openReceivables])
   const metrics = data.metrics ?? fallbackMetrics
 
+  const selectView = (next: View) => {
+    setView(next)
+    if (next === 'receivables') {
+      navigateAdminPath(buildAdminSubroutePath('finance', 'finance-receivable'))
+      return
+    }
+    if (next === 'payables') {
+      navigateAdminPath(buildAdminSubroutePath('finance', 'finance-payable'))
+      return
+    }
+    if (route.subroute?.id === 'finance-receivable' || route.subroute?.id === 'finance-payable') navigateAdmin('finance')
+  }
+
   if (checking || !session) return <section className="finance-loading">Validando acesso financeiro…</section>
 
   return <section className="finance-page">
@@ -127,12 +155,12 @@ export default function AdminFinancePage() {
     </div>
 
     <nav className="finance-tabs" aria-label="Áreas do financeiro">
-      <button className={view === 'billing' ? 'is-active' : ''} onClick={() => setView('billing')}>Aguardando faturamento <span>{billingCandidates.length}</span></button>
-      <button className={view === 'receivables' ? 'is-active' : ''} onClick={() => setView('receivables')}>Contas a receber <span>{openReceivables.length}</span></button>
-      <button className={view === 'received' ? 'is-active' : ''} onClick={() => setView('received')}>Recebidos <span>{paidReceivables.length}</span></button>
-      <button className={view === 'payables' ? 'is-active' : ''} onClick={() => setView('payables')}>Contas a pagar <span>{openPayables.length}</span></button>
-      <button className={view === 'paidPayables' ? 'is-active' : ''} onClick={() => setView('paidPayables')}>Pagos <span>{paidPayables.length}</span></button>
-      <button className={view === 'cashflow' ? 'is-active' : ''} onClick={() => setView('cashflow')}>Fluxo de caixa</button>
+      <button className={view === 'billing' ? 'is-active' : ''} onClick={() => selectView('billing')}>Aguardando faturamento <span>{billingCandidates.length}</span></button>
+      <button className={view === 'receivables' ? 'is-active' : ''} onClick={() => selectView('receivables')}>Contas a receber <span>{openReceivables.length}</span></button>
+      <button className={view === 'received' ? 'is-active' : ''} onClick={() => selectView('received')}>Recebidos <span>{paidReceivables.length}</span></button>
+      <button className={view === 'payables' ? 'is-active' : ''} onClick={() => selectView('payables')}>Contas a pagar <span>{openPayables.length}</span></button>
+      <button className={view === 'paidPayables' ? 'is-active' : ''} onClick={() => selectView('paidPayables')}>Pagos <span>{paidPayables.length}</span></button>
+      <button className={view === 'cashflow' ? 'is-active' : ''} onClick={() => selectView('cashflow')}>Fluxo de caixa</button>
     </nav>
 
     {view === 'billing' && <BillingList drafts={billingCandidates} requestById={requestById} clientById={clientById} installments={data.installments} onInvoice={setInvoiceDraft} />}
@@ -144,10 +172,10 @@ export default function AdminFinancePage() {
 
     <footer className="finance-page-footer"><span>Todos os lançamentos usam o ledger financeiro oficial da HRX e exigem sessão administrativa com MFA/AAL2.</span><button type="button" onClick={() => setAccountOpen(true)}>Configurar contas financeiras</button></footer>
 
-    {invoiceDraft && <InvoiceModal session={session} draft={invoiceDraft} request={requestById.get(invoiceDraft.request_id)} installments={data.installments.filter((item) => item.draft_id === invoiceDraft.id)} onClose={() => setInvoiceDraft(null)} onDone={async () => { setInvoiceDraft(null); await load(session); setView('receivables') }} onError={setError} />}
-    {payableOpen && <PayableModal session={session} onClose={() => setPayableOpen(false)} onDone={async () => { setPayableOpen(false); await load(session); setView('payables') }} onError={setError} />}
-    {settlementEntry && <SettlementModal session={session} entry={settlementEntry} accounts={data.accounts.filter((item) => item.active)} onClose={() => setSettlementEntry(null)} onNeedAccount={() => setAccountOpen(true)} onDone={async () => { const type = settlementEntry.entry_type; setSettlementEntry(null); await load(session); setView(type === 'payable' ? 'payables' : 'receivables') }} onError={setError} />}
-    {cancelEntry && <CancelPayableModal session={session} entry={cancelEntry} onClose={() => setCancelEntry(null)} onDone={async () => { setCancelEntry(null); await load(session); setView('payables') }} onError={setError} />}
+    {invoiceDraft && <InvoiceModal session={session} draft={invoiceDraft} request={requestById.get(invoiceDraft.request_id)} installments={data.installments.filter((item) => item.draft_id === invoiceDraft.id)} onClose={() => setInvoiceDraft(null)} onDone={async () => { setInvoiceDraft(null); await load(session); selectView('receivables') }} onError={setError} />}
+    {payableOpen && <PayableModal session={session} onClose={() => setPayableOpen(false)} onDone={async () => { setPayableOpen(false); await load(session); selectView('payables') }} onError={setError} />}
+    {settlementEntry && <SettlementModal session={session} entry={settlementEntry} accounts={data.accounts.filter((item) => item.active)} onClose={() => setSettlementEntry(null)} onNeedAccount={() => setAccountOpen(true)} onDone={async () => { const type = settlementEntry.entry_type; setSettlementEntry(null); await load(session); selectView(type === 'payable' ? 'payables' : 'receivables') }} onError={setError} />}
+    {cancelEntry && <CancelPayableModal session={session} entry={cancelEntry} onClose={() => setCancelEntry(null)} onDone={async () => { setCancelEntry(null); await load(session); selectView('payables') }} onError={setError} />}
     {accountOpen && <AccountModal session={session} onClose={() => setAccountOpen(false)} onDone={async () => { setAccountOpen(false); await load(session) }} onError={setError} />}
   </section>
 }
